@@ -237,6 +237,15 @@ function extractYoutubeId(input) {
   return match ? match[1] : "";
 }
 
+function tSlug(str) {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function normalizeAudioUrl(url) {
   if (!url) return "";
   const trimmed = url.trim();
@@ -293,7 +302,7 @@ function renderPlaylistEditor() {
             <strong>${t.title}</strong> <span class="muted">— ${t.movie} (${t.year || "?"})</span>
           </div>
         </label>
-        <span class="badge">${t.source || "youtube"}</span>
+        <span class="badge">${t.source || "audio"}</span>
       </div>
     `
     )
@@ -326,6 +335,7 @@ function addCustomTrack(event) {
 
   if (!title || !movie) return;
 
+  const defaultLocalAudio = `audio/${tSlug(title)}.mp3`;
   const newTrack = {
     id: "custom-" + Date.now(),
     title,
@@ -335,7 +345,7 @@ function addCustomTrack(event) {
     source,
     itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : "",
     youtubeId: source === "youtube" ? extractYoutubeId(mediaInput) : "",
-    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput) : "",
+    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput || defaultLocalAudio) : normalizeAudioUrl(mediaInput),
     startSec,
     custom: true,
     enabled: true,
@@ -491,16 +501,19 @@ async function resolveTrackMediaInfo(track) {
   let artworkUrl = "";
   const startSec = track.startSec || 0;
 
-  if (track.source === "audio" && track.audioUrl) {
-    audioUrl = normalizeAudioUrl(track.audioUrl);
-  } else {
-    const ytId = extractYoutubeId(track.youtubeId) || (track.source === "youtube" ? extractYoutubeId(track.itunesQuery) : "");
-    if (ytId) {
-      youtubeId = ytId;
-      artworkUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
-    } else if (track.audioUrl) {
-      audioUrl = normalizeAudioUrl(track.audioUrl);
-    }
+  const candidateAudio = track.audioUrl
+    ? normalizeAudioUrl(track.audioUrl)
+    : (track.source === "audio" ? `audio/${tSlug(track.title)}.mp3` : "");
+
+  if (candidateAudio) {
+    audioUrl = candidateAudio;
+    return { audioUrl, youtubeId, artworkUrl, startSec };
+  }
+
+  const ytId = extractYoutubeId(track.youtubeId) || (track.source === "youtube" ? extractYoutubeId(track.itunesQuery) : "");
+  if (ytId) {
+    youtubeId = ytId;
+    artworkUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
   }
 
   return { audioUrl, youtubeId, artworkUrl, startSec };

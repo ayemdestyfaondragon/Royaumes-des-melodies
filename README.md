@@ -1,4 +1,4 @@
-# Blind Test Musical Disney — Plateau TV Automatique (v9 YouTube par défaut)
+# Blind Test Musical Disney — Plateau TV Automatique (v10 Audio Direct Sans Pub)
 
-- **YouTube à la place d'iTunes** : `resolveTrackMediaInfo` utilise désormais YouTube (ou `audioUrl` direct) sans interroger l'API iTunes.
-- **Source par défaut YouTube** : le sélecteur d'ajout de piste et les titres de `tracks.json` utilisent `youtube` par défaut.
+- **Audio direct sans pub par défaut** : privilégie les fichiers/URL audio directs (`audioUrl` ou `audio/<titre>.mp3`) via `<audio>` sans régie publicitaire YouTube.
+- **Formulaire et playlist mis à jour** : la source `audio` est sélectionnée par défaut et les pistes de `tracks.json` utilisent `audio` en priorité.
