@@ -16,6 +16,7 @@ let phaseInterval = null;
 let currentTrack = null;
 let currentArtworkUrl = "";
 let roundSolved = false;
+let roundTransitionLock = false;
 let soundEffectsEnabled = true;
 let audioCtx = null;
 
@@ -42,14 +43,44 @@ let roomState = {
   hints: [],
   buzzerHolder: null,
   lastGuessAttempt: null,
-  revealedTrack: null, // { title, movie, year, era, artwork, message }
+  revealedTrack: null,
   qcmOptions: [],
-  players: {}
+  players: {},
+  mediaCommand: null // { seq, type: "play" | "stop" | "reveal", audioUrl, youtubeId, startSec, volume }
 };
+
+let lastAppliedMediaSeq = 0;
 
 // ==========================================
 // TV SHOW SYNTH JINGLES (WEB AUDIO API)
 // ==========================================
+
+function unlockAudioContext() {
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+    const audioEl = document.getElementById("audioPlayer");
+    if (audioEl && audioEl.src) {
+      audioEl.muted = false;
+      audioEl.play().catch(() => {});
+    }
+    updateAudioUnlockBanner(true);
+  } catch (_) {}
+}
+
+function updateAudioUnlockBanner(unlocked) {
+  const statusEl = document.getElementById("audioUnlockStatus");
+  if (statusEl) {
+    statusEl.textContent = unlocked
+      ? "✅ Audio débloqué sur cet appareil"
+      : "⚠️ Si tu n'entends pas la musique ou les jingles, clique sur « Activer l'audio »";
+  }
+}
 
 function playTvJingle(type) {
   if (!soundEffectsEnabled) return;
@@ -59,10 +90,12 @@ function playTvJingle(type) {
       if (Ctx) audioCtx = new Ctx();
     }
     if (!audioCtx) return;
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
 
     const now = audioCtx.currentTime;
-    const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.12) => {
+    const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.11) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = wave;
@@ -76,24 +109,24 @@ function playTvJingle(type) {
     };
 
     if (type === "tick") {
-      playTone(660, now, 0.12, "sine", 0.09);
+      playTone(660, now, 0.11, "sine", 0.08);
     } else if (type === "go") {
-      playTone(523.25, now, 0.12, "triangle", 0.13);
-      playTone(659.25, now + 0.1, 0.12, "triangle", 0.13);
-      playTone(1046.5, now + 0.2, 0.28, "triangle", 0.15);
+      playTone(523.25, now, 0.11, "triangle", 0.12);
+      playTone(659.25, now + 0.1, 0.11, "triangle", 0.12);
+      playTone(1046.5, now + 0.2, 0.25, "triangle", 0.14);
     } else if (type === "buzz") {
-      playTone(220, now, 0.28, "sawtooth", 0.14);
+      playTone(220, now, 0.24, "sawtooth", 0.12);
     } else if (type === "win") {
-      playTone(523.25, now, 0.11, "triangle", 0.14);
-      playTone(659.25, now + 0.1, 0.11, "triangle", 0.14);
-      playTone(783.99, now + 0.2, 0.11, "triangle", 0.14);
-      playTone(1046.5, now + 0.3, 0.35, "triangle", 0.16);
+      playTone(523.25, now, 0.1, "triangle", 0.13);
+      playTone(659.25, now + 0.1, 0.1, "triangle", 0.13);
+      playTone(783.99, now + 0.2, 0.1, "triangle", 0.13);
+      playTone(1046.5, now + 0.3, 0.32, "triangle", 0.15);
     } else if (type === "timeout") {
-      playTone(330, now, 0.2, "sawtooth", 0.1);
-      playTone(246.94, now + 0.18, 0.35, "sawtooth", 0.1);
+      playTone(330, now, 0.18, "sawtooth", 0.09);
+      playTone(246.94, now + 0.16, 0.3, "sawtooth", 0.09);
     } else if (type === "fanfare") {
       [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, idx) => {
-        playTone(f, now + idx * 0.13, idx === 5 ? 0.55 : 0.14, "triangle", 0.15);
+        playTone(f, now + idx * 0.13, idx === 5 ? 0.5 : 0.13, "triangle", 0.14);
       });
     }
   } catch (_) {}
@@ -103,6 +136,7 @@ function toggleSoundEffects() {
   soundEffectsEnabled = !soundEffectsEnabled;
   const btn = document.getElementById("sfxToggleBtn");
   if (btn) btn.textContent = soundEffectsEnabled ? "🔊 Jingles TV : ON" : "🔇 Jingles TV : OFF";
+  if (soundEffectsEnabled) unlockAudioContext();
 }
 
 // ==========================================
@@ -335,6 +369,110 @@ function importPlaylistJson(event) {
 }
 
 // ==========================================
+// SHARED AUDIO PLAYBACK (HOST & GUESTS)
+// ==========================================
+
+function stopLocalMedia() {
+  const audioEl = document.getElementById("audioPlayer");
+  if (audioEl) {
+    audioEl.onloadedmetadata = null;
+    audioEl.pause();
+    audioEl.removeAttribute("src");
+    try { audioEl.load(); } catch (_) {}
+  }
+  const ytBox = document.getElementById("ytHiddenContainer");
+  if (ytBox) ytBox.innerHTML = "";
+}
+
+function playAudioUrlSafely(url, startSec, volume = 0.9) {
+  const audioEl = document.getElementById("audioPlayer");
+  if (!audioEl || !url) return;
+
+  stopLocalMedia();
+  audioEl.volume = Math.max(0.05, Math.min(1, volume));
+  audioEl.src = url;
+
+  audioEl.onloadedmetadata = () => {
+    try {
+      const maxStart = Math.max(0, (audioEl.duration || 30) - 2);
+      const safeStart = Math.min(Math.max(0, Number(startSec) || 0), maxStart);
+      if (safeStart > 0 && Number.isFinite(safeStart)) {
+        audioEl.currentTime = safeStart;
+      }
+    } catch (_) {}
+    audioEl.play().then(() => {
+      updateAudioUnlockBanner(true);
+    }).catch(() => {
+      updateAudioUnlockBanner(false);
+    });
+  };
+
+  audioEl.load();
+}
+
+function applyMediaCommandIfNeeded(cmd) {
+  if (!cmd || typeof cmd.seq !== "number" || cmd.seq <= lastAppliedMediaSeq) return;
+  lastAppliedMediaSeq = cmd.seq;
+
+  if (cmd.type === "stop") {
+    stopLocalMedia();
+    return;
+  }
+
+  if (cmd.type === "play") {
+    if (cmd.audioUrl) {
+      playAudioUrlSafely(cmd.audioUrl, cmd.startSec || 0, cmd.volume || 0.9);
+    } else if (cmd.youtubeId) {
+      stopLocalMedia();
+      const ytBox = document.getElementById("ytHiddenContainer");
+      if (ytBox) {
+        ytBox.innerHTML = `<iframe width="200" height="120" src="https://www.youtube.com/embed/${cmd.youtubeId}?start=${cmd.startSec || 0}&autoplay=1" allow="autoplay"></iframe>`;
+      }
+    }
+    return;
+  }
+
+  if (cmd.type === "reveal") {
+    const audioEl = document.getElementById("audioPlayer");
+    if (audioEl && audioEl.src) {
+      audioEl.volume = 0.45;
+      audioEl.play().catch(() => {});
+    }
+  }
+}
+
+async function resolveTrackMediaInfo(track) {
+  let audioUrl = "";
+  let youtubeId = "";
+  let artworkUrl = "";
+  const startSec = track.startSec || 0;
+
+  if (track.source === "audio" && track.audioUrl) {
+    audioUrl = normalizeAudioUrl(track.audioUrl);
+  } else if (track.source === "youtube" && extractYoutubeId(track.youtubeId)) {
+    youtubeId = extractYoutubeId(track.youtubeId);
+    artworkUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
+  }
+
+  if (!audioUrl) {
+    const query = encodeURIComponent(track.itunesQuery || `${track.title} ${track.movie}`);
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=5&country=FR`);
+      const data = await res.json();
+      const hit = data.results?.[0];
+      if (hit?.artworkUrl100 && !artworkUrl) {
+        artworkUrl = hit.artworkUrl100.replace("100x100bb", "400x400bb");
+      }
+      if (hit?.previewUrl) {
+        audioUrl = hit.previewUrl;
+      }
+    } catch (_) {}
+  }
+
+  return { audioUrl, youtubeId, artworkUrl, startSec };
+}
+
+// ==========================================
 // PEERJS MULTIPLAYER ENGINE
 // ==========================================
 
@@ -357,6 +495,7 @@ function broadcastState() {
 }
 
 function createHostRoom(requestedCode) {
+  unlockAudioContext();
   destroyPeer();
   role = "host";
   roomCode = (requestedCode || document.getElementById("roomCodeInput").value || generateRoomCode())
@@ -398,7 +537,8 @@ function createHostRoom(requestedCode) {
       qcmOptions: [],
       players: {
         [myPeerId]: { id: myPeerId, name: getPseudo(), score: 0, isHost: true }
-      }
+      },
+      mediaCommand: null
     };
     setConnectionStatus("online", `Plateau EN DIRECT • ${roomCode}`);
     updateInviteDisplay();
@@ -407,6 +547,11 @@ function createHostRoom(requestedCode) {
 
   peer.on("connection", (conn) => {
     hostConnections.set(conn.peer, conn);
+    conn.on("open", () => {
+      if (roomState.phase) {
+        conn.send({ type: "SYNC_STATE", state: roomState });
+      }
+    });
     conn.on("data", (msg) => handleHostMessage(conn.peer, msg));
     conn.on("close", () => {
       hostConnections.delete(conn.peer);
@@ -425,6 +570,7 @@ function createHostRoom(requestedCode) {
 }
 
 function joinGuestRoom() {
+  unlockAudioContext();
   const code = (document.getElementById("roomCodeInput").value || "").trim().toUpperCase();
   if (!code) {
     alert("Entre le code du plateau (ex. : TV-1042) !");
@@ -462,11 +608,15 @@ function joinGuestRoom() {
           if (roomState.phase === "playing") playTvJingle("go");
           else if (roomState.phase === "ended") playTvJingle("fanfare");
         }
+        applyMediaCommandIfNeeded(roomState.mediaCommand);
         syncUiFromRoomState();
       }
     });
 
-    conn.on("close", () => setConnectionStatus("", "Déconnecté du plateau."));
+    conn.on("close", () => {
+      stopLocalMedia();
+      setConnectionStatus("", "Déconnecté du plateau.");
+    });
   });
 
   peer.on("error", (err) => {
@@ -509,7 +659,7 @@ function handleHostMessage(senderPeerId, msg) {
   }
 
   if (msg.type === "GUESS") {
-    if (roomState.phase === "playing" && !roundSolved && currentTrack) {
+    if (roomState.phase === "playing" && !roundSolved && !roundTransitionLock && currentTrack) {
       const player = roomState.players[senderPeerId];
       if (!player) return;
       if (isAnswerMatch(msg.text, currentTrack)) {
@@ -523,7 +673,7 @@ function handleHostMessage(senderPeerId, msg) {
   }
 
   if (msg.type === "CHOICE") {
-    if (roomState.phase === "playing" && !roundSolved && currentTrack) {
+    if (roomState.phase === "playing" && !roundSolved && !roundTransitionLock && currentTrack) {
       if (msg.trackId === currentTrack.id) {
         awardPointsToPlayer(senderPeerId, roomState.roundPoints);
       }
@@ -557,6 +707,7 @@ function copyInviteLink() {
 }
 
 function triggerBuzzer() {
+  unlockAudioContext();
   if (role === "guest") {
     sendGuestAction({ type: "BUZZ" });
     return;
@@ -651,7 +802,6 @@ function syncUiFromRoomState() {
     return;
   }
 
-  // Active TV Stage (countdown, playing, revealed)
   setupSec.classList.add("hidden");
   endSec.classList.add("hidden");
   gameSec.classList.remove("hidden");
@@ -679,11 +829,9 @@ function syncUiFromRoomState() {
     : (roomState.revealTimeLeft / revealDuration) * 100;
   document.getElementById("timerBar").style.width = `${Math.max(0, Math.min(100, pct))}%`;
 
-  // Equalizer animation only while playing
   document.getElementById("tvEqualizer").classList.toggle("hidden", roomState.phase !== "playing");
   document.getElementById("hostRoundControls").classList.toggle("hidden", isGuest);
 
-  // Progressive automatic hints
   const hintsBox = document.getElementById("hintsContainer");
   if (roomState.hints && roomState.hints.length) {
     hintsBox.classList.remove("hidden");
@@ -692,7 +840,6 @@ function syncUiFromRoomState() {
     hintsBox.classList.add("hidden");
   }
 
-  // Buzzer state
   const buzzerBox = document.getElementById("buzzerBanner");
   const buzzerText = document.getElementById("buzzerBannerText");
   const hostArb = document.getElementById("hostBuzzerArbitration");
@@ -736,7 +883,6 @@ function syncUiFromRoomState() {
     guessInput.disabled = roomState.phase !== "playing";
   }
 
-  // Automatic TV Reveal Card
   const revealCard = document.getElementById("revealCard");
   if (roomState.phase === "revealed" && roomState.revealedTrack) {
     revealCard.classList.remove("hidden");
@@ -759,57 +905,9 @@ function syncUiFromRoomState() {
 // AUTOMATIC TV GAME SHOW LOOP (HOST)
 // ==========================================
 
-function stopAllMedia() {
-  const audioEl = document.getElementById("audioPlayer");
-  if (audioEl) {
-    audioEl.pause();
-    audioEl.removeAttribute("src");
-  }
-  const ytBox = document.getElementById("ytHiddenContainer");
-  if (ytBox) ytBox.innerHTML = "";
-}
-
-async function playTrackMedia(track) {
-  if (role !== "host") return;
-  stopAllMedia();
-  currentArtworkUrl = "";
-  const startSec = track.startSec || 0;
-
-  if (track.source === "youtube" && extractYoutubeId(track.youtubeId)) {
-    const vid = extractYoutubeId(track.youtubeId);
-    currentArtworkUrl = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
-    const ytBox = document.getElementById("ytHiddenContainer");
-    ytBox.innerHTML = `<iframe id="ytFrame" width="1" height="1" src="https://www.youtube.com/embed/${vid}?start=${startSec}&autoplay=1&enablejsapi=1" allow="autoplay"></iframe>`;
-    return;
-  }
-
-  if (track.source === "audio" && track.audioUrl) {
-    const audioEl = document.getElementById("audioPlayer");
-    audioEl.src = normalizeAudioUrl(track.audioUrl);
-    audioEl.currentTime = startSec;
-    await audioEl.play().catch(() => {});
-    return;
-  }
-
-  const query = encodeURIComponent(track.itunesQuery || `${track.title} ${track.movie}`);
-  try {
-    const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=5&country=FR`);
-    const data = await res.json();
-    const hit = data.results?.[0];
-    if (hit?.artworkUrl100) {
-      currentArtworkUrl = hit.artworkUrl100.replace("100x100bb", "400x400bb");
-    }
-    if (hit?.previewUrl) {
-      const audioEl = document.getElementById("audioPlayer");
-      audioEl.src = hit.previewUrl;
-      audioEl.currentTime = Math.min(startSec, 25);
-      await audioEl.play().catch(() => {});
-    }
-  } catch (_) {}
-}
-
 function startGame() {
   if (role !== "host") return;
+  unlockAudioContext();
   const eligible = allTracks.filter((t) => t.enabled);
   if (!eligible.length) {
     alert("Active au moins une chanson dans la playlist !");
@@ -836,8 +934,14 @@ function startGame() {
 function startCountdownPhase() {
   if (role !== "host") return;
   clearInterval(phaseInterval);
-  stopAllMedia();
   roundSolved = false;
+  roundTransitionLock = false;
+
+  roomState.mediaCommand = {
+    seq: (roomState.mediaCommand?.seq || 0) + 1,
+    type: "stop"
+  };
+  applyMediaCommandIfNeeded(roomState.mediaCommand);
 
   if (activeRound >= totalRounds) {
     finishGame();
@@ -871,13 +975,16 @@ function startCountdownPhase() {
   }, 900);
 }
 
-function beginPlayingPhase() {
+async function beginPlayingPhase() {
   if (role !== "host") return;
   clearInterval(phaseInterval);
 
   currentTrack = window.__gamePool[activeRound];
   timeLeft = roundDuration;
   roundPoints = 100;
+
+  const mediaInfo = await resolveTrackMediaInfo(currentTrack);
+  currentArtworkUrl = mediaInfo.artworkUrl;
 
   const mode = document.getElementById("gameMode").value;
   let qcmOptions = [];
@@ -901,20 +1008,28 @@ function beginPlayingPhase() {
   roomState.presenterLine = "🎵 Écoutez bien l'extrait... Quel est ce titre ou ce film ?";
   roomState.hints = [];
   roomState.qcmOptions = qcmOptions;
+  roomState.mediaCommand = {
+    seq: (roomState.mediaCommand?.seq || 0) + 1,
+    type: "play",
+    audioUrl: mediaInfo.audioUrl,
+    youtubeId: mediaInfo.youtubeId,
+    startSec: mediaInfo.startSec,
+    volume: 0.9
+  };
 
+  applyMediaCommandIfNeeded(roomState.mediaCommand);
   broadcastState();
-  playTrackMedia(currentTrack);
 
   const hint1Time = Math.round(roundDuration * 0.65);
   const hint2Time = Math.round(roundDuration * 0.35);
 
   phaseInterval = setInterval(() => {
+    if (roundSolved || roundTransitionLock) return;
     timeLeft -= 0.5;
     roundPoints = Math.max(25, Math.round((timeLeft / roundDuration) * 100));
     roomState.timeLeft = Math.max(0, timeLeft);
     roomState.roundPoints = roundPoints;
 
-    // Automatic progressive TV hints
     if (timeLeft <= hint1Time && roomState.hints.length === 0) {
       roomState.hints = [`Année : ${currentTrack.year || "Classique"} (${currentTrack.era || "Disney"})`];
       roomState.presenterLine = "💡 Premier indice dévoilé sur le plateau !";
@@ -938,8 +1053,9 @@ function beginPlayingPhase() {
 }
 
 function startAutoRevealPhase(success, message) {
-  if (role !== "host" || roundSolved) return;
+  if (role !== "host" || roundSolved || roundTransitionLock) return;
   roundSolved = true;
+  roundTransitionLock = true;
   clearInterval(phaseInterval);
   if (!success) combo = 0;
 
@@ -955,6 +1071,12 @@ function startAutoRevealPhase(success, message) {
     artwork: currentArtworkUrl,
     message
   };
+  roomState.mediaCommand = {
+    seq: (roomState.mediaCommand?.seq || 0) + 1,
+    type: "reveal"
+  };
+
+  applyMediaCommandIfNeeded(roomState.mediaCommand);
   broadcastState();
 
   phaseInterval = setInterval(() => {
@@ -973,7 +1095,7 @@ function startAutoRevealPhase(success, message) {
 function skipToNextImmediately() {
   if (role !== "host") return;
   clearInterval(phaseInterval);
-  if (roomState.phase === "playing") {
+  if (roomState.phase === "playing" && !roundSolved) {
     startAutoRevealPhase(false, "⏭ Passage rapide par la régie :");
   } else {
     activeRound += 1;
@@ -983,6 +1105,7 @@ function skipToNextImmediately() {
 
 function submitGuess(event) {
   event.preventDefault();
+  unlockAudioContext();
   const inputEl = document.getElementById("guessInput");
   const val = inputEl.value.trim();
   if (!val) return;
@@ -993,7 +1116,7 @@ function submitGuess(event) {
     return;
   }
 
-  if (roundSolved || roomState.phase !== "playing") return;
+  if (roundSolved || roundTransitionLock || roomState.phase !== "playing") return;
   if (isAnswerMatch(val, currentTrack)) {
     awardPointsToPlayer(myPeerId, roundPoints);
   } else {
@@ -1005,11 +1128,12 @@ function submitGuess(event) {
 }
 
 function submitChoice(trackId) {
+  unlockAudioContext();
   if (role === "guest") {
     sendGuestAction({ type: "CHOICE", trackId });
     return;
   }
-  if (roundSolved || roomState.phase !== "playing") return;
+  if (roundSolved || roundTransitionLock || roomState.phase !== "playing") return;
   if (trackId === currentTrack.id) {
     awardPointsToPlayer(myPeerId, roundPoints);
   } else {
@@ -1021,8 +1145,12 @@ function submitChoice(trackId) {
 
 function finishGame() {
   if (role !== "host") return;
-  stopAllMedia();
   clearInterval(phaseInterval);
+  roomState.mediaCommand = {
+    seq: (roomState.mediaCommand?.seq || 0) + 1,
+    type: "stop"
+  };
+  applyMediaCommandIfNeeded(roomState.mediaCommand);
   playTvJingle("fanfare");
   roomState.phase = "ended";
   broadcastState();
@@ -1036,8 +1164,12 @@ function finishGame() {
 
 function backToSetup() {
   if (role !== "host") return;
-  stopAllMedia();
   clearInterval(phaseInterval);
+  roomState.mediaCommand = {
+    seq: (roomState.mediaCommand?.seq || 0) + 1,
+    type: "stop"
+  };
+  applyMediaCommandIfNeeded(roomState.mediaCommand);
   roomState.phase = "lobby";
   roomState.buzzerHolder = null;
   roomState.revealedTrack = null;
