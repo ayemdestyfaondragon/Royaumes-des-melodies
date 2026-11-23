@@ -563,7 +563,7 @@ function createHostRoom(requestedCode) {
     return;
   }
 
-  peer = new Peer(PEER_PREFIX + roomCode);
+  peer = createPeerInstance(PEER_PREFIX + roomCode);
 
   peer.on("open", (id) => {
     myPeerId = id;
@@ -618,7 +618,28 @@ function createHostRoom(requestedCode) {
   });
 }
 
-function joinGuestRoom() {
+function createPeerInstance(customId) {
+  const peerConfig = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" }
+      ]
+    }
+  };
+  return customId ? new Peer(customId, peerConfig) : new Peer(peerConfig);
+}
+
+let joinRetryTimer = null;
+
+function joinGuestRoom(isAutoRetry = false) {
+  if (joinRetryTimer) {
+    clearTimeout(joinRetryTimer);
+    joinRetryTimer = null;
+  }
   unlockAudioContext();
   const code = (document.getElementById("roomCodeInput").value || "").trim().toUpperCase();
   if (!code) {
@@ -633,16 +654,23 @@ function joinGuestRoom() {
   destroyPeer();
   role = "guest";
   roomCode = code;
-  setConnectionStatus("connecting", `Connexion au plateau ${roomCode}...`);
+  setConnectionStatus("connecting", isAutoRetry ? `Nouvelle tentative vers ${roomCode}...` : `Connexion au plateau ${roomCode}...`);
 
-  peer = new Peer();
+  peer = createPeerInstance();
 
   peer.on("open", (id) => {
     myPeerId = id;
     const conn = peer.connect(PEER_PREFIX + roomCode, { reliable: true });
     guestConnection = conn;
 
+    const handshakeTimeout = setTimeout(() => {
+      if (role === "guest" && (!conn || !conn.open)) {
+        setConnectionStatus("", `Salon ${roomCode} introuvable ou bloqué — vérifie que l'hôte est ouvert.`);
+      }
+    }, 8000);
+
     conn.on("open", () => {
+      clearTimeout(handshakeTimeout);
       setConnectionStatus("online", `Candidat connecté • ${roomCode}`);
       conn.send({ type: "HELLO", name: getPseudo() });
       updateInviteDisplay();
@@ -662,14 +690,28 @@ function joinGuestRoom() {
       }
     });
 
+    conn.on("error", () => {
+      clearTimeout(handshakeTimeout);
+      setConnectionStatus("", `Échec de liaison avec ${roomCode}.`);
+    });
+
     conn.on("close", () => {
+      clearTimeout(handshakeTimeout);
       stopLocalMedia();
       setConnectionStatus("", "Déconnecté du plateau.");
     });
   });
 
   peer.on("error", (err) => {
-    setConnectionStatus("", `Impossible de rejoindre ${roomCode} (${err.type}).`);
+    const errType = err?.type || "erreur";
+    setConnectionStatus("", `Impossible de rejoindre ${roomCode} (${errType}).`);
+    if (!isAutoRetry && (errType === "peer-unavailable" || errType === "network" || errType === "server-error")) {
+      joinRetryTimer = setTimeout(() => {
+        if (role === "guest" && (!guestConnection || !guestConnection.open)) {
+          joinGuestRoom(true);
+        }
+      }, 2500);
+    }
   });
 }
 

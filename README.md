@@ -1,5 +1,4 @@
-# Blind Test Musical Disney — Plateau TV Automatique (v6 Mode Sans Stream)
+# Blind Test Musical Disney — Plateau TV Automatique (v7 Connexion Salon Fiabilisée)
 
-- **Aucun flux audio / stream distant** : désactive toute récupération ou diffusion de flux audio/stream (`previewUrl`, `<audio>`, `<iframe>` YouTube) sur l'hôte comme sur le candidat à distance.
-- **Jingles locaux uniquement** : conserve les petits signaux sonores locaux (WebAudio) après geste utilisateur, sans aucune requête de stream.
-- **Synchronisation multijoueur à distance intacte** : manches automatiques, compte à rebours, indices, buzzer, saisie/QCM et scores restent synchronisés entre ordinateur et téléphone distant.
+- **Serveurs STUN explicites** : ajoute des serveurs STUN publics (`stun.l.google.com`, `stun1.l.google.com`, `stun2.l.google.com`, `global.stun.twilio.com`) pour faciliter la traversée NAT entre ordinateur et téléphone.
+- **Détection de délai & nouvelle tentative automatique** : affiche un message clair si le salon (`TV-XXXX`) n'est pas encore actif et retente automatiquement après 2,5 s en cas d'indisponibilité ponctuelle (`peer-unavailable` / `network`).
