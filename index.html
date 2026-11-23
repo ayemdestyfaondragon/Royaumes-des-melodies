@@ -631,7 +631,8 @@ button.danger {
           </div>
         </div>
 
-        <audio id="audioPlayer" style="display:none;"></audio>
+        <div id="audioStatusBar" class="muted" style="margin-top:10px;font-size:0.85rem;">🔊 Lecteur audio prêt</div>
+        <audio id="audioPlayer" controls style="width:100%;margin-top:8px;"></audio>
         <div id="ytHiddenContainer" style="position:fixed;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
 
         <div id="hostRoundControls" class="controls-row" style="margin-top:16px;">
@@ -1563,13 +1564,20 @@ function stopLocalMedia() {
   if (ytBox) ytBox.innerHTML = "";
 }
 
+function setAudioDebugText(msg) {
+  const el = document.getElementById("audioStatusBar");
+  if (el) el.textContent = msg;
+}
+
 function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
   const audioEl = document.getElementById("audioPlayer");
   if (!audioEl || !url) {
+    setAudioDebugText("⚠️ Aucune URL audio résolue pour cette manche.");
     updateAudioUnlockBanner(false, "⚠️ Aucun flux audio trouvé pour cet extrait");
     return;
   }
 
+  setAudioDebugText(`🎵 Chargement : ${url}`);
   audioEl.onloadedmetadata = null;
   audioEl.pause();
   audioEl.muted = false;
@@ -1579,7 +1587,9 @@ function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
     audioEl.src = url;
   }
 
-  audioEl.onerror = null;
+  audioEl.onerror = () => {
+    setAudioDebugText(`⚠️ Erreur flux audio (${url}) — utilise le lecteur ou vérifie la source.`);
+  };
 
   const seekAndPlay = () => {
     try {
@@ -1594,8 +1604,10 @@ function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
 
     audioEl.play().then(() => {
       pendingAudioJob = null;
-    }).catch(() => {
+      setAudioDebugText(`▶️ Lecture en cours : ${url}`);
+    }).catch((err) => {
       pendingAudioJob = { url, startSec, volume, sourceKey };
+      setAudioDebugText(`⏸ Lecture bloquée par le navigateur (${err?.name || "autoplay"}) — clique sur Play ou sur la page.`);
     });
   };
 
@@ -1756,7 +1768,7 @@ async function resolveTrackMediaInfo(track) {
     }
   }
 
-  if (!youtubeId && !audioUrl) {
+  if (!youtubeId) {
     const ytId = extractYoutubeId(track.youtubeId) || (track.source === "youtube" ? extractYoutubeId(track.itunesQuery) : "");
     if (ytId) {
       youtubeId = ytId;
