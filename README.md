@@ -1,4 +1,5 @@
-# Blind Test Musical Disney — Plateau TV Automatique (v5 Zéro Erreur Console)
+# Blind Test Musical Disney — Plateau TV Automatique (v6 Mode Sans Stream)
 
-- **Suppression du warning `AudioContext was not allowed to start`** : `AudioContext` n'est instancié/joué qu'après un vrai geste utilisateur (`audioUserGestureUnlocked`), évitant l'avertissement autoplay de Chrome au chargement ou à la réception d'un message réseau côté candidat.
-- **Suppression du `404 /favicon.ico`** : ajout d'une icône SVG inline (`🎶`) dans `index.html`.
+- **Aucun flux audio / stream distant** : désactive toute récupération ou diffusion de flux audio/stream (`previewUrl`, `<audio>`, `<iframe>` YouTube) sur l'hôte comme sur le candidat à distance.
+- **Jingles locaux uniquement** : conserve les petits signaux sonores locaux (WebAudio) après geste utilisateur, sans aucune requête de stream.
+- **Synchronisation multijoueur à distance intacte** : manches automatiques, compte à rebours, indices, buzzer, saisie/QCM et scores restent synchronisés entre ordinateur et téléphone distant.
