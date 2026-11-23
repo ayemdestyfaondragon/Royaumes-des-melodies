@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="sombre">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blind Test Musical Disney</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">✨ Blind Test Musical Disney</div>
+      <div class="theme-switcher">
+        <button type="button" class="secondary" onclick="setTheme('sombre')">🌙 Sombre</button>
+        <button type="button" class="secondary" onclick="setTheme('savane')">🦁 Savane</button>
+      </div>
+    </header>
+
+    <section id="setupSection">
+      <div class="panel">
+        <h1>Paramètres de la partie</h1>
+        <p class="muted">Choisis ton mode de jeu, le nombre de manches et ta playlist.</p>
+        <div class="grid-2">
+          <div>
+            <label for="gameMode">Mode de jeu</label>
+            <select id="gameMode">
+              <option value="input">Saisie libre (tolérance aux fautes)</option>
+              <option value="qcm">QCM à 4 choix</option>
+            </select>
+          </div>
+          <div>
+            <label for="roundCount">Nombre de manches</label>
+            <select id="roundCount">
+              <option value="5">5 manches</option>
+              <option value="10" selected>10 manches</option>
+              <option value="15">15 manches</option>
+              <option value="25">25 manches</option>
+            </select>
+          </div>
+        </div>
+        <div class="controls-row">
+          <button type="button" class="success" onclick="startGame()">▶ Lancer le blind test</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Salon à distance & Buzzer</h2>
+        <div class="grid-2">
+          <div>
+            <label for="playerPseudo">Ton pseudo</label>
+            <input id="playerPseudo" type="text" value="Joueur 1" placeholder="Ex. : Simba" />
+          </div>
+          <div>
+            <label for="roomCodeInput">Code du salon</label>
+            <input id="roomCodeInput" type="text" value="DISNEY-1042" />
+          </div>
+        </div>
+        <div class="controls-row">
+          <button type="button" onclick="joinOrCreateRoom()">Rejoindre / Créer le salon</button>
+          <button type="button" class="danger" onclick="triggerBuzzer()">🚨 BUZZER</button>
+          <button type="button" class="secondary" onclick="resetBuzzer()">Réinitialiser buzzer</button>
+        </div>
+        <p id="buzzerStatus" class="muted"></p>
+        <p id="inviteStatus" class="muted"></p>
+        <div id="leaderboard"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Playlist personnalisable</h2>
+        <div class="controls-row">
+          <input id="playlistSearch" type="search" placeholder="Filtrer par titre ou film..." oninput="renderPlaylistEditor()" />
+          <button type="button" class="secondary" onclick="setAllTracks(true)">Tout cocher</button>
+          <button type="button" class="secondary" onclick="setAllTracks(false)">Tout décocher</button>
+          <button type="button" class="secondary" onclick="exportPlaylistJson()">Exporter JSON</button>
+          <label class="secondary" style="padding:10px 16px;border-radius:10px;cursor:pointer;">
+            Importer JSON
+            <input type="file" accept=".json,application/json" style="display:none;" onchange="importPlaylistJson(event)" />
+          </label>
+        </div>
+
+        <div id="playlistEditor" class="playlist-list"></div>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,0.1);" />
+        <h3>Ajouter un extrait (iTunes, YouTube ou Audio direct)</h3>
+        <form onsubmit="addCustomTrack(event)" class="grid-2">
+          <input id="newTrackTitle" type="text" placeholder="Titre de la chanson" required />
+          <input id="newTrackMovie" type="text" placeholder="Film Disney" required />
+          <select id="newTrackSource">
+            <option value="itunes">iTunes (aperçu automatique)</option>
+            <option value="youtube">YouTube (lien ou ID)</option>
+            <option value="audio">Audio direct (MP3 / OGG / WAV)</option>
+          </select>
+          <input id="newTrackMedia" type="text" placeholder="URL YouTube / lien MP3 / requête iTunes" />
+          <input id="newTrackStart" type="text" placeholder="Départ (ex. : 45 ou 1:15)" />
+          <input id="newTrackAccepted" type="text" placeholder="Réponses acceptées (séparées par virgule)" />
+          <div class="controls-row" style="grid-column: 1 / -1;">
+            <button type="submit">+ Ajouter à la playlist</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="gameSection" class="hidden">
+      <div class="panel">
+        <div class="topbar" style="margin-bottom:6px;">
+          <strong id="roundIndicator">Manche 1 / 10</strong>
+          <strong id="scoreIndicator">Score : 0 pts</strong>
+        </div>
+        <div class="timer-bar-wrap">
+          <div id="timerBar" class="timer-bar"></div>
+        </div>
+
+        <audio id="audioPlayer" controls style="width:100%;"></audio>
+        <div id="ytHiddenContainer" style="position:fixed;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+
+        <form id="guessForm" onsubmit="submitGuess(event)" class="controls-row" style="margin-top:16px;">
+          <input id="guessInput" type="text" placeholder="Écris le titre de la chanson ou le film..." autocomplete="off" />
+          <button type="submit">Valider</button>
+          <button type="button" class="secondary" onclick="revealRound(false, 'Réponse révélée')">Passer / Révéler</button>
+        </form>
+
+        <div id="qcmChoices" class="choices-grid hidden"></div>
+
+        <div id="roundFeedback" class="feedback-box hidden"></div>
+        <div class="controls-row">
+          <button type="button" onclick="goToNextRound()">Manche suivante →</button>
+          <button type="button" class="secondary" onclick="backToSetup()">Retour à l'accueil</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="endSection" class="hidden">
+      <div class="panel">
+        <h2>Partie terminée !</h2>
+        <p id="finalScoreText"></p>
+        <div class="controls-row">
+          <button type="button" class="success" onclick="startGame()">Rejouer</button>
+          <button type="button" class="secondary" onclick="backToSetup()">Modifier la playlist</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

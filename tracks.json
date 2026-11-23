@@ -1,0 +1,490 @@
+[
+  {
+    "id": "lk-soyez-pretes",
+    "title": "Soyez prêtes",
+    "movie": "Le Roi Lion",
+    "year": 1994,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Soyez pretes Le Roi Lion",
+    "youtubeId": "zPUe7O3SHHQ",
+    "startSec": 45,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "soyez pretes",
+      "soyez pret",
+      "be prepared",
+      "le roi lion",
+      "roi lion",
+      "lion king",
+      "scar"
+    ]
+  },
+  {
+    "id": "lk-cercle-vie",
+    "title": "L'Histoire de la vie",
+    "movie": "Le Roi Lion",
+    "year": 1994,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Histoire de la vie Le Roi Lion",
+    "youtubeId": "GibiNy4d4gc",
+    "startSec": 10,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "histoire de la vie",
+      "cercle de la vie",
+      "circle of life",
+      "le roi lion",
+      "roi lion",
+      "lion king"
+    ]
+  },
+  {
+    "id": "lk-hakuna-matata",
+    "title": "Hakuna Matata",
+    "movie": "Le Roi Lion",
+    "year": 1994,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Hakuna Matata Le Roi Lion",
+    "youtubeId": "04854XqcfCY",
+    "startSec": 15,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "hakuna matata",
+      "le roi lion",
+      "roi lion",
+      "timon",
+      "pumbaa"
+    ]
+  },
+  {
+    "id": "lk-amour-brille",
+    "title": "L'Amour brille sous les étoiles",
+    "movie": "Le Roi Lion",
+    "year": 1994,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Amour brille sous les etoiles Le Roi Lion",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "amour brille sous les etoiles",
+      "can you feel the love tonight",
+      "le roi lion",
+      "roi lion"
+    ]
+  },
+  {
+    "id": "frozen-liberee",
+    "title": "Libérée, délivrée",
+    "movie": "La Reine des Neiges",
+    "year": 2013,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Liberee delivree Reine des Neiges",
+    "youtubeId": "moSfdLAcego",
+    "startSec": 50,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "liberee delivree",
+      "let it go",
+      "reine des neiges",
+      "frozen",
+      "elsa"
+    ]
+  },
+  {
+    "id": "frozen-je-voudrais",
+    "title": "Je voudrais un bonhomme de neige",
+    "movie": "La Reine des Neiges",
+    "year": 2013,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Je voudrais un bonhomme de neige Reine des Neiges",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "bonhomme de neige",
+      "do you want to build a snowman",
+      "reine des neiges",
+      "frozen"
+    ]
+  },
+  {
+    "id": "aladdin-reve-bleu",
+    "title": "Ce rêve bleu",
+    "movie": "Aladdin",
+    "year": 1992,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Ce reve bleu Aladdin",
+    "youtubeId": "-kl6JQy30wg",
+    "startSec": 20,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "ce reve bleu",
+      "a whole new world",
+      "aladdin",
+      "jasmin"
+    ]
+  },
+  {
+    "id": "aladdin-ami-grand",
+    "title": "Je suis ton meilleur ami",
+    "movie": "Aladdin",
+    "year": 1992,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Je suis ton meilleur ami Aladdin",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "meilleur ami",
+      "friend like me",
+      "aladdin",
+      "genie"
+    ]
+  },
+  {
+    "id": "batb-histoire-eternelle",
+    "title": "Histoire éternelle",
+    "movie": "La Belle et la Bête",
+    "year": 1991,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Histoire eternelle Belle et la Bete",
+    "youtubeId": "uQZdrgOal50",
+    "startSec": 10,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "histoire eternelle",
+      "beauty and the beast",
+      "belle et la bete",
+      "la belle et la bete"
+    ]
+  },
+  {
+    "id": "batb-cest-la-fete",
+    "title": "C'est la fête",
+    "movie": "La Belle et la Bête",
+    "year": 1991,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "C est la fete Belle et la Bete",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "cest la fete",
+      "be our guest",
+      "belle et la bete",
+      "lumiere"
+    ]
+  },
+  {
+    "id": "moana-bleu-lumiere",
+    "title": "Le Bleu lumière",
+    "movie": "Vaiana : La Légende du bout du monde",
+    "year": 2016,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Le Bleu lumiere Vaiana",
+    "youtubeId": "cPAbx5kgCJo",
+    "startSec": 35,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "bleu lumiere",
+      "how far ill go",
+      "vaiana",
+      "moana"
+    ]
+  },
+  {
+    "id": "tangled-je-veux-y-croire",
+    "title": "Je veux y croire",
+    "movie": "Raiponce",
+    "year": 2010,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Je veux y croire Raiponce",
+    "youtubeId": "J_5X4aR1X98",
+    "startSec": 25,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "je veux y croire",
+      "i see the light",
+      "raiponce",
+      "tangled",
+      "flynn"
+    ]
+  },
+  {
+    "id": "jungle-il-en-faut-peu",
+    "title": "Il en faut peu pour être heureux",
+    "movie": "Le Livre de la Jungle",
+    "year": 1967,
+    "era": "classiques",
+    "source": "itunes",
+    "itunesQuery": "Il en faut peu pour etre heureux Livre de la Jungle",
+    "youtubeId": "9ogQ0w0m0Qo",
+    "startSec": 12,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "il en faut peu",
+      "bare necessities",
+      "livre de la jungle",
+      "baloo",
+      "mowgli"
+    ]
+  },
+  {
+    "id": "pocahontas-air-vent",
+    "title": "L'Air du vent",
+    "movie": "Pocahontas",
+    "year": 1995,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Air du vent Pocahontas",
+    "youtubeId": "TKfS5zVfGBc",
+    "startSec": 20,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "air du vent",
+      "colors of the wind",
+      "pocahontas"
+    ]
+  },
+  {
+    "id": "hercule-zero-heros",
+    "title": "De zéro en héros",
+    "movie": "Hercule",
+    "year": 1997,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "De zero en heros Hercule",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "zero en heros",
+      "zero to hero",
+      "hercule",
+      "hercules"
+    ]
+  },
+  {
+    "id": "mulan-reflet",
+    "title": "Réflexion",
+    "movie": "Mulan",
+    "year": 1998,
+    "era": "renaissance",
+    "source": "itunes",
+    "itunesQuery": "Reflexion Mulan",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "reflexion",
+      "reflection",
+      "mulan"
+    ]
+  },
+  {
+    "id": "encanto-ne-parle-pas-bruno",
+    "title": "Ne parlons pas de Bruno",
+    "movie": "Encanto",
+    "year": 2021,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Ne parlons pas de Bruno Encanto",
+    "youtubeId": "bvWRbfSMP4M",
+    "startSec": 20,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "bruno",
+      "ne parlons pas de bruno",
+      "we dont talk about bruno",
+      "encanto"
+    ]
+  },
+  {
+    "id": "toystory-ami-sincere",
+    "title": "Je suis ton ami",
+    "movie": "Toy Story",
+    "year": 1995,
+    "era": "pixar",
+    "source": "itunes",
+    "itunesQuery": "Je suis ton ami Toy Story",
+    "youtubeId": "DNZ8I96H_7Y",
+    "startSec": 10,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "je suis ton ami",
+      "youve got a friend in me",
+      "toy story",
+      "woody",
+      "buzz"
+    ]
+  },
+  {
+    "id": "coco-ne-moublie-pas",
+    "title": "Ne m'oublie pas",
+    "movie": "Coco",
+    "year": 2017,
+    "era": "pixar",
+    "source": "itunes",
+    "itunesQuery": "Ne m oublie pas Coco",
+    "youtubeId": "02w3r6p1j4Q",
+    "startSec": 15,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "ne moublie pas",
+      "remember me",
+      "coco",
+      "miguel",
+      "hector"
+    ]
+  },
+  {
+    "id": "cinderella-bibbidi",
+    "title": "Bibbidi-Bobbidi-Boo",
+    "movie": "Cendrillon",
+    "year": 1950,
+    "era": "classiques",
+    "source": "itunes",
+    "itunesQuery": "Bibbidi Bobbidi Boo Cendrillon",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "bibbidi bobbidi boo",
+      "cendrillon",
+      "cinderella",
+      "marraine la bonne fee"
+    ]
+  },
+  {
+    "id": "littlemermaid-partir-la-bas",
+    "title": "Partir là-bas",
+    "movie": "La Petite Sirène",
+    "year": 1989,
+    "era": "classiques",
+    "source": "itunes",
+    "itunesQuery": "Partir la bas Petite Sirene",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "partir la bas",
+      "part of your world",
+      "petite sirene",
+      "little mermaid",
+      "ariel"
+    ]
+  },
+  {
+    "id": "littlemermaid-sous-locean",
+    "title": "Sous l'océan",
+    "movie": "La Petite Sirène",
+    "year": 1989,
+    "era": "classiques",
+    "source": "itunes",
+    "itunesQuery": "Sous locean Petite Sirene",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "sous locean",
+      "under the sea",
+      "petite sirene",
+      "little mermaid",
+      "sebastien"
+    ]
+  },
+  {
+    "id": "peterpan-envol",
+    "title": "Tu t'envoles",
+    "movie": "Peter Pan",
+    "year": 1953,
+    "era": "classiques",
+    "source": "itunes",
+    "itunesQuery": "Tu t envoles Peter Pan",
+    "youtubeId": "",
+    "startSec": 0,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "tu tenvoles",
+      "you can fly",
+      "peter pan",
+      "fee clochette"
+    ]
+  },
+  {
+    "id": "zootopia-try-everything",
+    "title": "Try Everything",
+    "movie": "Zootopie",
+    "year": 2016,
+    "era": "moderne",
+    "source": "itunes",
+    "itunesQuery": "Try Everything Zootopia Shakira",
+    "youtubeId": "c6rP-YP4c5I",
+    "startSec": 25,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "try everything",
+      "zootopie",
+      "zootopia",
+      "shakira",
+      "gazelle"
+    ]
+  },
+  {
+    "id": "ratatouille-festin",
+    "title": "Le Festin",
+    "movie": "Ratatouille",
+    "year": 2007,
+    "era": "pixar",
+    "source": "itunes",
+    "itunesQuery": "Le Festin Ratatouille Camille",
+    "youtubeId": "p_3f8v-3l3k",
+    "startSec": 15,
+    "audioUrl": "",
+    "custom": false,
+    "acceptedAnswers": [
+      "le festin",
+      "festin",
+      "ratatouille",
+      "remy",
+      "camille"
+    ]
+  }
+]
