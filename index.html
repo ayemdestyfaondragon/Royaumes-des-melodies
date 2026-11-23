@@ -549,16 +549,16 @@ button.danger {
           <div id="playlistEditor" class="playlist-list"></div>
 
           <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,0.1);" />
-          <h3>Ajouter un extrait (iTunes, YouTube ou Audio direct)</h3>
+          <h3>Ajouter un extrait (Spotify, YouTube ou Audio direct)</h3>
           <form onsubmit="addCustomTrack(event)" class="grid-2">
             <input id="newTrackTitle" type="text" placeholder="Titre de la chanson" required />
             <input id="newTrackMovie" type="text" placeholder="Film Disney" required />
             <select id="newTrackSource">
-              <option value="audio" selected>Audio direct sans pub (MP3 / OGG / WAV)</option>
+              <option value="spotify" selected>Spotify (lien, URI ou recherche)</option>
+              <option value="audio">Audio direct sans pub (MP3 / OGG / WAV)</option>
               <option value="youtube">YouTube (lien ou ID)</option>
-              <option value="itunes">iTunes (aperçu + pochette auto)</option>
             </select>
-            <input id="newTrackMedia" type="text" placeholder="Lien MP3/OGG/WAV sans pub (ex. : audio/soyez-pretes.mp3)" />
+            <input id="newTrackMedia" type="text" placeholder="Lien/ID Spotify (ex. : https://open.spotify.com/track/... ou titre)" />
             <input id="newTrackStart" type="text" placeholder="Départ (ex. : 45 ou 1:15)" />
             <input id="newTrackAccepted" type="text" placeholder="Réponses acceptées (séparées par virgule)" />
             <div class="controls-row" style="grid-column: 1 / -1;">
@@ -1512,9 +1512,10 @@ function addCustomTrack(event) {
     year: 2024,
     era: "Sélection Perso",
     source,
-    itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : "",
+    spotifyUrl: source === "spotify" ? mediaInput : "",
+    itunesQuery: "",
     youtubeId: source === "youtube" ? extractYoutubeId(mediaInput) : "",
-    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput) : normalizeAudioUrl(mediaInput),
+    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput) : "", 
     startSec,
     custom: true,
     enabled: true,
@@ -1649,7 +1650,7 @@ function syncMediaFromRoomState(state) {
     if (cmd.audioUrl) preloadAudioStream(cmd.audioUrl);
     if (cmd.artworkUrl) preloadArtworkImage(cmd.artworkUrl);
 
-    const mediaKey = `${cmd.seq}-${cmd.audioUrl || ""}-${cmd.youtubeId || ""}`;
+    const mediaKey = `${cmd.seq}-${cmd.audioUrl || ""}-${cmd.spotifyEmbedUrl || ""}-${cmd.youtubeId || ""}`;
     const delayMs = cmd.playAtEpochMs ? Math.max(0, cmd.playAtEpochMs - Date.now()) : 0;
 
     const executePlay = () => {
@@ -1657,6 +1658,22 @@ function syncMediaFromRoomState(state) {
         if (mediaKey !== lastActiveMediaKey || pendingAudioJob) {
           lastActiveMediaKey = mediaKey;
           playAudioUrlSafely(cmd.audioUrl, cmd.startSec || 0, cmd.volume || 0.9, mediaKey);
+        }
+      } else if (cmd.spotifyEmbedUrl) {
+        if (mediaKey !== lastActiveMediaKey) {
+          lastActiveMediaKey = mediaKey;
+          stopLocalMedia();
+          setAudioDebugText(`🟢 Lecteur Spotify : ${cmd.spotifyEmbedUrl}`);
+          const ytBox = document.getElementById("ytHiddenContainer");
+          if (ytBox) {
+            ytBox.style.position = "static";
+            ytBox.style.left = "auto";
+            ytBox.style.width = "100%";
+            ytBox.style.height = "152px";
+            ytBox.style.overflow = "visible";
+            ytBox.style.marginTop = "8px";
+            ytBox.innerHTML = `<iframe style="border-radius:12px" src="${cmd.spotifyEmbedUrl}" width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+          }
         }
       } else if (cmd.youtubeId) {
         if (mediaKey !== lastActiveMediaKey) {
@@ -1669,7 +1686,7 @@ function syncMediaFromRoomState(state) {
           }
         }
       } else {
-        setAudioDebugText("⚠️ Aucun flux audio ni YouTube trouvé pour cette manche.");
+        setAudioDebugText("ℹ️ Ajoute un lien Spotify, YouTube ou audio direct sur cet extrait pour diffuser la musique.");
       }
     };
 
@@ -1695,31 +1712,47 @@ const mediaResolutionCache = new Map();
 const preloadedAudioElements = new Map();
 const preloadedArtworkImages = new Map();
 
-async function fetchItunesPreview(query, country = "FR") {
-  const cleanQuery = (query || "").trim();
-  if (!cleanQuery) return null;
+function extractSpotifyTrackId(input) {
+  if (!input) return "";
+  const str = String(input).trim();
+  const uriMatch = str.match(/spotify:track:([a-zA-Z0-9]{22})/);
+  if (uriMatch) return uriMatch[1];
+  const urlMatch = str.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([a-zA-Z0-9]{22})/);
+  if (urlMatch) return urlMatch[1];
+  if (/^[a-zA-Z0-9]{22}$/.test(str)) return str;
+  return "";
+}
 
-  const endpoint = `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=music&entity=song&country=${encodeURIComponent(country)}&limit=5`;
-  try {
-    const res = await fetch(endpoint);
-    if (!res.ok) return null;
+async function resolveSpotifyTrack(queryOrId) {
+  const clean = (queryOrId || "").trim();
+  if (!clean) return null;
 
-    const data = await res.json();
-    if (!Array.isArray(data.results) || !data.results.length) return null;
-
-    const match = data.results.find((item) => item.previewUrl) || data.results[0];
-    const rawArt = match.artworkUrl600 || match.artworkUrl100 || "";
-    const artwork = rawArt ? rawArt.replace("100x100bb", "600x600bb") : "";
-
+  const directId = extractSpotifyTrackId(clean);
+  if (directId) {
     return {
-      audioUrl: match.previewUrl || "",
-      artworkUrl: artwork,
-      trackName: match.trackName || "",
-      artistName: match.artistName || ""
+      spotifyId: directId,
+      embedUrl: `https://open.spotify.com/embed/track/${directId}?utm_source=generator`,
+      artworkUrl: ""
     };
-  } catch (_) {
-    return null;
   }
+
+  // Try Spotify oEmbed if a full track URL was pasted
+  if (/open\.spotify\.com\/track\//i.test(clean)) {
+    try {
+      const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(clean)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const idFromUrl = extractSpotifyTrackId(clean);
+        return {
+          spotifyId: idFromUrl,
+          embedUrl: idFromUrl ? `https://open.spotify.com/embed/track/${idFromUrl}?utm_source=generator` : "",
+          artworkUrl: data.thumbnail_url || ""
+        };
+      }
+    } catch (_) {}
+  }
+
+  return null;
 }
 
 function preloadArtworkImage(url) {
@@ -1747,7 +1780,7 @@ function preloadAudioStream(url) {
 
 async function resolveTrackMediaInfo(track) {
   if (!track) {
-    return { audioUrl: "", youtubeId: "", artworkUrl: "", startSec: 0 };
+    return { audioUrl: "", youtubeId: "", spotifyEmbedUrl: "", artworkUrl: "", startSec: 0 };
   }
 
   if (mediaResolutionCache.has(track.id)) {
@@ -1756,23 +1789,20 @@ async function resolveTrackMediaInfo(track) {
 
   let audioUrl = "";
   let youtubeId = "";
+  let spotifyEmbedUrl = "";
   let artworkUrl = "";
   const startSec = track.startSec || 0;
 
   const explicitAudio = track.audioUrl ? normalizeAudioUrl(track.audioUrl) : "";
-
   if (explicitAudio) {
     audioUrl = explicitAudio;
-  } else {
-    const query = track.itunesQuery || `${track.title} ${track.movie}`;
-    let itunesData = await fetchItunesPreview(query, "FR");
-    if (!itunesData || !itunesData.audioUrl) {
-      itunesData = await fetchItunesPreview(query, "US");
-    }
-    if (itunesData) {
-      audioUrl = itunesData.audioUrl || "";
-      artworkUrl = itunesData.artworkUrl || "";
-    }
+  }
+
+  const spotifyCandidate = track.spotifyUrl || track.spotifyId || (track.source === "spotify" ? (track.itunesQuery || track.title) : "");
+  const spData = await resolveSpotifyTrack(spotifyCandidate);
+  if (spData) {
+    spotifyEmbedUrl = spData.embedUrl || "";
+    if (spData.artworkUrl) artworkUrl = spData.artworkUrl;
   }
 
   if (!youtubeId) {
@@ -1785,7 +1815,7 @@ async function resolveTrackMediaInfo(track) {
     }
   }
 
-  const resolved = { audioUrl, youtubeId, artworkUrl, startSec };
+  const resolved = { audioUrl, youtubeId, spotifyEmbedUrl, artworkUrl, startSec };
   mediaResolutionCache.set(track.id, resolved);
   if (resolved.artworkUrl) preloadArtworkImage(resolved.artworkUrl);
   if (resolved.audioUrl) preloadAudioStream(resolved.audioUrl);
@@ -2400,6 +2430,7 @@ async function beginPlayingPhase() {
     type: "play",
     audioUrl: mediaInfo.audioUrl,
     artworkUrl: mediaInfo.artworkUrl,
+    spotifyEmbedUrl: mediaInfo.spotifyEmbedUrl,
     youtubeId: mediaInfo.youtubeId,
     startSec: mediaInfo.startSec,
     playAtEpochMs,
