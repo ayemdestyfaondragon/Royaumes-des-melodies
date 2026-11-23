@@ -20,6 +20,10 @@ let roundTransitionLock = false;
 let soundEffectsEnabled = true;
 let audioCtx = null;
 
+// Pending playback if browser autoplay is locked on candidate device
+let pendingAudioJob = null; // { url, startSec, volume, sourceKey }
+let lastActiveMediaKey = "";
+
 // PeerJS Multiplayer state
 let peer = null;
 let role = "host"; // "host" | "guest"
@@ -46,16 +50,15 @@ let roomState = {
   revealedTrack: null,
   qcmOptions: [],
   players: {},
-  mediaCommand: null // { seq, type: "play" | "stop" | "reveal", audioUrl, youtubeId, startSec, volume }
+  mediaCommand: null
 };
 
-let lastAppliedMediaSeq = 0;
-
 // ==========================================
-// TV SHOW SYNTH JINGLES (WEB AUDIO API)
+// AUDIO UNLOCK & TV JINGLES
 // ==========================================
 
 function unlockAudioContext() {
+  audioUserGestureUnlocked = true;
   try {
     if (!audioCtx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -64,35 +67,48 @@ function unlockAudioContext() {
     if (audioCtx && audioCtx.state === "suspended") {
       audioCtx.resume().catch(() => {});
     }
+
     const audioEl = document.getElementById("audioPlayer");
+    if (pendingAudioJob) {
+      const job = pendingAudioJob;
+      pendingAudioJob = null;
+      playAudioUrlSafely(job.url, job.startSec, job.volume, job.sourceKey);
+      return;
+    }
+
     if (audioEl && audioEl.src) {
       audioEl.muted = false;
-      audioEl.play().catch(() => {});
+      audioEl.play().then(() => {
+        updateAudioUnlockBanner(true);
+      }).catch(() => {});
+    } else {
+      updateAudioUnlockBanner(true);
     }
-    updateAudioUnlockBanner(true);
   } catch (_) {}
 }
 
-function updateAudioUnlockBanner(unlocked) {
+function updateAudioUnlockBanner(unlocked, customMsg) {
   const statusEl = document.getElementById("audioUnlockStatus");
-  if (statusEl) {
-    statusEl.textContent = unlocked
-      ? "✅ Audio débloqué sur cet appareil"
-      : "⚠️ Si tu n'entends pas la musique ou les jingles, clique sur « Activer l'audio »";
+  if (!statusEl) return;
+  if (customMsg) {
+    statusEl.textContent = customMsg;
+    return;
   }
+  statusEl.textContent = unlocked
+    ? "✅ Son prêt sur cet appareil"
+    : "⚠️ Clique sur « Activer le son » pour entendre la musique sur ton appareil";
 }
 
+let audioUserGestureUnlocked = false;
+
 function playTvJingle(type) {
-  if (!soundEffectsEnabled) return;
+  if (!soundEffectsEnabled || !audioUserGestureUnlocked) return;
   try {
     if (!audioCtx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (Ctx) audioCtx = new Ctx();
     }
-    if (!audioCtx) return;
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {});
-    }
+    if (!audioCtx || audioCtx.state !== "running") return;
 
     const now = audioCtx.currentTime;
     const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.11) => {
@@ -369,10 +385,11 @@ function importPlaylistJson(event) {
 }
 
 // ==========================================
-// SHARED AUDIO PLAYBACK (HOST & GUESTS)
+// SHARED AUDIO PLAYBACK (HOST & CANDIDATES)
 // ==========================================
 
 function stopLocalMedia() {
+  pendingAudioJob = null;
   const audioEl = document.getElementById("audioPlayer");
   if (audioEl) {
     audioEl.onloadedmetadata = null;
@@ -384,50 +401,76 @@ function stopLocalMedia() {
   if (ytBox) ytBox.innerHTML = "";
 }
 
-function playAudioUrlSafely(url, startSec, volume = 0.9) {
+function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
   const audioEl = document.getElementById("audioPlayer");
-  if (!audioEl || !url) return;
+  if (!audioEl || !url) {
+    updateAudioUnlockBanner(false, "⚠️ Aucun flux audio trouvé pour cet extrait");
+    return;
+  }
 
-  stopLocalMedia();
+  audioEl.onloadedmetadata = null;
+  audioEl.pause();
+  audioEl.muted = false;
   audioEl.volume = Math.max(0.05, Math.min(1, volume));
-  audioEl.src = url;
 
-  audioEl.onloadedmetadata = () => {
+  if (audioEl.src !== url) {
+    audioEl.src = url;
+  }
+
+  const seekAndPlay = () => {
     try {
       const maxStart = Math.max(0, (audioEl.duration || 30) - 2);
       const safeStart = Math.min(Math.max(0, Number(startSec) || 0), maxStart);
-      if (safeStart > 0 && Number.isFinite(safeStart)) {
+      if (safeStart > 0 && Number.isFinite(safeStart) && Math.abs(audioEl.currentTime - safeStart) > 1.5) {
         audioEl.currentTime = safeStart;
       }
     } catch (_) {}
+
     audioEl.play().then(() => {
-      updateAudioUnlockBanner(true);
+      pendingAudioJob = null;
+      updateAudioUnlockBanner(true, `🔊 Musique en cours de diffusion (${role === "guest" ? "Candidat" : "Plateau"})`);
     }).catch(() => {
-      updateAudioUnlockBanner(false);
+      pendingAudioJob = { url, startSec, volume, sourceKey };
+      updateAudioUnlockBanner(false, "⚠️ Clique sur « Activer le son » pour lancer l'extrait sur cet appareil !");
     });
   };
 
-  audioEl.load();
+  if (audioEl.readyState >= 1) {
+    seekAndPlay();
+  } else {
+    audioEl.onloadedmetadata = seekAndPlay;
+    audioEl.load();
+  }
 }
 
-function applyMediaCommandIfNeeded(cmd) {
-  if (!cmd || typeof cmd.seq !== "number" || cmd.seq <= lastAppliedMediaSeq) return;
-  lastAppliedMediaSeq = cmd.seq;
+function syncMediaFromRoomState(state) {
+  const cmd = state?.mediaCommand;
+  if (!cmd) return;
 
-  if (cmd.type === "stop") {
+  if (state.phase === "countdown" || state.phase === "lobby" || state.phase === "ended" || cmd.type === "stop") {
+    lastActiveMediaKey = "";
     stopLocalMedia();
     return;
   }
 
   if (cmd.type === "play") {
+    const mediaKey = `${cmd.seq}-${cmd.audioUrl || ""}-${cmd.youtubeId || ""}`;
     if (cmd.audioUrl) {
-      playAudioUrlSafely(cmd.audioUrl, cmd.startSec || 0, cmd.volume || 0.9);
-    } else if (cmd.youtubeId) {
-      stopLocalMedia();
-      const ytBox = document.getElementById("ytHiddenContainer");
-      if (ytBox) {
-        ytBox.innerHTML = `<iframe width="200" height="120" src="https://www.youtube.com/embed/${cmd.youtubeId}?start=${cmd.startSec || 0}&autoplay=1" allow="autoplay"></iframe>`;
+      if (mediaKey !== lastActiveMediaKey || pendingAudioJob) {
+        lastActiveMediaKey = mediaKey;
+        playAudioUrlSafely(cmd.audioUrl, cmd.startSec || 0, cmd.volume || 0.9, mediaKey);
       }
+    } else if (cmd.youtubeId) {
+      if (mediaKey !== lastActiveMediaKey) {
+        lastActiveMediaKey = mediaKey;
+        stopLocalMedia();
+        const ytBox = document.getElementById("ytHiddenContainer");
+        if (ytBox) {
+          ytBox.innerHTML = `<iframe width="220" height="124" src="https://www.youtube.com/embed/${cmd.youtubeId}?start=${cmd.startSec || 0}&autoplay=1&mute=0" allow="autoplay"></iframe>`;
+        }
+      }
+    } else {
+      updateAudioUnlockBanner(false, "⚠️ Aperçu audio indisponible pour ce titre");
     }
     return;
   }
@@ -435,6 +478,7 @@ function applyMediaCommandIfNeeded(cmd) {
   if (cmd.type === "reveal") {
     const audioEl = document.getElementById("audioPlayer");
     if (audioEl && audioEl.src) {
+      audioEl.muted = false;
       audioEl.volume = 0.45;
       audioEl.play().catch(() => {});
     }
@@ -491,6 +535,7 @@ function broadcastState() {
   hostConnections.forEach((conn) => {
     if (conn.open) conn.send(payload);
   });
+  syncMediaFromRoomState(roomState);
   syncUiFromRoomState();
 }
 
@@ -608,7 +653,7 @@ function joinGuestRoom() {
           if (roomState.phase === "playing") playTvJingle("go");
           else if (roomState.phase === "ended") playTvJingle("fanfare");
         }
-        applyMediaCommandIfNeeded(roomState.mediaCommand);
+        syncMediaFromRoomState(roomState);
         syncUiFromRoomState();
       }
     });
@@ -941,7 +986,6 @@ function startCountdownPhase() {
     seq: (roomState.mediaCommand?.seq || 0) + 1,
     type: "stop"
   };
-  applyMediaCommandIfNeeded(roomState.mediaCommand);
 
   if (activeRound >= totalRounds) {
     finishGame();
@@ -1017,7 +1061,6 @@ async function beginPlayingPhase() {
     volume: 0.9
   };
 
-  applyMediaCommandIfNeeded(roomState.mediaCommand);
   broadcastState();
 
   const hint1Time = Math.round(roundDuration * 0.65);
@@ -1076,7 +1119,6 @@ function startAutoRevealPhase(success, message) {
     type: "reveal"
   };
 
-  applyMediaCommandIfNeeded(roomState.mediaCommand);
   broadcastState();
 
   phaseInterval = setInterval(() => {
@@ -1150,7 +1192,6 @@ function finishGame() {
     seq: (roomState.mediaCommand?.seq || 0) + 1,
     type: "stop"
   };
-  applyMediaCommandIfNeeded(roomState.mediaCommand);
   playTvJingle("fanfare");
   roomState.phase = "ended";
   broadcastState();
@@ -1169,7 +1210,6 @@ function backToSetup() {
     seq: (roomState.mediaCommand?.seq || 0) + 1,
     type: "stop"
   };
-  applyMediaCommandIfNeeded(roomState.mediaCommand);
   roomState.phase = "lobby";
   roomState.buzzerHolder = null;
   roomState.revealedTrack = null;
@@ -1180,6 +1220,15 @@ window.addEventListener("DOMContentLoaded", () => {
   const savedTheme = localStorage.getItem(THEME_KEY) || "sombre";
   setTheme(savedTheme);
   loadTracks();
+
+  // First user interaction anywhere unlocks audio automatically
+  const firstGestureUnlock = () => {
+    unlockAudioContext();
+    window.removeEventListener("pointerdown", firstGestureUnlock);
+    window.removeEventListener("keydown", firstGestureUnlock);
+  };
+  window.addEventListener("pointerdown", firstGestureUnlock, { passive: true });
+  window.addEventListener("keydown", firstGestureUnlock, { passive: true });
 
   const params = new URLSearchParams(window.location.search);
   const urlRoom = params.get("room");
