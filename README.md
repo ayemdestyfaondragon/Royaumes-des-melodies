@@ -1,15 +1,15 @@
-# Blind Test Musical Disney (Multijoueur en ligne PeerJS)
+# Blind Test Musical Disney — Édition Plateau TV Automatique
 
-Application web statique de blind test musical Disney jouable en solo ou entre amis à distance sur téléphone et ordinateur via **PeerJS (WebRTC)**, sans serveur ni base de données externe.
+Jeu télé musical Disney entièrement automatisé avec présentateur virtuel, habillage TV dynamique, jingles synthétisés en Web Audio API, révélation automatique avec pochette et multijoueur PeerJS.
 
-## Fonctionnalités incluses
-- **Multijoueur en ligne PeerJS (WebRTC)** :
-  - **Hôte** : crée un salon (`DISNEY-XXXX`), copie un lien d'invitation direct (`?room=DISNEY-XXXX`), diffuse la musique et arbitre les buzzers ou valide automatiquement les réponses écrites.
-  - **Joueur à distance (Mobile / PC)** : rejoint via le lien ou le code du salon, utilise le gros bouton **🚨 BUZZER**, envoie ses réponses écrites ou QCM et suit le classement en direct.
-- **Thèmes visuels** : mode **Sombre** et thème **Savane** (sauvegardés dans `localStorage`).
-- **Multi-sources** : iTunes Search, YouTube (avec timecode et masquage anti-spoiler) et liens audio directs (MP3, OGG, WAV, Dropbox).
-- **Playlist personnalisable** : activation/désactivation par titre, recherche, ajout manuel et import/export JSON (`tracks.json`).
+## Nouveautés de l'édition Plateau TV Automatique
+- **Enchaînement 100 % automatique** :
+  1. **Annonce de manche ("Prêts ?")** avec compte à rebours `3... 2... 1...` et jingle TV.
+  2. **Manche musicale en direct** avec barre de temps animée, égaliseur plateau, indices automatiques progressifs (à 18s et 9s restantes) et saisie / buzzer instantané.
+  3. **Révélation TV automatique (6 secondes)** avec pochette d'album iTunes haute résolution ou miniature YouTube, musique prolongée et mise à jour du classement avant passage automatique à la manche suivante.
+  4. **Cérémonie du Podium Final** avec fanfare, classement complet et relance automatique ou manuelle.
+- **Habillage TV & Thèmes** : Bandeau **EN DIRECT**, mode **Sombre** et thème **Savane** sauvegardés dans `localStorage`.
+- **Multijoueur en ligne PeerJS (WebRTC)** : Hôte + Joueurs à distance synchronisés sur chaque phase automatique du plateau.
 
 ## Déploiement sur GitHub Pages
-1. Remplace les fichiers `index.html`, `style.css`, `app.js`, `tracks.json` et `README.md` à la racine de ton dépôt GitHub.
-2. Vérifie que **GitHub Pages** pointe sur la branche **`main`** (`/ (root)`).
+Remplace `index.html`, `style.css`, `app.js`, `tracks.json` et `README.md` à la racine de ton dépôt GitHub.

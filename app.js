@@ -1,19 +1,27 @@
 const THEME_KEY = "disneyBlindTestTheme";
 const CUSTOM_TRACKS_KEY = "disneyBlindTestCustomTracks";
-const PEER_PREFIX = "disney-bt-room-";
+const PEER_PREFIX = "disney-bt-tv-";
 
 let allTracks = [];
 let activeRound = 0;
 let totalRounds = 10;
 let combo = 0;
 let roundPoints = 100;
-let timeLeft = 30;
-let timerInterval = null;
-let currentTrack = null;
-let roundSolved = false;
+let timeLeft = 25;
+let roundDuration = 25;
+let revealDuration = 6;
+let autoRestartShow = false;
 
+let phaseInterval = null;
+let currentTrack = null;
+let currentArtworkUrl = "";
+let roundSolved = false;
+let soundEffectsEnabled = true;
+let audioCtx = null;
+
+// PeerJS Multiplayer state
 let peer = null;
-let role = "host";
+let role = "host"; // "host" | "guest"
 let hostConnections = new Map();
 let guestConnection = null;
 let myPeerId = "";
@@ -21,18 +29,85 @@ let roomCode = "";
 
 let roomState = {
   code: "",
-  phase: "lobby",
+  phase: "lobby", // "lobby" | "countdown" | "playing" | "revealed" | "ended"
+  countdownVal: 3,
   roundIndex: 0,
   totalRounds: 10,
   mode: "input",
-  timeLeft: 30,
+  timeLeft: 25,
+  roundDuration: 25,
+  revealTimeLeft: 6,
   roundPoints: 100,
+  presenterLine: "Bienvenue sur le plateau du Grand Blind Test Disney !",
+  hints: [],
   buzzerHolder: null,
   lastGuessAttempt: null,
-  revealedTrack: null,
+  revealedTrack: null, // { title, movie, year, era, artwork, message }
   qcmOptions: [],
   players: {}
 };
+
+// ==========================================
+// TV SHOW SYNTH JINGLES (WEB AUDIO API)
+// ==========================================
+
+function playTvJingle(type) {
+  if (!soundEffectsEnabled) return;
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+    const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.12) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(gainVal, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + dur);
+    };
+
+    if (type === "tick") {
+      playTone(660, now, 0.12, "sine", 0.09);
+    } else if (type === "go") {
+      playTone(523.25, now, 0.12, "triangle", 0.13);
+      playTone(659.25, now + 0.1, 0.12, "triangle", 0.13);
+      playTone(1046.5, now + 0.2, 0.28, "triangle", 0.15);
+    } else if (type === "buzz") {
+      playTone(220, now, 0.28, "sawtooth", 0.14);
+    } else if (type === "win") {
+      playTone(523.25, now, 0.11, "triangle", 0.14);
+      playTone(659.25, now + 0.1, 0.11, "triangle", 0.14);
+      playTone(783.99, now + 0.2, 0.11, "triangle", 0.14);
+      playTone(1046.5, now + 0.3, 0.35, "triangle", 0.16);
+    } else if (type === "timeout") {
+      playTone(330, now, 0.2, "sawtooth", 0.1);
+      playTone(246.94, now + 0.18, 0.35, "sawtooth", 0.1);
+    } else if (type === "fanfare") {
+      [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, idx) => {
+        playTone(f, now + idx * 0.13, idx === 5 ? 0.55 : 0.14, "triangle", 0.15);
+      });
+    }
+  } catch (_) {}
+}
+
+function toggleSoundEffects() {
+  soundEffectsEnabled = !soundEffectsEnabled;
+  const btn = document.getElementById("sfxToggleBtn");
+  if (btn) btn.textContent = soundEffectsEnabled ? "🔊 Jingles TV : ON" : "🔇 Jingles TV : OFF";
+}
+
+// ==========================================
+// THEME & HELPERS
+// ==========================================
 
 function setTheme(themeName) {
   const chosen = themeName === "savane" ? "savane" : "sombre";
@@ -42,11 +117,11 @@ function setTheme(themeName) {
 
 function generateRoomCode() {
   const num = Math.floor(1000 + Math.random() * 9000);
-  return `DISNEY-${num}`;
+  return `TV-${num}`;
 }
 
 function getPseudo() {
-  return (document.getElementById("playerPseudo")?.value || "Joueur").trim() || "Joueur";
+  return (document.getElementById("playerPseudo")?.value || "Candidat").trim() || "Candidat";
 }
 
 function setConnectionStatus(status, text) {
@@ -120,6 +195,10 @@ function normalizeAudioUrl(url) {
   }
   return trimmed;
 }
+
+// ==========================================
+// PLAYLIST MANAGEMENT
+// ==========================================
 
 async function loadTracks() {
   let baseTracks = [];
@@ -202,7 +281,7 @@ function addCustomTrack(event) {
     title,
     movie,
     year: 2024,
-    era: "moderne",
+    era: "Sélection Perso",
     source,
     itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : `${title} ${movie}`,
     youtubeId: source === "youtube" ? extractYoutubeId(mediaInput) : "",
@@ -226,7 +305,7 @@ function exportPlaylistJson() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "disney-blindtest-playlist.json";
+  a.download = "disney-blindtest-tv-playlist.json";
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -255,6 +334,10 @@ function importPlaylistJson(event) {
   reader.readAsText(file);
 }
 
+// ==========================================
+// PEERJS MULTIPLAYER ENGINE
+// ==========================================
+
 function destroyPeer() {
   if (peer) {
     try { peer.destroy(); } catch (_) {}
@@ -280,13 +363,13 @@ function createHostRoom(requestedCode) {
     .trim()
     .toUpperCase();
   document.getElementById("roomCodeInput").value = roomCode;
-  setConnectionStatus("connecting", `Création du salon ${roomCode}...`);
+  setConnectionStatus("connecting", `Ouverture du plateau ${roomCode}...`);
 
   if (typeof Peer === "undefined") {
     myPeerId = "local-host";
     roomState.code = roomCode;
     roomState.players[myPeerId] = { id: myPeerId, name: getPseudo(), score: 0, isHost: true };
-    setConnectionStatus("online", `Salon local ${roomCode} prêt`);
+    setConnectionStatus("online", `Plateau local ${roomCode} prêt`);
     updateInviteDisplay();
     syncUiFromRoomState();
     return;
@@ -299,11 +382,16 @@ function createHostRoom(requestedCode) {
     roomState = {
       code: roomCode,
       phase: "lobby",
+      countdownVal: 3,
       roundIndex: 0,
       totalRounds: Number(document.getElementById("roundCount").value) || 10,
       mode: document.getElementById("gameMode").value,
-      timeLeft: 30,
+      timeLeft: 25,
+      roundDuration: 25,
+      revealTimeLeft: 6,
       roundPoints: 100,
+      presenterLine: "Bienvenue sur le plateau du Grand Blind Test Disney !",
+      hints: [],
       buzzerHolder: null,
       lastGuessAttempt: null,
       revealedTrack: null,
@@ -312,18 +400,14 @@ function createHostRoom(requestedCode) {
         [myPeerId]: { id: myPeerId, name: getPseudo(), score: 0, isHost: true }
       }
     };
-    setConnectionStatus("online", `Hôte connecté • Salon ${roomCode}`);
+    setConnectionStatus("online", `Plateau EN DIRECT • ${roomCode}`);
     updateInviteDisplay();
     syncUiFromRoomState();
   });
 
   peer.on("connection", (conn) => {
     hostConnections.set(conn.peer, conn);
-
-    conn.on("data", (msg) => {
-      handleHostMessage(conn.peer, msg);
-    });
-
+    conn.on("data", (msg) => handleHostMessage(conn.peer, msg));
     conn.on("close", () => {
       hostConnections.delete(conn.peer);
       delete roomState.players[conn.peer];
@@ -333,10 +417,9 @@ function createHostRoom(requestedCode) {
 
   peer.on("error", (err) => {
     if (err.type === "unavailable-id") {
-      setConnectionStatus("connecting", `Le code ${roomCode} est déjà pris, génération d'un nouveau code...`);
       createHostRoom(generateRoomCode());
     } else {
-      setConnectionStatus("", `Erreur réseau PeerJS (${err.type}) — mode local actif`);
+      setConnectionStatus("", `Mode plateau local actif (${err.type})`);
     }
   });
 }
@@ -344,18 +427,18 @@ function createHostRoom(requestedCode) {
 function joinGuestRoom() {
   const code = (document.getElementById("roomCodeInput").value || "").trim().toUpperCase();
   if (!code) {
-    alert("Entre le code du salon (ex. : DISNEY-1042) !");
+    alert("Entre le code du plateau (ex. : TV-1042) !");
     return;
   }
   if (typeof Peer === "undefined") {
-    alert("La bibliothèque PeerJS n'a pas pu se charger.");
+    alert("PeerJS indisponible.");
     return;
   }
 
   destroyPeer();
   role = "guest";
   roomCode = code;
-  setConnectionStatus("connecting", `Connexion au salon ${roomCode}...`);
+  setConnectionStatus("connecting", `Connexion au plateau ${roomCode}...`);
 
   peer = new Peer();
 
@@ -365,7 +448,7 @@ function joinGuestRoom() {
     guestConnection = conn;
 
     conn.on("open", () => {
-      setConnectionStatus("online", `Connecté au salon ${roomCode}`);
+      setConnectionStatus("online", `Candidat connecté • ${roomCode}`);
       conn.send({ type: "HELLO", name: getPseudo() });
       updateInviteDisplay();
       syncUiFromRoomState();
@@ -373,18 +456,21 @@ function joinGuestRoom() {
 
     conn.on("data", (msg) => {
       if (msg?.type === "SYNC_STATE" && msg.state) {
+        const prevPhase = roomState.phase;
         roomState = msg.state;
+        if (prevPhase !== roomState.phase) {
+          if (roomState.phase === "playing") playTvJingle("go");
+          else if (roomState.phase === "ended") playTvJingle("fanfare");
+        }
         syncUiFromRoomState();
       }
     });
 
-    conn.on("close", () => {
-      setConnectionStatus("", "Déconnecté du salon de l'hôte.");
-    });
+    conn.on("close", () => setConnectionStatus("", "Déconnecté du plateau."));
   });
 
   peer.on("error", (err) => {
-    setConnectionStatus("", `Impossible de rejoindre ${roomCode} (${err.type}). Vérifie que l'hôte a ouvert le salon.`);
+    setConnectionStatus("", `Impossible de rejoindre ${roomCode} (${err.type}).`);
   });
 }
 
@@ -398,7 +484,7 @@ function handleHostMessage(senderPeerId, msg) {
   if (!msg || typeof msg !== "object") return;
 
   if (msg.type === "HELLO") {
-    const cleanName = String(msg.name || "Ami").trim().slice(0, 24) || "Ami";
+    const cleanName = String(msg.name || "Candidat").trim().slice(0, 24) || "Candidat";
     roomState.players[senderPeerId] = {
       id: senderPeerId,
       name: cleanName,
@@ -413,7 +499,9 @@ function handleHostMessage(senderPeerId, msg) {
     if (roomState.phase === "playing" && !roomState.buzzerHolder) {
       const player = roomState.players[senderPeerId];
       if (player) {
+        playTvJingle("buzz");
         roomState.buzzerHolder = { peerId: senderPeerId, name: player.name };
+        roomState.presenterLine = `🚨 ${player.name} prend la main au buzzer !`;
         broadcastState();
       }
     }
@@ -456,19 +544,15 @@ function updatePseudoInRoom() {
 function updateInviteDisplay() {
   const inviteLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomCode)}`;
   const el = document.getElementById("inviteStatus");
-  if (el) {
-    el.innerHTML = `Lien d'invitation direct : <strong>${inviteLink}</strong>`;
-  }
+  if (el) el.innerHTML = `Lien candidats : <strong>${inviteLink}</strong>`;
 }
 
 function copyInviteLink() {
   const inviteLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomCode)}`;
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(inviteLink).then(() => {
-      alert("Lien d'invitation copié ! Envoie-le à tes amis sur Discord ou par message.");
-    });
+    navigator.clipboard.writeText(inviteLink).then(() => alert("Lien du plateau copié !"));
   } else {
-    prompt("Copie ce lien d'invitation :", inviteLink);
+    prompt("Copie ce lien :", inviteLink);
   }
 }
 
@@ -478,15 +562,11 @@ function triggerBuzzer() {
     return;
   }
   if (roomState.phase === "playing" && !roomState.buzzerHolder && roomState.players[myPeerId]) {
+    playTvJingle("buzz");
     roomState.buzzerHolder = { peerId: myPeerId, name: roomState.players[myPeerId].name };
+    roomState.presenterLine = `🚨 ${roomState.players[myPeerId].name} prend la main au buzzer !`;
     broadcastState();
   }
-}
-
-function resetBuzzer() {
-  if (role !== "host") return;
-  roomState.buzzerHolder = null;
-  broadcastState();
 }
 
 function validateBuzzerSuccess() {
@@ -501,6 +581,7 @@ function rejectBuzzerAttempt() {
     text: "Mauvaise réponse à l'oral",
     correct: false
   };
+  roomState.presenterLine = `❌ Mauvaise réponse de ${roomState.buzzerHolder.name} ! Le buzzer est libéré.`;
   roomState.buzzerHolder = null;
   broadcastState();
 }
@@ -514,7 +595,8 @@ function awardPointsToPlayer(targetPeerId, pts) {
   if (targetPeerId === myPeerId) combo += 1;
   else combo = 0;
 
-  revealRound(true, `🎉 ${player.name} trouve la réponse (+${gained} pts) !`);
+  playTvJingle("win");
+  startAutoRevealPhase(true, `🎉 Bonne réponse de ${player.name} (+${gained} pts) !`);
 }
 
 function renderAllLeaderboards() {
@@ -523,13 +605,13 @@ function renderAllLeaderboards() {
     ? list
         .map(
           (p, idx) => `
-          <div class="leaderboard-item">
-            <span>#${idx + 1} <strong>${p.name}</strong> ${p.isHost ? '<span class="badge">Hôte</span>' : ""}</span>
+          <div class="leaderboard-item ${idx === 0 && p.score > 0 ? "podium-top" : ""}">
+            <span>${idx === 0 && p.score > 0 ? "👑" : `#${idx + 1}`} <strong>${p.name}</strong> ${p.isHost ? '<span class="badge">Plateau</span>' : ""}</span>
             <strong>${p.score} pts</strong>
           </div>`
         )
         .join("")
-    : `<p class="muted">En attente de joueurs dans le salon ${roomState.code}...</p>`;
+    : `<p class="muted">En attente de candidats sur le plateau ${roomState.code}...</p>`;
 
   ["lobbyLeaderboard", "gameLeaderboard", "endLeaderboard"].forEach((id) => {
     const el = document.getElementById(id);
@@ -563,32 +645,62 @@ function syncUiFromRoomState() {
     endSec.classList.remove("hidden");
     const winner = Object.values(roomState.players || {}).sort((a, b) => b.score - a.score)[0];
     document.getElementById("finalScoreText").textContent = winner
-      ? `Vainqueur : ${winner.name} avec ${winner.score} points !`
-      : "Partie terminée !";
+      ? `🏆 Grand vainqueur de l'émission : ${winner.name} avec ${winner.score} points !`
+      : "Émission terminée !";
     document.getElementById("hostEndControls").classList.toggle("hidden", isGuest);
     return;
   }
 
+  // Active TV Stage (countdown, playing, revealed)
   setupSec.classList.add("hidden");
   endSec.classList.add("hidden");
   gameSec.classList.remove("hidden");
 
-  document.getElementById("roundIndicator").textContent = `Manche ${roomState.roundIndex + 1} / ${roomState.totalRounds}`;
+  document.getElementById("roundIndicator").textContent = `MANCHE ${roomState.roundIndex + 1} / ${roomState.totalRounds}`;
   const myScore = roomState.players[myPeerId]?.score || 0;
   document.getElementById("scoreIndicator").textContent = `Ton score : ${myScore} pts`;
-  document.getElementById("timerBar").style.width = `${Math.max(0, (roomState.timeLeft / 30) * 100)}%`;
+  document.getElementById("presenterLine").textContent = roomState.presenterLine || "";
 
-  document.getElementById("hostMediaWrap").classList.toggle("hidden", isGuest);
+  const countdownBox = document.getElementById("countdownStage");
+  const activePlayBox = document.getElementById("activePlayStage");
+
+  if (roomState.phase === "countdown") {
+    countdownBox.classList.remove("hidden");
+    activePlayBox.classList.add("hidden");
+    document.getElementById("countdownNumber").textContent = roomState.countdownVal;
+    return;
+  }
+
+  countdownBox.classList.add("hidden");
+  activePlayBox.classList.remove("hidden");
+
+  const pct = roomState.phase === "playing"
+    ? (roomState.timeLeft / (roomState.roundDuration || 25)) * 100
+    : (roomState.revealTimeLeft / revealDuration) * 100;
+  document.getElementById("timerBar").style.width = `${Math.max(0, Math.min(100, pct))}%`;
+
+  // Equalizer animation only while playing
+  document.getElementById("tvEqualizer").classList.toggle("hidden", roomState.phase !== "playing");
   document.getElementById("hostRoundControls").classList.toggle("hidden", isGuest);
 
+  // Progressive automatic hints
+  const hintsBox = document.getElementById("hintsContainer");
+  if (roomState.hints && roomState.hints.length) {
+    hintsBox.classList.remove("hidden");
+    hintsBox.innerHTML = roomState.hints.map((h) => `<span class="hint-chip">💡 ${h}</span>`).join("");
+  } else {
+    hintsBox.classList.add("hidden");
+  }
+
+  // Buzzer state
   const buzzerBox = document.getElementById("buzzerBanner");
   const buzzerText = document.getElementById("buzzerBannerText");
   const hostArb = document.getElementById("hostBuzzerArbitration");
   const megaBtn = document.getElementById("megaBuzzerBtn");
 
-  if (roomState.buzzerHolder) {
+  if (roomState.buzzerHolder && roomState.phase === "playing") {
     buzzerBox.classList.remove("hidden");
-    buzzerText.textContent = `🚨 ${roomState.buzzerHolder.name} a buzzé en premier !`;
+    buzzerText.textContent = `🚨 ${roomState.buzzerHolder.name} a buzzé !`;
     hostArb.classList.toggle("hidden", isGuest);
     megaBtn.disabled = true;
   } else {
@@ -600,7 +712,7 @@ function syncUiFromRoomState() {
   const attemptNote = document.getElementById("lastAttemptNote");
   if (roomState.lastGuessAttempt && !roomState.lastGuessAttempt.correct && roomState.phase === "playing") {
     attemptNote.classList.remove("hidden");
-    attemptNote.textContent = `❌ ${roomState.lastGuessAttempt.name} a tenté : "${roomState.lastGuessAttempt.text}"`;
+    attemptNote.textContent = `❌ ${roomState.lastGuessAttempt.name} a proposé : "${roomState.lastGuessAttempt.text}"`;
   } else {
     attemptNote.classList.add("hidden");
   }
@@ -624,17 +736,28 @@ function syncUiFromRoomState() {
     guessInput.disabled = roomState.phase !== "playing";
   }
 
-  const fb = document.getElementById("roundFeedback");
+  // Automatic TV Reveal Card
+  const revealCard = document.getElementById("revealCard");
   if (roomState.phase === "revealed" && roomState.revealedTrack) {
-    fb.classList.remove("hidden");
-    fb.innerHTML = `
-      <strong>${roomState.revealedTrack.message}</strong><br/>
-      Chanson : <strong>${roomState.revealedTrack.title}</strong> — <em>${roomState.revealedTrack.movie}</em> (${roomState.revealedTrack.year || "?"})
-    `;
+    revealCard.classList.remove("hidden");
+    document.getElementById("revealTitle").textContent = roomState.revealedTrack.title;
+    document.getElementById("revealMovie").textContent = `${roomState.revealedTrack.movie} (${roomState.revealedTrack.year || "?"}) • ${roomState.revealedTrack.era || "Disney"}`;
+    document.getElementById("revealNextNote").textContent = `Manche suivante automatique dans ${Math.ceil(roomState.revealTimeLeft)}s...`;
+    const img = document.getElementById("revealArtwork");
+    if (roomState.revealedTrack.artwork) {
+      img.src = roomState.revealedTrack.artwork;
+      img.classList.remove("hidden");
+    } else {
+      img.classList.add("hidden");
+    }
   } else {
-    fb.classList.add("hidden");
+    revealCard.classList.add("hidden");
   }
 }
+
+// ==========================================
+// AUTOMATIC TV GAME SHOW LOOP (HOST)
+// ==========================================
 
 function stopAllMedia() {
   const audioEl = document.getElementById("audioPlayer");
@@ -649,10 +772,12 @@ function stopAllMedia() {
 async function playTrackMedia(track) {
   if (role !== "host") return;
   stopAllMedia();
+  currentArtworkUrl = "";
   const startSec = track.startSec || 0;
 
   if (track.source === "youtube" && extractYoutubeId(track.youtubeId)) {
     const vid = extractYoutubeId(track.youtubeId);
+    currentArtworkUrl = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
     const ytBox = document.getElementById("ytHiddenContainer");
     ytBox.innerHTML = `<iframe id="ytFrame" width="1" height="1" src="https://www.youtube.com/embed/${vid}?start=${startSec}&autoplay=1&enablejsapi=1" allow="autoplay"></iframe>`;
     return;
@@ -670,10 +795,13 @@ async function playTrackMedia(track) {
   try {
     const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=5&country=FR`);
     const data = await res.json();
-    const preview = data.results?.[0]?.previewUrl;
-    if (preview) {
+    const hit = data.results?.[0];
+    if (hit?.artworkUrl100) {
+      currentArtworkUrl = hit.artworkUrl100.replace("100x100bb", "400x400bb");
+    }
+    if (hit?.previewUrl) {
       const audioEl = document.getElementById("audioPlayer");
-      audioEl.src = preview;
+      audioEl.src = hit.previewUrl;
       audioEl.currentTime = Math.min(startSec, 25);
       await audioEl.play().catch(() => {});
     }
@@ -689,6 +817,9 @@ function startGame() {
   }
 
   const requestedRounds = Number(document.getElementById("roundCount").value) || 10;
+  roundDuration = Number(document.getElementById("roundDurationSelect")?.value) || 25;
+  autoRestartShow = Boolean(document.getElementById("autoLoopShow")?.checked);
+
   const pool = [...eligible].sort(() => Math.random() - 0.5).slice(0, Math.min(requestedRounds, eligible.length));
   window.__gamePool = pool;
   totalRounds = pool.length;
@@ -699,12 +830,12 @@ function startGame() {
     p.score = 0;
   });
 
-  nextRound();
+  startCountdownPhase();
 }
 
-function nextRound() {
+function startCountdownPhase() {
   if (role !== "host") return;
-  clearInterval(timerInterval);
+  clearInterval(phaseInterval);
   stopAllMedia();
   roundSolved = false;
 
@@ -713,8 +844,39 @@ function nextRound() {
     return;
   }
 
+  let count = 3;
+  roomState.phase = "countdown";
+  roomState.countdownVal = count;
+  roomState.roundIndex = activeRound;
+  roomState.totalRounds = totalRounds;
+  roomState.presenterLine = `🎬 Manche ${activeRound + 1} sur ${totalRounds} — Préparez vos buzzers !`;
+  roomState.buzzerHolder = null;
+  roomState.lastGuessAttempt = null;
+  roomState.revealedTrack = null;
+  roomState.hints = [];
+  playTvJingle("tick");
+  broadcastState();
+
+  phaseInterval = setInterval(() => {
+    count -= 1;
+    if (count > 0) {
+      roomState.countdownVal = count;
+      playTvJingle("tick");
+      broadcastState();
+    } else {
+      clearInterval(phaseInterval);
+      playTvJingle("go");
+      beginPlayingPhase();
+    }
+  }, 900);
+}
+
+function beginPlayingPhase() {
+  if (role !== "host") return;
+  clearInterval(phaseInterval);
+
   currentTrack = window.__gamePool[activeRound];
-  timeLeft = 30;
+  timeLeft = roundDuration;
   roundPoints = 100;
 
   const mode = document.getElementById("gameMode").value;
@@ -732,31 +894,91 @@ function nextRound() {
   document.getElementById("guessInput").value = "";
 
   roomState.phase = "playing";
-  roomState.roundIndex = activeRound;
-  roomState.totalRounds = totalRounds;
   roomState.mode = mode;
-  roomState.timeLeft = 30;
+  roomState.timeLeft = roundDuration;
+  roomState.roundDuration = roundDuration;
   roomState.roundPoints = 100;
-  roomState.buzzerHolder = null;
-  roomState.lastGuessAttempt = null;
-  roomState.revealedTrack = null;
+  roomState.presenterLine = "🎵 Écoutez bien l'extrait... Quel est ce titre ou ce film ?";
+  roomState.hints = [];
   roomState.qcmOptions = qcmOptions;
 
   broadcastState();
   playTrackMedia(currentTrack);
 
-  timerInterval = setInterval(() => {
+  const hint1Time = Math.round(roundDuration * 0.65);
+  const hint2Time = Math.round(roundDuration * 0.35);
+
+  phaseInterval = setInterval(() => {
     timeLeft -= 0.5;
-    roundPoints = Math.max(25, Math.round((timeLeft / 30) * 100));
+    roundPoints = Math.max(25, Math.round((timeLeft / roundDuration) * 100));
     roomState.timeLeft = Math.max(0, timeLeft);
     roomState.roundPoints = roundPoints;
+
+    // Automatic progressive TV hints
+    if (timeLeft <= hint1Time && roomState.hints.length === 0) {
+      roomState.hints = [`Année : ${currentTrack.year || "Classique"} (${currentTrack.era || "Disney"})`];
+      roomState.presenterLine = "💡 Premier indice dévoilé sur le plateau !";
+    } else if (timeLeft <= hint2Time && roomState.hints.length === 1) {
+      const firstLetter = (currentTrack.movie || "?").trim().charAt(0).toUpperCase();
+      roomState.hints = [
+        roomState.hints[0],
+        `Le film commence par la lettre « ${firstLetter} »`
+      ];
+      roomState.presenterLine = "⚡ Derniers instants ! Deuxième indice affiché !";
+    }
+
     broadcastState();
 
     if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      revealRound(false, "⏰ Temps écoulé !");
+      clearInterval(phaseInterval);
+      playTvJingle("timeout");
+      startAutoRevealPhase(false, "⏰ Temps écoulé ! Voici la réponse :");
     }
   }, 500);
+}
+
+function startAutoRevealPhase(success, message) {
+  if (role !== "host" || roundSolved) return;
+  roundSolved = true;
+  clearInterval(phaseInterval);
+  if (!success) combo = 0;
+
+  let revLeft = revealDuration;
+  roomState.phase = "revealed";
+  roomState.revealTimeLeft = revLeft;
+  roomState.presenterLine = message;
+  roomState.revealedTrack = {
+    title: currentTrack.title,
+    movie: currentTrack.movie,
+    year: currentTrack.year,
+    era: currentTrack.era || "Disney",
+    artwork: currentArtworkUrl,
+    message
+  };
+  broadcastState();
+
+  phaseInterval = setInterval(() => {
+    revLeft -= 0.5;
+    roomState.revealTimeLeft = Math.max(0, revLeft);
+    broadcastState();
+
+    if (revLeft <= 0) {
+      clearInterval(phaseInterval);
+      activeRound += 1;
+      startCountdownPhase();
+    }
+  }, 500);
+}
+
+function skipToNextImmediately() {
+  if (role !== "host") return;
+  clearInterval(phaseInterval);
+  if (roomState.phase === "playing") {
+    startAutoRevealPhase(false, "⏭ Passage rapide par la régie :");
+  } else {
+    activeRound += 1;
+    startCountdownPhase();
+  }
 }
 
 function submitGuess(event) {
@@ -792,43 +1014,30 @@ function submitChoice(trackId) {
     awardPointsToPlayer(myPeerId, roundPoints);
   } else {
     combo = 0;
-    revealRound(false, "❌ Mauvais choix !");
+    playTvJingle("timeout");
+    startAutoRevealPhase(false, "❌ Mauvais choix ! La bonne réponse était :");
   }
-}
-
-function revealRound(success, message) {
-  if (role !== "host" || roundSolved) return;
-  roundSolved = true;
-  clearInterval(timerInterval);
-  if (!success) combo = 0;
-
-  roomState.phase = "revealed";
-  roomState.revealedTrack = {
-    title: currentTrack.title,
-    movie: currentTrack.movie,
-    year: currentTrack.year,
-    message
-  };
-  broadcastState();
-}
-
-function goToNextRound() {
-  if (role !== "host") return;
-  activeRound += 1;
-  nextRound();
 }
 
 function finishGame() {
   if (role !== "host") return;
   stopAllMedia();
+  clearInterval(phaseInterval);
+  playTvJingle("fanfare");
   roomState.phase = "ended";
   broadcastState();
+
+  if (autoRestartShow) {
+    setTimeout(() => {
+      if (roomState.phase === "ended") startGame();
+    }, 10000);
+  }
 }
 
 function backToSetup() {
   if (role !== "host") return;
   stopAllMedia();
-  clearInterval(timerInterval);
+  clearInterval(phaseInterval);
   roomState.phase = "lobby";
   roomState.buzzerHolder = null;
   roomState.revealedTrack = null;
