@@ -1,26 +1,61 @@
 const THEME_KEY = "disneyBlindTestTheme";
 const CUSTOM_TRACKS_KEY = "disneyBlindTestCustomTracks";
-const ROOM_STORAGE_PREFIX = "disneyBlindTestRoom_";
+const PEER_PREFIX = "disney-bt-room-";
 
 let allTracks = [];
 let activeRound = 0;
 let totalRounds = 10;
-let score = 0;
 let combo = 0;
 let roundPoints = 100;
 let timeLeft = 30;
 let timerInterval = null;
 let currentTrack = null;
 let roundSolved = false;
-let ytPlayer = null;
-let ytReady = false;
-let roomChannel = null;
-let roomCode = "DISNEY-1042";
+
+let peer = null;
+let role = "host";
+let hostConnections = new Map();
+let guestConnection = null;
+let myPeerId = "";
+let roomCode = "";
+
+let roomState = {
+  code: "",
+  phase: "lobby",
+  roundIndex: 0,
+  totalRounds: 10,
+  mode: "input",
+  timeLeft: 30,
+  roundPoints: 100,
+  buzzerHolder: null,
+  lastGuessAttempt: null,
+  revealedTrack: null,
+  qcmOptions: [],
+  players: {}
+};
 
 function setTheme(themeName) {
   const chosen = themeName === "savane" ? "savane" : "sombre";
   document.documentElement.setAttribute("data-theme", chosen);
   localStorage.setItem(THEME_KEY, chosen);
+}
+
+function generateRoomCode() {
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `DISNEY-${num}`;
+}
+
+function getPseudo() {
+  return (document.getElementById("playerPseudo")?.value || "Joueur").trim() || "Joueur";
+}
+
+function setConnectionStatus(status, text) {
+  const dot = document.getElementById("connDot");
+  const label = document.getElementById("connText");
+  if (dot) {
+    dot.className = "dot " + (status === "online" ? "online" : status === "connecting" ? "connecting" : "");
+  }
+  if (label) label.textContent = text;
 }
 
 function normalizeText(str) {
@@ -220,99 +255,386 @@ function importPlaylistJson(event) {
   reader.readAsText(file);
 }
 
-function getRoomState() {
-  const raw = localStorage.getItem(ROOM_STORAGE_PREFIX + roomCode);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch (_) {}
+function destroyPeer() {
+  if (peer) {
+    try { peer.destroy(); } catch (_) {}
+    peer = null;
   }
-  return {
-    code: roomCode,
-    players: {},
-    buzzerHolder: null
-  };
+  hostConnections.clear();
+  guestConnection = null;
 }
 
-function saveRoomState(state) {
-  localStorage.setItem(ROOM_STORAGE_PREFIX + roomCode, JSON.stringify(state));
-  if (roomChannel) {
-    roomChannel.postMessage({ type: "STATE_UPDATE", state });
-  }
-  renderLeaderboard(state);
+function broadcastState() {
+  if (role !== "host") return;
+  const payload = { type: "SYNC_STATE", state: roomState };
+  hostConnections.forEach((conn) => {
+    if (conn.open) conn.send(payload);
+  });
+  syncUiFromRoomState();
 }
 
-function initRoom() {
-  const params = new URLSearchParams(window.location.search);
-  const urlRoom = params.get("room");
-  if (urlRoom) roomCode = urlRoom.toUpperCase();
+function createHostRoom(requestedCode) {
+  destroyPeer();
+  role = "host";
+  roomCode = (requestedCode || document.getElementById("roomCodeInput").value || generateRoomCode())
+    .trim()
+    .toUpperCase();
   document.getElementById("roomCodeInput").value = roomCode;
+  setConnectionStatus("connecting", `Création du salon ${roomCode}...`);
 
-  if ("BroadcastChannel" in window) {
-    roomChannel = new BroadcastChannel("disney_blindtest_room_" + roomCode);
-    roomChannel.onmessage = (ev) => {
-      if (ev.data?.type === "STATE_UPDATE") {
-        renderLeaderboard(ev.data.state);
+  if (typeof Peer === "undefined") {
+    myPeerId = "local-host";
+    roomState.code = roomCode;
+    roomState.players[myPeerId] = { id: myPeerId, name: getPseudo(), score: 0, isHost: true };
+    setConnectionStatus("online", `Salon local ${roomCode} prêt`);
+    updateInviteDisplay();
+    syncUiFromRoomState();
+    return;
+  }
+
+  peer = new Peer(PEER_PREFIX + roomCode);
+
+  peer.on("open", (id) => {
+    myPeerId = id;
+    roomState = {
+      code: roomCode,
+      phase: "lobby",
+      roundIndex: 0,
+      totalRounds: Number(document.getElementById("roundCount").value) || 10,
+      mode: document.getElementById("gameMode").value,
+      timeLeft: 30,
+      roundPoints: 100,
+      buzzerHolder: null,
+      lastGuessAttempt: null,
+      revealedTrack: null,
+      qcmOptions: [],
+      players: {
+        [myPeerId]: { id: myPeerId, name: getPseudo(), score: 0, isHost: true }
       }
     };
-  }
-  renderLeaderboard(getRoomState());
+    setConnectionStatus("online", `Hôte connecté • Salon ${roomCode}`);
+    updateInviteDisplay();
+    syncUiFromRoomState();
+  });
+
+  peer.on("connection", (conn) => {
+    hostConnections.set(conn.peer, conn);
+
+    conn.on("data", (msg) => {
+      handleHostMessage(conn.peer, msg);
+    });
+
+    conn.on("close", () => {
+      hostConnections.delete(conn.peer);
+      delete roomState.players[conn.peer];
+      broadcastState();
+    });
+  });
+
+  peer.on("error", (err) => {
+    if (err.type === "unavailable-id") {
+      setConnectionStatus("connecting", `Le code ${roomCode} est déjà pris, génération d'un nouveau code...`);
+      createHostRoom(generateRoomCode());
+    } else {
+      setConnectionStatus("", `Erreur réseau PeerJS (${err.type}) — mode local actif`);
+    }
+  });
 }
 
-function joinOrCreateRoom() {
-  const codeInput = (document.getElementById("roomCodeInput").value || "DISNEY-1042").trim().toUpperCase();
-  const pseudo = (document.getElementById("playerPseudo").value || "Joueur").trim();
-  roomCode = codeInput;
-  const state = getRoomState();
-  if (!state.players[pseudo]) {
-    state.players[pseudo] = { name: pseudo, score: 0 };
+function joinGuestRoom() {
+  const code = (document.getElementById("roomCodeInput").value || "").trim().toUpperCase();
+  if (!code) {
+    alert("Entre le code du salon (ex. : DISNEY-1042) !");
+    return;
   }
-  saveRoomState(state);
+  if (typeof Peer === "undefined") {
+    alert("La bibliothèque PeerJS n'a pas pu se charger.");
+    return;
+  }
+
+  destroyPeer();
+  role = "guest";
+  roomCode = code;
+  setConnectionStatus("connecting", `Connexion au salon ${roomCode}...`);
+
+  peer = new Peer();
+
+  peer.on("open", (id) => {
+    myPeerId = id;
+    const conn = peer.connect(PEER_PREFIX + roomCode, { reliable: true });
+    guestConnection = conn;
+
+    conn.on("open", () => {
+      setConnectionStatus("online", `Connecté au salon ${roomCode}`);
+      conn.send({ type: "HELLO", name: getPseudo() });
+      updateInviteDisplay();
+      syncUiFromRoomState();
+    });
+
+    conn.on("data", (msg) => {
+      if (msg?.type === "SYNC_STATE" && msg.state) {
+        roomState = msg.state;
+        syncUiFromRoomState();
+      }
+    });
+
+    conn.on("close", () => {
+      setConnectionStatus("", "Déconnecté du salon de l'hôte.");
+    });
+  });
+
+  peer.on("error", (err) => {
+    setConnectionStatus("", `Impossible de rejoindre ${roomCode} (${err.type}). Vérifie que l'hôte a ouvert le salon.`);
+  });
+}
+
+function sendGuestAction(payload) {
+  if (role === "guest" && guestConnection && guestConnection.open) {
+    guestConnection.send(payload);
+  }
+}
+
+function handleHostMessage(senderPeerId, msg) {
+  if (!msg || typeof msg !== "object") return;
+
+  if (msg.type === "HELLO") {
+    const cleanName = String(msg.name || "Ami").trim().slice(0, 24) || "Ami";
+    roomState.players[senderPeerId] = {
+      id: senderPeerId,
+      name: cleanName,
+      score: roomState.players[senderPeerId]?.score || 0,
+      isHost: false
+    };
+    broadcastState();
+    return;
+  }
+
+  if (msg.type === "BUZZ") {
+    if (roomState.phase === "playing" && !roomState.buzzerHolder) {
+      const player = roomState.players[senderPeerId];
+      if (player) {
+        roomState.buzzerHolder = { peerId: senderPeerId, name: player.name };
+        broadcastState();
+      }
+    }
+    return;
+  }
+
+  if (msg.type === "GUESS") {
+    if (roomState.phase === "playing" && !roundSolved && currentTrack) {
+      const player = roomState.players[senderPeerId];
+      if (!player) return;
+      if (isAnswerMatch(msg.text, currentTrack)) {
+        awardPointsToPlayer(senderPeerId, roomState.roundPoints);
+      } else {
+        roomState.lastGuessAttempt = { name: player.name, text: String(msg.text || "").slice(0, 60), correct: false };
+        broadcastState();
+      }
+    }
+    return;
+  }
+
+  if (msg.type === "CHOICE") {
+    if (roomState.phase === "playing" && !roundSolved && currentTrack) {
+      if (msg.trackId === currentTrack.id) {
+        awardPointsToPlayer(senderPeerId, roomState.roundPoints);
+      }
+    }
+  }
+}
+
+function updatePseudoInRoom() {
+  const newName = getPseudo();
+  if (role === "host" && roomState.players[myPeerId]) {
+    roomState.players[myPeerId].name = newName;
+    broadcastState();
+  } else if (role === "guest") {
+    sendGuestAction({ type: "HELLO", name: newName });
+  }
+}
+
+function updateInviteDisplay() {
   const inviteLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomCode)}`;
-  document.getElementById("inviteStatus").textContent = `Salon ${roomCode} actif — Lien : ${inviteLink}`;
+  const el = document.getElementById("inviteStatus");
+  if (el) {
+    el.innerHTML = `Lien d'invitation direct : <strong>${inviteLink}</strong>`;
+  }
+}
+
+function copyInviteLink() {
+  const inviteLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomCode)}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      alert("Lien d'invitation copié ! Envoie-le à tes amis sur Discord ou par message.");
+    });
+  } else {
+    prompt("Copie ce lien d'invitation :", inviteLink);
+  }
 }
 
 function triggerBuzzer() {
-  const pseudo = (document.getElementById("playerPseudo").value || "Joueur").trim();
-  const state = getRoomState();
-  if (!state.buzzerHolder) {
-    state.buzzerHolder = pseudo;
-    saveRoomState(state);
-    document.getElementById("buzzerStatus").textContent = `🚨 ${pseudo} a buzzé en premier !`;
+  if (role === "guest") {
+    sendGuestAction({ type: "BUZZ" });
+    return;
+  }
+  if (roomState.phase === "playing" && !roomState.buzzerHolder && roomState.players[myPeerId]) {
+    roomState.buzzerHolder = { peerId: myPeerId, name: roomState.players[myPeerId].name };
+    broadcastState();
   }
 }
 
 function resetBuzzer() {
-  const state = getRoomState();
-  state.buzzerHolder = null;
-  saveRoomState(state);
-  document.getElementById("buzzerStatus").textContent = "Buzzer réinitialisé.";
+  if (role !== "host") return;
+  roomState.buzzerHolder = null;
+  broadcastState();
 }
 
-function updatePlayerScore(delta) {
-  const pseudo = (document.getElementById("playerPseudo").value || "Joueur").trim();
-  const state = getRoomState();
-  if (!state.players[pseudo]) state.players[pseudo] = { name: pseudo, score: 0 };
-  state.players[pseudo].score = Math.max(0, state.players[pseudo].score + delta);
-  saveRoomState(state);
+function validateBuzzerSuccess() {
+  if (role !== "host" || !roomState.buzzerHolder) return;
+  awardPointsToPlayer(roomState.buzzerHolder.peerId, roomState.roundPoints);
 }
 
-function renderLeaderboard(state) {
-  const el = document.getElementById("leaderboard");
-  if (!el) return;
-  const list = Object.values(state.players || {}).sort((a, b) => b.score - a.score);
-  if (!list.length) {
-    el.innerHTML = `<p class="muted">Aucun joueur enregistré dans le salon ${state.code}.</p>`;
+function rejectBuzzerAttempt() {
+  if (role !== "host" || !roomState.buzzerHolder) return;
+  roomState.lastGuessAttempt = {
+    name: roomState.buzzerHolder.name,
+    text: "Mauvaise réponse à l'oral",
+    correct: false
+  };
+  roomState.buzzerHolder = null;
+  broadcastState();
+}
+
+function awardPointsToPlayer(targetPeerId, pts) {
+  const player = roomState.players[targetPeerId];
+  if (!player) return;
+  const bonus = targetPeerId === myPeerId ? combo * 10 : 0;
+  const gained = pts + bonus;
+  player.score += gained;
+  if (targetPeerId === myPeerId) combo += 1;
+  else combo = 0;
+
+  revealRound(true, `🎉 ${player.name} trouve la réponse (+${gained} pts) !`);
+}
+
+function renderAllLeaderboards() {
+  const list = Object.values(roomState.players || {}).sort((a, b) => b.score - a.score);
+  const html = list.length
+    ? list
+        .map(
+          (p, idx) => `
+          <div class="leaderboard-item">
+            <span>#${idx + 1} <strong>${p.name}</strong> ${p.isHost ? '<span class="badge">Hôte</span>' : ""}</span>
+            <strong>${p.score} pts</strong>
+          </div>`
+        )
+        .join("")
+    : `<p class="muted">En attente de joueurs dans le salon ${roomState.code}...</p>`;
+
+  ["lobbyLeaderboard", "gameLeaderboard", "endLeaderboard"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function syncUiFromRoomState() {
+  renderAllLeaderboards();
+
+  const isGuest = role === "guest";
+  const hostSetupBox = document.getElementById("hostOnlySetup");
+  const guestWaitBox = document.getElementById("guestLobbyBanner");
+  if (hostSetupBox) hostSetupBox.classList.toggle("hidden", isGuest);
+  if (guestWaitBox) guestWaitBox.classList.toggle("hidden", !isGuest);
+
+  const setupSec = document.getElementById("setupSection");
+  const gameSec = document.getElementById("gameSection");
+  const endSec = document.getElementById("endSection");
+
+  if (roomState.phase === "lobby") {
+    setupSec.classList.remove("hidden");
+    gameSec.classList.add("hidden");
+    endSec.classList.add("hidden");
     return;
   }
-  el.innerHTML = list
-    .map((p, idx) => `<div class="leaderboard-item"><span>#${idx + 1} ${p.name}</span><strong>${p.score} pts</strong></div>`)
-    .join("");
-}
 
-window.onYouTubeIframeAPIReady = function () {
-  ytReady = true;
-};
+  if (roomState.phase === "ended") {
+    setupSec.classList.add("hidden");
+    gameSec.classList.add("hidden");
+    endSec.classList.remove("hidden");
+    const winner = Object.values(roomState.players || {}).sort((a, b) => b.score - a.score)[0];
+    document.getElementById("finalScoreText").textContent = winner
+      ? `Vainqueur : ${winner.name} avec ${winner.score} points !`
+      : "Partie terminée !";
+    document.getElementById("hostEndControls").classList.toggle("hidden", isGuest);
+    return;
+  }
+
+  setupSec.classList.add("hidden");
+  endSec.classList.add("hidden");
+  gameSec.classList.remove("hidden");
+
+  document.getElementById("roundIndicator").textContent = `Manche ${roomState.roundIndex + 1} / ${roomState.totalRounds}`;
+  const myScore = roomState.players[myPeerId]?.score || 0;
+  document.getElementById("scoreIndicator").textContent = `Ton score : ${myScore} pts`;
+  document.getElementById("timerBar").style.width = `${Math.max(0, (roomState.timeLeft / 30) * 100)}%`;
+
+  document.getElementById("hostMediaWrap").classList.toggle("hidden", isGuest);
+  document.getElementById("hostRoundControls").classList.toggle("hidden", isGuest);
+
+  const buzzerBox = document.getElementById("buzzerBanner");
+  const buzzerText = document.getElementById("buzzerBannerText");
+  const hostArb = document.getElementById("hostBuzzerArbitration");
+  const megaBtn = document.getElementById("megaBuzzerBtn");
+
+  if (roomState.buzzerHolder) {
+    buzzerBox.classList.remove("hidden");
+    buzzerText.textContent = `🚨 ${roomState.buzzerHolder.name} a buzzé en premier !`;
+    hostArb.classList.toggle("hidden", isGuest);
+    megaBtn.disabled = true;
+  } else {
+    buzzerBox.classList.add("hidden");
+    hostArb.classList.add("hidden");
+    megaBtn.disabled = roomState.phase !== "playing";
+  }
+
+  const attemptNote = document.getElementById("lastAttemptNote");
+  if (roomState.lastGuessAttempt && !roomState.lastGuessAttempt.correct && roomState.phase === "playing") {
+    attemptNote.classList.remove("hidden");
+    attemptNote.textContent = `❌ ${roomState.lastGuessAttempt.name} a tenté : "${roomState.lastGuessAttempt.text}"`;
+  } else {
+    attemptNote.classList.add("hidden");
+  }
+
+  const guessForm = document.getElementById("guessForm");
+  const qcmBox = document.getElementById("qcmChoices");
+  const guessInput = document.getElementById("guessInput");
+
+  if (roomState.mode === "qcm") {
+    guessForm.classList.add("hidden");
+    qcmBox.classList.remove("hidden");
+    qcmBox.innerHTML = (roomState.qcmOptions || [])
+      .map(
+        (opt) =>
+          `<button type="button" class="secondary" ${roomState.phase !== "playing" ? "disabled" : ""} onclick="submitChoice('${opt.id}')">${opt.label}</button>`
+      )
+      .join("");
+  } else {
+    guessForm.classList.remove("hidden");
+    qcmBox.classList.add("hidden");
+    guessInput.disabled = roomState.phase !== "playing";
+  }
+
+  const fb = document.getElementById("roundFeedback");
+  if (roomState.phase === "revealed" && roomState.revealedTrack) {
+    fb.classList.remove("hidden");
+    fb.innerHTML = `
+      <strong>${roomState.revealedTrack.message}</strong><br/>
+      Chanson : <strong>${roomState.revealedTrack.title}</strong> — <em>${roomState.revealedTrack.movie}</em> (${roomState.revealedTrack.year || "?"})
+    `;
+  } else {
+    fb.classList.add("hidden");
+  }
+}
 
 function stopAllMedia() {
   const audioEl = document.getElementById("audioPlayer");
@@ -325,6 +647,7 @@ function stopAllMedia() {
 }
 
 async function playTrackMedia(track) {
+  if (role !== "host") return;
   stopAllMedia();
   const startSec = track.startSec || 0;
 
@@ -358,6 +681,7 @@ async function playTrackMedia(track) {
 }
 
 function startGame() {
+  if (role !== "host") return;
   const eligible = allTracks.filter((t) => t.enabled);
   if (!eligible.length) {
     alert("Active au moins une chanson dans la playlist !");
@@ -369,20 +693,17 @@ function startGame() {
   window.__gamePool = pool;
   totalRounds = pool.length;
   activeRound = 0;
-  score = 0;
   combo = 0;
 
-  const state = getRoomState();
-  state.buzzerHolder = null;
-  saveRoomState(state);
+  Object.values(roomState.players).forEach((p) => {
+    p.score = 0;
+  });
 
-  document.getElementById("setupSection").classList.add("hidden");
-  document.getElementById("endSection").classList.add("hidden");
-  document.getElementById("gameSection").classList.remove("hidden");
   nextRound();
 }
 
 function nextRound() {
+  if (role !== "host") return;
   clearInterval(timerInterval);
   stopAllMedia();
   roundSolved = false;
@@ -396,122 +717,135 @@ function nextRound() {
   timeLeft = 30;
   roundPoints = 100;
 
-  document.getElementById("roundIndicator").textContent = `Manche ${activeRound + 1} / ${totalRounds}`;
-  document.getElementById("scoreIndicator").textContent = `Score : ${score} pts`;
-  document.getElementById("guessInput").value = "";
-  document.getElementById("guessInput").disabled = false;
-  document.getElementById("roundFeedback").classList.add("hidden");
-  document.getElementById("timerBar").style.width = "100%";
-
   const mode = document.getElementById("gameMode").value;
-  const qcmBox = document.getElementById("qcmChoices");
-  const guessForm = document.getElementById("guessForm");
-
+  let qcmOptions = [];
   if (mode === "qcm") {
-    guessForm.classList.add("hidden");
-    qcmBox.classList.remove("hidden");
     const distractors = allTracks
       .filter((t) => t.id !== currentTrack.id)
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
-    const options = [currentTrack, ...distractors].sort(() => Math.random() - 0.5);
-    qcmBox.innerHTML = options
-      .map(
-        (opt) =>
-          `<button type="button" class="secondary" onclick="submitChoice('${opt.id}')">${opt.title} — ${opt.movie}</button>`
-      )
-      .join("");
-  } else {
-    guessForm.classList.remove("hidden");
-    qcmBox.classList.add("hidden");
+    qcmOptions = [currentTrack, ...distractors]
+      .sort(() => Math.random() - 0.5)
+      .map((opt) => ({ id: opt.id, label: `${opt.title} — ${opt.movie}` }));
   }
 
-  const rState = getRoomState();
-  rState.buzzerHolder = null;
-  saveRoomState(rState);
+  document.getElementById("guessInput").value = "";
 
+  roomState.phase = "playing";
+  roomState.roundIndex = activeRound;
+  roomState.totalRounds = totalRounds;
+  roomState.mode = mode;
+  roomState.timeLeft = 30;
+  roomState.roundPoints = 100;
+  roomState.buzzerHolder = null;
+  roomState.lastGuessAttempt = null;
+  roomState.revealedTrack = null;
+  roomState.qcmOptions = qcmOptions;
+
+  broadcastState();
   playTrackMedia(currentTrack);
 
   timerInterval = setInterval(() => {
-    timeLeft -= 0.25;
+    timeLeft -= 0.5;
     roundPoints = Math.max(25, Math.round((timeLeft / 30) * 100));
-    document.getElementById("timerBar").style.width = `${Math.max(0, (timeLeft / 30) * 100)}%`;
+    roomState.timeLeft = Math.max(0, timeLeft);
+    roomState.roundPoints = roundPoints;
+    broadcastState();
+
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      revealRound(false, "Temps écoulé !");
+      revealRound(false, "⏰ Temps écoulé !");
     }
-  }, 250);
+  }, 500);
 }
 
 function submitGuess(event) {
   event.preventDefault();
-  if (roundSolved) return;
-  const val = document.getElementById("guessInput").value;
+  const inputEl = document.getElementById("guessInput");
+  const val = inputEl.value.trim();
+  if (!val) return;
+
+  if (role === "guest") {
+    sendGuestAction({ type: "GUESS", text: val });
+    inputEl.value = "";
+    return;
+  }
+
+  if (roundSolved || roomState.phase !== "playing") return;
   if (isAnswerMatch(val, currentTrack)) {
-    const gained = roundPoints + combo * 10;
-    score += gained;
-    combo += 1;
-    updatePlayerScore(gained);
-    revealRound(true, `Bravo ! +${gained} pts (série x${combo})`);
+    awardPointsToPlayer(myPeerId, roundPoints);
   } else {
-    document.getElementById("guessInput").value = "";
-    document.getElementById("guessInput").placeholder = "Pas tout à fait, essaie encore...";
+    roomState.lastGuessAttempt = { name: getPseudo(), text: val, correct: false };
+    inputEl.value = "";
+    inputEl.placeholder = "Pas tout à fait, essaie encore...";
+    broadcastState();
   }
 }
 
 function submitChoice(trackId) {
-  if (roundSolved) return;
+  if (role === "guest") {
+    sendGuestAction({ type: "CHOICE", trackId });
+    return;
+  }
+  if (roundSolved || roomState.phase !== "playing") return;
   if (trackId === currentTrack.id) {
-    const gained = roundPoints + combo * 10;
-    score += gained;
-    combo += 1;
-    updatePlayerScore(gained);
-    revealRound(true, `Bonne réponse ! +${gained} pts`);
+    awardPointsToPlayer(myPeerId, roundPoints);
   } else {
     combo = 0;
-    revealRound(false, "Mauvais choix !");
+    revealRound(false, "❌ Mauvais choix !");
   }
 }
 
 function revealRound(success, message) {
-  if (roundSolved) return;
+  if (role !== "host" || roundSolved) return;
   roundSolved = true;
   clearInterval(timerInterval);
   if (!success) combo = 0;
 
-  document.getElementById("guessInput").disabled = true;
-  document.getElementById("scoreIndicator").textContent = `Score : ${score} pts`;
-  const fb = document.getElementById("roundFeedback");
-  fb.classList.remove("hidden");
-  fb.innerHTML = `
-    <strong>${message}</strong><br/>
-    Chanson : <strong>${currentTrack.title}</strong> — <em>${currentTrack.movie}</em> (${currentTrack.year || "?"})
-  `;
+  roomState.phase = "revealed";
+  roomState.revealedTrack = {
+    title: currentTrack.title,
+    movie: currentTrack.movie,
+    year: currentTrack.year,
+    message
+  };
+  broadcastState();
 }
 
 function goToNextRound() {
+  if (role !== "host") return;
   activeRound += 1;
   nextRound();
 }
 
 function finishGame() {
+  if (role !== "host") return;
   stopAllMedia();
-  document.getElementById("gameSection").classList.add("hidden");
-  document.getElementById("endSection").classList.remove("hidden");
-  document.getElementById("finalScoreText").textContent = `Score final : ${score} points sur ${totalRounds} manches.`;
+  roomState.phase = "ended";
+  broadcastState();
 }
 
 function backToSetup() {
+  if (role !== "host") return;
   stopAllMedia();
   clearInterval(timerInterval);
-  document.getElementById("gameSection").classList.add("hidden");
-  document.getElementById("endSection").classList.add("hidden");
-  document.getElementById("setupSection").classList.remove("hidden");
+  roomState.phase = "lobby";
+  roomState.buzzerHolder = null;
+  roomState.revealedTrack = null;
+  broadcastState();
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   const savedTheme = localStorage.getItem(THEME_KEY) || "sombre";
   setTheme(savedTheme);
-  initRoom();
   loadTracks();
+
+  const params = new URLSearchParams(window.location.search);
+  const urlRoom = params.get("room");
+  if (urlRoom) {
+    document.getElementById("roomCodeInput").value = urlRoom.toUpperCase();
+    joinGuestRoom();
+  } else {
+    createHostRoom(generateRoomCode());
+  }
 });

@@ -2,8 +2,8 @@
   --bg-main: #060913;
   --bg-grad-1: rgba(56, 189, 248, 0.14);
   --bg-grad-2: rgba(245, 184, 46, 0.12);
-  --bg-surface: rgba(13, 19, 38, 0.88);
-  --bg-card-soft: rgba(255, 255, 255, 0.04);
+  --bg-surface: rgba(13, 19, 38, 0.9);
+  --bg-card-soft: rgba(255, 255, 255, 0.05);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --accent-primary: #f5b82e;
@@ -18,8 +18,8 @@
   --bg-main: #030407;
   --bg-grad-1: rgba(129, 140, 248, 0.13);
   --bg-grad-2: rgba(234, 179, 8, 0.11);
-  --bg-surface: rgba(10, 12, 20, 0.94);
-  --bg-card-soft: rgba(255, 255, 255, 0.035);
+  --bg-surface: rgba(10, 12, 20, 0.95);
+  --bg-card-soft: rgba(255, 255, 255, 0.04);
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --accent-primary: #eab308;
@@ -32,8 +32,8 @@
   --bg-main: #1d1209;
   --bg-grad-1: rgba(132, 204, 22, 0.12);
   --bg-grad-2: rgba(217, 119, 6, 0.22);
-  --bg-surface: rgba(45, 25, 11, 0.9);
-  --bg-card-soft: rgba(254, 243, 199, 0.06);
+  --bg-surface: rgba(45, 25, 11, 0.92);
+  --bg-card-soft: rgba(254, 243, 199, 0.07);
   --text-main: #fef3c7;
   --text-muted: #d6b88c;
   --accent-primary: #d97706;
@@ -60,7 +60,7 @@ body {
 .app-shell {
   max-width: 980px;
   margin: 0 auto;
-  padding: 24px 18px 60px;
+  padding: 20px 16px 64px;
 }
 
 .topbar {
@@ -69,7 +69,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .brand {
@@ -90,7 +90,7 @@ body {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  padding: 22px;
+  padding: 20px;
   margin-bottom: 18px;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
 }
@@ -105,7 +105,7 @@ h1, h2, h3 {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 14px;
 }
 
@@ -117,9 +117,9 @@ h1, h2, h3 {
   margin-top: 12px;
 }
 
-input, select, textarea {
+input, select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: var(--bg-card-soft);
@@ -131,7 +131,7 @@ button {
   cursor: pointer;
   border: none;
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 11px 16px;
   font-weight: 700;
   font-size: 0.95rem;
   background: var(--accent-primary);
@@ -139,9 +139,14 @@ button {
   transition: transform 0.12s ease, opacity 0.15s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   transform: translateY(-1px);
   opacity: 0.95;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 button.secondary {
@@ -160,8 +165,46 @@ button.danger {
   color: #ffffff;
 }
 
+.mega-buzzer {
+  width: 100%;
+  padding: 22px 18px;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  border-radius: 16px;
+  margin: 14px 0;
+  box-shadow: 0 10px 26px rgba(239, 68, 68, 0.35);
+}
+
 .hidden {
   display: none !important;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-subtle);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.dot.online {
+  background: var(--accent-success);
+  box-shadow: 0 0 8px var(--accent-success);
+}
+
+.dot.connecting {
+  background: var(--accent-primary);
 }
 
 .timer-bar-wrap {
@@ -170,7 +213,7 @@ button.danger {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  margin: 12px 0 18px;
+  margin: 12px 0 16px;
 }
 
 .timer-bar {
@@ -191,7 +234,7 @@ button.danger {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 320px;
+  max-height: 300px;
   overflow-y: auto;
   margin-top: 12px;
 }
@@ -232,8 +275,9 @@ button.danger {
 .leaderboard-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
   background: var(--bg-card-soft);
   margin-bottom: 6px;
 }
@@ -244,4 +288,12 @@ button.danger {
   border-radius: 12px;
   background: var(--bg-card-soft);
   border-left: 4px solid var(--accent-primary);
+}
+
+.buzzer-alert {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  margin: 12px 0;
 }
