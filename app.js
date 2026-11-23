@@ -293,7 +293,7 @@ function renderPlaylistEditor() {
             <strong>${t.title}</strong> <span class="muted">— ${t.movie} (${t.year || "?"})</span>
           </div>
         </label>
-        <span class="badge">${t.source || "itunes"}</span>
+        <span class="badge">${t.source || "youtube"}</span>
       </div>
     `
     )
@@ -333,7 +333,7 @@ function addCustomTrack(event) {
     year: 2024,
     era: "Sélection Perso",
     source,
-    itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : `${title} ${movie}`,
+    itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : "",
     youtubeId: source === "youtube" ? extractYoutubeId(mediaInput) : "",
     audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput) : "",
     startSec,
@@ -493,24 +493,14 @@ async function resolveTrackMediaInfo(track) {
 
   if (track.source === "audio" && track.audioUrl) {
     audioUrl = normalizeAudioUrl(track.audioUrl);
-  } else if (track.source === "youtube" && extractYoutubeId(track.youtubeId)) {
-    youtubeId = extractYoutubeId(track.youtubeId);
-    artworkUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
-  }
-
-  if (!audioUrl) {
-    const query = encodeURIComponent(track.itunesQuery || `${track.title} ${track.movie}`);
-    try {
-      const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=5&country=FR`);
-      const data = await res.json();
-      const hit = data.results?.[0];
-      if (hit?.artworkUrl100 && !artworkUrl) {
-        artworkUrl = hit.artworkUrl100.replace("100x100bb", "400x400bb");
-      }
-      if (hit?.previewUrl) {
-        audioUrl = hit.previewUrl;
-      }
-    } catch (_) {}
+  } else {
+    const ytId = extractYoutubeId(track.youtubeId) || (track.source === "youtube" ? extractYoutubeId(track.itunesQuery) : "");
+    if (ytId) {
+      youtubeId = ytId;
+      artworkUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
+    } else if (track.audioUrl) {
+      audioUrl = normalizeAudioUrl(track.audioUrl);
+    }
   }
 
   return { audioUrl, youtubeId, artworkUrl, startSec };
