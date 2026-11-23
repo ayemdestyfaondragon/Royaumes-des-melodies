@@ -444,8 +444,6 @@ function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
 }
 
 function syncMediaFromRoomState(state) {
-  // Mode sans stream : aucun flux audio/stream déclenché
-  stopLocalMedia();
   const cmd = state?.mediaCommand;
   if (!cmd) return;
 
@@ -488,8 +486,6 @@ function syncMediaFromRoomState(state) {
 }
 
 async function resolveTrackMediaInfo(track) {
-  // Mode sans stream : aucun appel audio/stream réseau
-  return { audioUrl: '', youtubeId: '', artworkUrl: '', startSec: track.startSec || 0 };
   let audioUrl = "";
   let youtubeId = "";
   let artworkUrl = "";
