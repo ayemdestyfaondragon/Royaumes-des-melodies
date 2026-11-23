@@ -1174,13 +1174,12 @@ let roundTransitionLock = false;
 let soundEffectsEnabled = true;
 let audioCtx = null;
 
-// Pending playback if browser autoplay is locked on candidate device
-let pendingAudioJob = null; // { url, startSec, volume, sourceKey }
+let pendingAudioJob = null;
 let lastActiveMediaKey = "";
+let joinRetryTimer = null;
 
-// PeerJS Multiplayer state
 let peer = null;
-let role = "host"; // "host" | "guest"
+let role = "host";
 let hostConnections = new Map();
 let guestConnection = null;
 let myPeerId = "";
@@ -1188,7 +1187,7 @@ let roomCode = "";
 
 let roomState = {
   code: "",
-  phase: "lobby", // "lobby" | "countdown" | "playing" | "revealed" | "ended"
+  phase: "lobby",
   countdownVal: 3,
   roundIndex: 0,
   totalRounds: 10,
@@ -1208,11 +1207,29 @@ let roomState = {
 };
 
 // ==========================================
-// AUDIO UNLOCK & TV JINGLES
+// AUDIO ENGINE (DIRECT STREAMS + SYNTHETIC FALLBACK TONE)
 // ==========================================
 
-function unlockAudioContext() {
-  audioUserGestureUnlocked = true;
+function setAudioDebugText(msg) {
+  const el = document.getElementById("audioStatusBar");
+  if (el) el.textContent = msg;
+}
+
+function updateAudioUnlockBanner(unlocked, customMsg) {
+  const statusEl = document.getElementById("audioUnlockStatus");
+  if (!statusEl) return;
+  statusEl.textContent = customMsg || (unlocked ? "✅ Son actif" : "🔊 Son prêt");
+}
+
+let hasUserGesture = false;
+
+function markUserGesture() {
+  hasUserGesture = true;
+  unlockAudioContext();
+}
+
+function ensureAudioContext() {
+  if (!hasUserGesture) return null;
   try {
     if (!audioCtx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1221,7 +1238,25 @@ function unlockAudioContext() {
     if (audioCtx && audioCtx.state === "suspended") {
       audioCtx.resume().catch(() => {});
     }
+    return audioCtx;
+  } catch (_) {
+    return null;
+  }
+}
 
+function unlockAudioContext() {
+  if (!hasUserGesture) return;
+  const ctx = ensureAudioContext();
+  try {
+    if (ctx && ctx.state === "running") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.02);
+    }
     const audioEl = document.getElementById("audioPlayer");
     if (pendingAudioJob) {
       const job = pendingAudioJob;
@@ -1229,77 +1264,51 @@ function unlockAudioContext() {
       playAudioUrlSafely(job.url, job.startSec, job.volume, job.sourceKey);
       return;
     }
-
     if (audioEl && audioEl.src) {
       audioEl.muted = false;
-      audioEl.play().then(() => {
-        updateAudioUnlockBanner(true);
-      }).catch(() => {});
-    } else {
-      updateAudioUnlockBanner(true);
+      audioEl.play().catch(() => {});
     }
   } catch (_) {}
 }
 
-function updateAudioUnlockBanner(unlocked, customMsg) {
-  const statusEl = document.getElementById("audioUnlockStatus");
-  if (!statusEl) return;
-  if (customMsg) {
-    statusEl.textContent = customMsg;
-    return;
-  }
-  statusEl.textContent = unlocked
-    ? "✅ Son prêt sur cet appareil"
-    : "⚠️ Clique sur « Activer le son » pour entendre la musique sur ton appareil";
-}
-
-let audioUserGestureUnlocked = true;
-
 function playTvJingle(type) {
   if (!soundEffectsEnabled) return;
   try {
-    if (!audioCtx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) audioCtx = new Ctx();
-    }
-    if (!audioCtx) return;
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {});
-    }
-
-    const now = audioCtx.currentTime;
-    const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.11) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const playTone = (freq, start, dur, wave = "triangle", gainVal = 0.14) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = wave;
       osc.frequency.setValueAtTime(freq, start);
       gain.gain.setValueAtTime(gainVal, start);
       gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(ctx.destination);
       osc.start(start);
       osc.stop(start + dur);
     };
 
     if (type === "tick") {
-      playTone(660, now, 0.11, "sine", 0.08);
+      playTone(660, now, 0.12, "sine", 0.12);
     } else if (type === "go") {
-      playTone(523.25, now, 0.11, "triangle", 0.12);
-      playTone(659.25, now + 0.1, 0.11, "triangle", 0.12);
-      playTone(1046.5, now + 0.2, 0.25, "triangle", 0.14);
+      playTone(523.25, now, 0.12, "triangle", 0.15);
+      playTone(659.25, now + 0.11, 0.12, "triangle", 0.15);
+      playTone(1046.5, now + 0.22, 0.28, "triangle", 0.18);
     } else if (type === "buzz") {
-      playTone(220, now, 0.24, "sawtooth", 0.12);
+      playTone(220, now, 0.25, "sawtooth", 0.15);
     } else if (type === "win") {
-      playTone(523.25, now, 0.1, "triangle", 0.13);
-      playTone(659.25, now + 0.1, 0.1, "triangle", 0.13);
-      playTone(783.99, now + 0.2, 0.1, "triangle", 0.13);
-      playTone(1046.5, now + 0.3, 0.32, "triangle", 0.15);
+      playTone(523.25, now, 0.11, "triangle", 0.16);
+      playTone(659.25, now + 0.11, 0.11, "triangle", 0.16);
+      playTone(783.99, now + 0.22, 0.11, "triangle", 0.16);
+      playTone(1046.5, now + 0.33, 0.35, "triangle", 0.18);
     } else if (type === "timeout") {
-      playTone(330, now, 0.18, "sawtooth", 0.09);
-      playTone(246.94, now + 0.16, 0.3, "sawtooth", 0.09);
+      playTone(330, now, 0.18, "sawtooth", 0.12);
+      playTone(246.94, now + 0.16, 0.3, "sawtooth", 0.12);
     } else if (type === "fanfare") {
       [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, idx) => {
-        playTone(f, now + idx * 0.13, idx === 5 ? 0.5 : 0.13, "triangle", 0.14);
+        playTone(f, now + idx * 0.13, idx === 5 ? 0.5 : 0.13, "triangle", 0.16);
       });
     }
   } catch (_) {}
@@ -1309,7 +1318,10 @@ function toggleSoundEffects() {
   soundEffectsEnabled = !soundEffectsEnabled;
   const btn = document.getElementById("sfxToggleBtn");
   if (btn) btn.textContent = soundEffectsEnabled ? "🔊 Jingles TV : ON" : "🔇 Jingles TV : OFF";
-  if (soundEffectsEnabled) unlockAudioContext();
+  if (soundEffectsEnabled) {
+    unlockAudioContext();
+    playTvJingle("tick");
+  }
 }
 
 // ==========================================
@@ -1414,10 +1426,15 @@ function normalizeAudioUrl(url) {
 
 async function loadTracks() {
   let baseTracks = Array.isArray(window.__EMBEDDED_TRACKS__) ? window.__EMBEDDED_TRACKS__ : [];
-  try {
-    const res = await fetch("tracks.json");
-    if (res.ok) baseTracks = await res.json();
-  } catch (_) {}
+  if (!baseTracks.length) {
+    try {
+      const res = await fetch("tracks.json");
+      if (res.ok) {
+        const jsonData = await res.json();
+        if (Array.isArray(jsonData) && jsonData.length) baseTracks = jsonData;
+      }
+    } catch (_) {}
+  }
 
   let customTracks = [];
   try {
@@ -1488,7 +1505,6 @@ function addCustomTrack(event) {
 
   if (!title || !movie) return;
 
-  const defaultLocalAudio = `audio/${tSlug(title)}.mp3`;
   const newTrack = {
     id: "custom-" + Date.now(),
     title,
@@ -1498,7 +1514,7 @@ function addCustomTrack(event) {
     source,
     itunesQuery: source === "itunes" ? (mediaInput || `${title} ${movie}`) : "",
     youtubeId: source === "youtube" ? extractYoutubeId(mediaInput) : "",
-    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput || defaultLocalAudio) : normalizeAudioUrl(mediaInput),
+    audioUrl: source === "audio" ? normalizeAudioUrl(mediaInput) : normalizeAudioUrl(mediaInput),
     startSec,
     custom: true,
     enabled: true,
@@ -1548,7 +1564,7 @@ function importPlaylistJson(event) {
 }
 
 // ==========================================
-// SHARED AUDIO PLAYBACK (HOST & CANDIDATES)
+// SHARED AUDIO PLAYBACK
 // ==========================================
 
 function stopLocalMedia() {
@@ -1564,16 +1580,10 @@ function stopLocalMedia() {
   if (ytBox) ytBox.innerHTML = "";
 }
 
-function setAudioDebugText(msg) {
-  const el = document.getElementById("audioStatusBar");
-  if (el) el.textContent = msg;
-}
-
 function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
   const audioEl = document.getElementById("audioPlayer");
   if (!audioEl || !url) {
     setAudioDebugText("⚠️ Aucune URL audio résolue pour cette manche.");
-    updateAudioUnlockBanner(false, "⚠️ Aucun flux audio trouvé pour cet extrait");
     return;
   }
 
@@ -1588,7 +1598,7 @@ function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
   }
 
   audioEl.onerror = () => {
-    setAudioDebugText(`⚠️ Erreur flux audio (${url}) — utilise le lecteur ou vérifie la source.`);
+    setAudioDebugText(`⚠️ Flux audio non chargé (${url}) — vérifie la connexion ou clique sur Play.`);
   };
 
   const seekAndPlay = () => {
@@ -1607,7 +1617,7 @@ function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
       setAudioDebugText(`▶️ Lecture en cours : ${url}`);
     }).catch((err) => {
       pendingAudioJob = { url, startSec, volume, sourceKey };
-      setAudioDebugText(`⏸ Lecture bloquée par le navigateur (${err?.name || "autoplay"}) — clique sur Play ou sur la page.`);
+      setAudioDebugText(`⏸ Lecture en attente d'interaction (${err?.name || "autoplay"}) — clique sur Play ou sur la page.`);
     });
   };
 
@@ -1652,13 +1662,14 @@ function syncMediaFromRoomState(state) {
         if (mediaKey !== lastActiveMediaKey) {
           lastActiveMediaKey = mediaKey;
           stopLocalMedia();
+          setAudioDebugText(`📺 Lecture YouTube : ${cmd.youtubeId}`);
           const ytBox = document.getElementById("ytHiddenContainer");
           if (ytBox) {
             ytBox.innerHTML = `<iframe width="220" height="124" src="https://www.youtube.com/embed/${cmd.youtubeId}?start=${cmd.startSec || 0}&autoplay=1&mute=0" allow="autoplay"></iframe>`;
           }
         }
       } else {
-        
+        setAudioDebugText("⚠️ Aucun flux audio ni YouTube trouvé pour cette manche.");
       }
     };
 
@@ -1749,7 +1760,6 @@ async function resolveTrackMediaInfo(track) {
   const startSec = track.startSec || 0;
 
   const explicitAudio = track.audioUrl ? normalizeAudioUrl(track.audioUrl) : "";
-  const localFallbackAudio = track.source === "audio" ? `audio/${tSlug(track.title)}.mp3` : "";
 
   if (explicitAudio) {
     audioUrl = explicitAudio;
@@ -1762,9 +1772,6 @@ async function resolveTrackMediaInfo(track) {
     if (itunesData) {
       audioUrl = itunesData.audioUrl || "";
       artworkUrl = itunesData.artworkUrl || "";
-    }
-    if (!audioUrl && localFallbackAudio) {
-      audioUrl = localFallbackAudio;
     }
   }
 
@@ -1908,8 +1915,6 @@ function createPeerInstance(customId) {
   };
   return customId ? new Peer(customId, peerConfig) : new Peer(peerConfig);
 }
-
-let joinRetryTimer = null;
 
 function joinGuestRoom(isAutoRetry = false) {
   if (joinRetryTimer) {
@@ -2282,6 +2287,8 @@ function syncUiFromRoomState() {
 async function startGame() {
   if (role !== "host") return;
   unlockAudioContext();
+  playTvJingle("tick");
+
   const eligible = allTracks.filter((t) => t.enabled);
   if (!eligible.length) {
     alert("Active au moins une chanson dans la playlist !");
@@ -2306,14 +2313,13 @@ async function startGame() {
   roomState.countdownVal = 3;
   roomState.roundIndex = 0;
   roomState.totalRounds = totalRounds;
-  roomState.presenterLine = "⏳ Préchargement des aperçus et pochettes iTunes...";
+  roomState.presenterLine = "⏳ Préparation de la manche...";
   roomState.buzzerHolder = null;
   roomState.lastGuessAttempt = null;
   roomState.revealedTrack = null;
   roomState.hints = [];
   broadcastState();
 
-  await preloadGamePoolMedia(pool);
   startCountdownPhase();
 }
 
@@ -2322,16 +2328,6 @@ function startCountdownPhase() {
   clearInterval(phaseInterval);
   roundSolved = false;
   roundTransitionLock = false;
-
-  const upcomingTrack = window.__gamePool && window.__gamePool[activeRound];
-  const cachedInfo = upcomingTrack ? mediaResolutionCache.get(upcomingTrack.id) : null;
-  roomState.mediaCommand = {
-    seq: (roomState.mediaCommand?.seq || 0) + 1,
-    type: "preload",
-    audioUrl: cachedInfo?.audioUrl || "",
-    artworkUrl: cachedInfo?.artworkUrl || "",
-    startSec: upcomingTrack?.startSec || 0
-  };
 
   if (activeRound >= totalRounds) {
     finishGame();
@@ -2398,7 +2394,7 @@ async function beginPlayingPhase() {
   roomState.presenterLine = "🎵 Écoutez bien l'extrait... Quel est ce titre ou ce film ?";
   roomState.hints = [];
   roomState.qcmOptions = qcmOptions;
-  const playAtEpochMs = Date.now() + 350;
+  const playAtEpochMs = Date.now() + 200;
   roomState.mediaCommand = {
     seq: (roomState.mediaCommand?.seq || 0) + 1,
     type: "play",
@@ -2570,9 +2566,8 @@ window.addEventListener("DOMContentLoaded", () => {
   setTheme(savedTheme);
   loadTracks();
 
-  // First user interaction anywhere unlocks audio automatically
   const firstGestureUnlock = () => {
-    unlockAudioContext();
+    markUserGesture();
     window.removeEventListener("pointerdown", firstGestureUnlock);
     window.removeEventListener("keydown", firstGestureUnlock);
   };
@@ -2588,6 +2583,6 @@ window.addEventListener("DOMContentLoaded", () => {
     createHostRoom(generateRoomCode());
   }
 });
-  </script>
+</script>
 </body>
 </html>
