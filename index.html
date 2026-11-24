@@ -3,47 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Disney Blind Test — Tableau des Scores &amp; Animation</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['"Cinzel Decorative"', 'Georgia', 'serif'],
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-          },
-          colors: {
-            midnight: '#070b19',
-            twilight: '#0e1730',
-            sapphire: '#162447',
-            gold: '#f5c542',
-            goldLight: '#ffe082',
-            goldDark: '#b8860b',
-          },
-          boxShadow: {
-            goldGlow: '0 0 24px rgba(245, 197, 66, 0.24)',
-            cardDark: '0 14px 35px rgba(0, 0, 0, 0.45)',
-          },
-        },
-      },
-    };
-  </script>
+  <title>Disney Blind Test — Multijoueur & Synchro sans Stream</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E" />
   <style>
-    /* Ambiance ciel étoilé enchanté & finitions dorées */
+    /* Ambiance ciel étoilé enchanté & finitions dorées (CSS pur sans CDN) */
+    :root {
+      --bg-midnight: #070b19;
+      --bg-twilight: #0e1730;
+      --bg-sapphire: #162447;
+      --gold: #f5c542;
+      --gold-light: #ffe082;
+      --gold-dark: #b8860b;
+      --sky: #7dd3fc;
+      --emerald: #6ee7b7;
+      --rose: #fda4af;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     body {
-      background-color: #070b19;
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-midnight);
       background-image:
         radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.13) 0%, transparent 40%),
         radial-gradient(circle at 80% 10%, rgba(245, 197, 66, 0.14) 0%, transparent 45%),
         radial-gradient(circle at 50% 85%, rgba(129, 140, 248, 0.12) 0%, transparent 50%),
         linear-gradient(180deg, #060914 0%, #0b1226 55%, #070b19 100%);
-      color: #f8fafc;
+      color: var(--text-main);
       min-height: 100vh;
       overflow-x: hidden;
+      line-height: 1.45;
+    }
+
+    .font-display {
+      font-family: Georgia, "Times New Roman", serif;
+      letter-spacing: 0.02em;
     }
 
     .starfield {
@@ -78,6 +77,293 @@
       animation: pulseScore 0.35s ease-out;
     }
 
+    /* Classes utilitaires légères de remplacement (zéro CDN requis) */
+    .hidden { display: none !important; }
+    .relative { position: relative; }
+    .z-10 { position: relative; z-index: 10; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .max-w-7xl { max-width: 80rem; }
+    .max-w-2xl { max-width: 42rem; }
+    .max-w-sm { max-width: 24rem; }
+    .min-h-screen { min-height: 100vh; }
+    .min-w-0 { min-width: 0; }
+    .flex-1 { flex: 1 1 0%; }
+    .shrink-0 { flex-shrink: 0; }
+    .flex { display: flex; }
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .flex-col { flex-direction: column; }
+    .flex-wrap { flex-wrap: wrap; }
+    .items-start { align-items: flex-start; }
+    .items-center { align-items: center; }
+    .items-baseline { align-items: baseline; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .justify-end { justify-content: flex-end; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-1\.5 { gap: 0.375rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-2\.5 { gap: 0.625rem; }
+    .gap-3 { gap: 0.75rem; }
+    .gap-4 { gap: 1rem; }
+    .gap-6 { gap: 1.5rem; }
+    .space-y-1 > * + * { margin-top: 0.25rem; }
+    .space-y-1\.5 > * + * { margin-top: 0.375rem; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    .space-y-2\.5 > * + * { margin-top: 0.625rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .space-y-6 > * + * { margin-top: 1.5rem; }
+    .p-3 { padding: 0.75rem; }
+    .p-3\.5 { padding: 0.875rem; }
+    .p-4 { padding: 1rem; }
+    .p-5 { padding: 1.25rem; }
+    .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .px-3\.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+    .px-4 { padding-left: 1rem; padding-right: 1rem; }
+    .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+    .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+    .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    .py-5 { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mb-1\.5 { margin-bottom: 0.375rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-3 { margin-bottom: 0.75rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .mb-5 { margin-bottom: 1.25rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mt-0\.5 { margin-top: 0.125rem; }
+    .mt-1 { margin-top: 0.25rem; }
+    .mt-1\.5 { margin-top: 0.375rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .pr-1 { padding-right: 0.25rem; }
+    .pb-3 { padding-bottom: 0.75rem; }
+    .w-full { width: 100%; }
+    .w-20 { width: 5rem; }
+    .h-1\.5 { height: 0.375rem; }
+    .h-2 { height: 0.5rem; }
+    .h-8 { height: 2rem; }
+    .w-8 { width: 2rem; }
+    .h-16 { height: 4rem; }
+    .w-16 { width: 4rem; }
+    .max-h-64 { max-height: 16rem; }
+    .max-h-72 { max-height: 18rem; }
+    .max-h-\[92vh\] { max-height: 92vh; }
+    .overflow-y-auto { overflow-y: auto; }
+    .overflow-x-hidden { overflow-x: hidden; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .text-xs { font-size: 0.75rem; }
+    .text-sm { font-size: 0.875rem; }
+    .text-base { font-size: 1rem; }
+    .text-lg { font-size: 1.125rem; }
+    .text-xl { font-size: 1.25rem; }
+    .text-2xl { font-size: 1.5rem; }
+    .font-medium { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-bold { font-weight: 700; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .italic { font-style: italic; }
+    .uppercase { text-transform: uppercase; }
+    .tracking-wider { letter-spacing: 0.05em; }
+    .leading-snug { line-height: 1.375; }
+    .leading-relaxed { line-height: 1.625; }
+    .rounded-lg { border-radius: 0.5rem; }
+    .rounded-xl { border-radius: 0.75rem; }
+    .rounded-2xl { border-radius: 1rem; }
+    .rounded-3xl { border-radius: 1.5rem; }
+    .rounded-full { border-radius: 9999px; }
+    .border { border-width: 1px; border-style: solid; }
+    .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+    .border-dashed { border-style: dashed; }
+    .border-transparent { border-color: transparent; }
+    .border-slate-600 { border-color: rgba(71, 85, 105, 0.8); }
+    .border-slate-600\/70 { border-color: rgba(71, 85, 105, 0.7); }
+    .border-slate-600\/80 { border-color: rgba(71, 85, 105, 0.8); }
+    .border-slate-700 { border-color: rgba(51, 65, 85, 0.85); }
+    .border-slate-700\/60 { border-color: rgba(51, 65, 85, 0.65); }
+    .border-slate-700\/70 { border-color: rgba(51, 65, 85, 0.75); }
+    .border-slate-700\/80 { border-color: rgba(51, 65, 85, 0.85); }
+    .border-gold\/20 { border-color: rgba(245, 197, 66, 0.22); }
+    .border-gold\/25 { border-color: rgba(245, 197, 66, 0.28); }
+    .border-gold\/30 { border-color: rgba(245, 197, 66, 0.34); }
+    .border-gold\/35 { border-color: rgba(245, 197, 66, 0.38); }
+    .border-gold\/40 { border-color: rgba(245, 197, 66, 0.45); }
+    .border-gold\/50 { border-color: rgba(245, 197, 66, 0.55); }
+    .border-sky-400\/35 { border-color: rgba(56, 189, 248, 0.38); }
+    .border-sky-400\/40 { border-color: rgba(56, 189, 248, 0.45); }
+    .border-emerald-400\/40 { border-color: rgba(52, 211, 153, 0.45); }
+    .border-rose-400\/30 { border-color: rgba(251, 113, 133, 0.35); }
+    .border-rose-400\/35 { border-color: rgba(251, 113, 133, 0.4); }
+    .bg-midnight { background-color: rgba(7, 11, 25, 0.92); }
+    .bg-midnight\/70 { background-color: rgba(7, 11, 25, 0.72); }
+    .bg-midnight\/75 { background-color: rgba(7, 11, 25, 0.78); }
+    .bg-midnight\/80 { background-color: rgba(7, 11, 25, 0.82); }
+    .bg-midnight\/85 { background-color: rgba(7, 11, 25, 0.88); }
+    .bg-midnight\/95 { background-color: rgba(7, 11, 25, 0.96); }
+    .bg-twilight\/75 { background-color: rgba(14, 23, 48, 0.78); }
+    .bg-twilight\/80 { background-color: rgba(14, 23, 48, 0.84); }
+    .bg-twilight\/85 { background-color: rgba(14, 23, 48, 0.88); }
+    .bg-twilight\/90 { background-color: rgba(14, 23, 48, 0.92); }
+    .bg-twilight\/95 { background-color: rgba(14, 23, 48, 0.97); }
+    .bg-slate-800 { background-color: rgba(30, 41, 59, 0.85); }
+    .bg-slate-800\/70 { background-color: rgba(30, 41, 59, 0.75); }
+    .bg-slate-800\/75 { background-color: rgba(30, 41, 59, 0.8); }
+    .bg-slate-800\/80 { background-color: rgba(30, 41, 59, 0.85); }
+    .bg-slate-800\/90 { background-color: rgba(30, 41, 59, 0.92); }
+    .bg-slate-900 { background-color: rgba(15, 23, 42, 0.92); }
+    .bg-slate-900\/75 { background-color: rgba(15, 23, 42, 0.78); }
+    .bg-gold { background-color: var(--gold); color: var(--bg-midnight); }
+    .bg-gold\/10 { background-color: rgba(245, 197, 66, 0.11); }
+    .bg-gold\/15 { background-color: rgba(245, 197, 66, 0.16); }
+    .bg-gold\/20 { background-color: rgba(245, 197, 66, 0.22); }
+    .bg-sky-500\/15 { background-color: rgba(14, 165, 233, 0.16); }
+    .bg-emerald-500\/15 { background-color: rgba(16, 185, 129, 0.16); }
+    .bg-rose-500\/10 { background-color: rgba(244, 63, 94, 0.12); }
+    .bg-gradient-to-b-twilight {
+      background-image: linear-gradient(180deg, rgba(14, 23, 48, 0.92), rgba(7, 11, 25, 0.96));
+    }
+    .bg-gradient-to-r-gold-soft {
+      background-image: linear-gradient(90deg, rgba(245, 158, 11, 0.25), rgba(245, 197, 66, 0.25));
+    }
+    .bg-gradient-to-r-gold-solid {
+      background-image: linear-gradient(90deg, #f5c542, #fbbf24);
+      color: var(--bg-midnight);
+    }
+    .bg-gradient-to-r-leader {
+      background-image: linear-gradient(90deg, rgba(245, 197, 66, 0.16), rgba(245, 158, 11, 0.08), transparent);
+    }
+    .bg-cover-badge {
+      background-image: linear-gradient(135deg, #162447, #1e1b4b, #070b19);
+    }
+    .text-white { color: #ffffff; }
+    .text-midnight { color: var(--bg-midnight); }
+    .text-slate-100 { color: #f1f5f9; }
+    .text-slate-200 { color: #e2e8f0; }
+    .text-slate-300 { color: #cbd5e1; }
+    .text-slate-400 { color: #94a3b8; }
+    .text-gold { color: var(--gold); }
+    .text-goldLight { color: var(--gold-light); }
+    .text-sky-200 { color: #bae6fd; }
+    .text-sky-300 { color: var(--sky); }
+    .text-emerald-200 { color: #a7f3d0; }
+    .text-emerald-300 { color: var(--emerald); }
+    .text-rose-200 { color: #fecdd3; }
+    .text-rose-300 { color: var(--rose); }
+    .text-amber-300\/80 { color: rgba(252, 211, 77, 0.85); }
+    .shadow-cardDark { box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45); }
+    .shadow-goldGlow { box-shadow: 0 0 24px rgba(245, 197, 66, 0.24); }
+    .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65); }
+    .backdrop-blur-md { backdrop-filter: blur(12px); }
+    .backdrop-blur-sm { backdrop-filter: blur(4px); }
+    .outline-none { outline: none; }
+    .cursor-pointer { cursor: pointer; }
+    .pointer-events-none { pointer-events: none; }
+    .transition { transition: all 0.2s ease; }
+
+    button, input, select, textarea {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled, input:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.07);
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.99);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--gold);
+    }
+
+    /* Bandeau toast */
+    .toast-banner {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 60;
+      max-width: 24rem;
+      transform: translateX(125%);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .toast-banner.is-visible {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    /* Modale */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.78);
+      padding: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    @media (min-width: 640px) {
+      .sm\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .sm\:p-6 { padding: 1.5rem; }
+      .sm\:flex-row { flex-direction: row; }
+      .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sm\:text-sm { font-size: 0.875rem; }
+      .sm\:text-base { font-size: 1rem; }
+      .sm\:text-xl { font-size: 1.25rem; }
+      .sm\:text-3xl { font-size: 1.875rem; }
+    }
+
+    @media (min-width: 768px) {
+      .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (min-width: 1024px) {
+      .lg\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+      .lg\:flex-row { flex-direction: row; }
+      .lg\:items-center { align-items: center; }
+      .lg\:justify-between { justify-content: space-between; }
+      .lg\:text-4xl { font-size: 2.25rem; }
+      .lg\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+      .lg\:col-span-5 { grid-column: span 5 / span 5; }
+      .lg\:col-span-7 { grid-column: span 7 / span 7; }
+    }
+
     /* Personnalisation discrète des barres de défilement */
     ::-webkit-scrollbar {
       width: 8px;
@@ -95,18 +381,15 @@
     }
   </style>
 </head>
-<body class="font-sans antialiased selection:bg-gold/30 selection:text-goldLight">
+<body>
   <div class="starfield" aria-hidden="true"></div>
 
-  <!-- Lecteur audio strictement sans vidéo (aucun élément vidéo ni cadre externe) -->
-  <audio id="audioPlayer" preload="auto" class="hidden" aria-hidden="true"></audio>
-
-  <!-- Bandeau de notification non-bloquant (remplace alert/confirm) -->
+  <!-- Bandeau de notification non-bloquant -->
   <div
     id="toastBanner"
     role="status"
     aria-live="polite"
-    class="fixed top-4 right-4 z-50 max-w-sm transform transition-all duration-300 translate-x-[120%] opacity-0 pointer-events-none"
+    class="toast-banner"
   >
     <div id="toastInner" class="flex items-start gap-3 rounded-2xl border border-gold/40 bg-twilight/95 px-4 py-3 text-sm text-slate-100 shadow-2xl backdrop-blur-md">
       <span id="toastIcon" class="mt-0.5 text-base">✨</span>
@@ -119,14 +402,14 @@
     <!-- En-tête principal -->
     <header class="mb-6 flex flex-col gap-4 rounded-3xl border border-gold/25 bg-twilight/75 p-5 shadow-cardDark backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
       <div class="space-y-1">
-        <div class="inline-flex flex-wrap items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold tracking-wider text-goldLight uppercase">
-          <span>✦ +1 pt Titre · +1 pt Disney · Audio Auto Sans Vidéo</span>
+        <div class="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold tracking-wider text-goldLight uppercase">
+          <span>✦ +1 pt Titre · +1 pt Disney · Zéro Stream Vidéo · Synchro à distance</span>
         </div>
-        <h1 class="font-display text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-goldLight via-gold to-amber-300 sm:text-3xl lg:text-4xl">
+        <h1 class="font-display text-2xl font-bold text-goldLight sm:text-3xl lg:text-4xl">
           Disney Blind Test
         </h1>
         <p class="text-xs text-slate-300 sm:text-sm">
-          151 titres Disney intégrés · Lecture audio automatique sans vidéo · Modes de sélection &amp; scores multi-joueurs.
+          151 classiques Disney — lecture audio locale automatique, sélection multi-modes et multijoueur synchronisé à distance sans streaming.
         </p>
       </div>
 
@@ -135,37 +418,36 @@
         <button
           id="toggleJudgeModeBtn"
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition hover:bg-gold/25 active:scale-[0.99] sm:text-sm"
-          title="Masquer ou afficher les réponses côté plateau"
+          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition sm:text-sm"
+          title="Masquer ou afficher les réponses et notes côté plateau"
         >
           <span id="judgeModeIcon">👑</span>
           <span id="judgeModeLabel">Mode Juge : Actif</span>
         </button>
 
         <button
-          id="undoActionBtn"
-          type="button"
-          disabled
-          class="inline-flex items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
-          title="Annuler la dernière action de score"
-        >
-          <span>↩️</span>
-          <span>Annuler</span>
-        </button>
-
-        <button
           id="openJsonModalBtn"
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/15 px-3.5 py-2.5 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/25 active:scale-[0.99] sm:text-sm"
+          class="inline-flex items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/15 px-3.5 py-2.5 text-xs font-semibold text-sky-200 transition sm:text-sm"
         >
           <span>📂</span>
           <span>Playlist JSON (<span id="playlistCountBadge">151</span>)</span>
         </button>
 
         <button
+          id="undoScoreBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3.5 py-2.5 text-xs font-semibold text-slate-200 transition sm:text-sm"
+          title="Annuler la dernière attribution de point"
+        >
+          <span>↩️</span>
+          <span>Annuler</span>
+        </button>
+
+        <button
           id="resetScoresBtn"
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3.5 py-2.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 active:scale-[0.99] sm:text-sm"
+          class="inline-flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3.5 py-2.5 text-xs font-semibold text-rose-200 transition sm:text-sm"
         >
           <span>🔄</span>
           <span>Zéro scores</span>
@@ -173,187 +455,267 @@
       </div>
     </header>
 
-    <!-- Grille principale : Colonne Gauche (Manche, Modes Playlist & Audio Auto) | Colonne Droite (Joueurs & Classement) -->
+    <!-- Bloc Multijoueur à Distance sans Stream & Synchronisation -->
+    <section class="mb-6 rounded-3xl border border-sky-400/35 bg-twilight/85 p-5 shadow-cardDark backdrop-blur-md">
+      <div class="mb-4 flex flex-col justify-between gap-3 border-b border-slate-700/70 pb-3 lg:flex-row lg:items-center">
+        <div>
+          <h2 class="font-display text-lg font-bold text-sky-200 sm:text-xl">
+            🌐 Multijoueur à Distance &amp; Synchro sans Stream
+          </h2>
+          <p class="text-xs text-slate-300">
+            Chaque appareil joue l’extrait audio localement (sans flux vidéo ni serveur) et se cale sur la piste, la seconde exacte et l’état lecture/pause via le code de salon / code de synchro.
+          </p>
+        </div>
+
+        <!-- Sélecteur de rôle : Hôte / Joueur distant / Local -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" data-role="host" class="role-btn rounded-xl border border-gold/50 bg-gold/20 px-3 py-2 text-xs font-bold text-goldLight">
+            👑 Hôte
+          </button>
+          <button type="button" data-role="player" class="role-btn rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2 text-xs font-bold text-slate-200">
+            🎮 Joueur distant
+          </button>
+          <button type="button" data-role="local" class="role-btn rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2 text-xs font-bold text-slate-200">
+            🏠 Local
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <!-- Salon, Lien d'invitation & Buzzer distant -->
+        <div class="space-y-3 rounded-2xl border border-slate-700/75 bg-midnight/80 p-4 lg:col-span-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label for="roomCodeInput" class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Code Salon
+            </label>
+            <div class="flex items-center gap-1.5">
+              <input
+                id="roomCodeInput"
+                type="text"
+                maxlength="12"
+                class="w-28 rounded-xl border border-slate-600 bg-slate-900 px-2.5 py-1.5 font-mono text-xs font-bold uppercase text-goldLight outline-none"
+              />
+              <button
+                id="newRoomCodeBtn"
+                type="button"
+                class="rounded-xl border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200"
+                title="Générer un nouveau code salon"
+              >
+                🎲
+              </button>
+              <button
+                id="copyInviteBtn"
+                type="button"
+                class="rounded-xl border border-sky-400/40 bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-sky-200"
+              >
+                🔗 Copier lien
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <label for="remotePlayerSelect" class="mb-1 block text-[11px] font-semibold text-slate-400">
+                Mon joueur (pour Buzzer)
+              </label>
+              <select
+                id="remotePlayerSelect"
+                class="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-xs font-semibold text-white outline-none"
+              ></select>
+            </div>
+            <div class="flex items-end">
+              <button
+                id="remoteBuzzBtn"
+                type="button"
+                class="w-full rounded-xl border border-amber-300/60 bg-gradient-to-r-gold-solid px-3 py-2 text-xs font-bold text-midnight shadow-goldGlow"
+              >
+                🔔 BUZZER À DISTANCE
+              </button>
+            </div>
+          </div>
+
+          <div id="buzzerOrderBox" class="rounded-xl border border-slate-700/70 bg-slate-900/75 px-3 py-2 text-xs text-slate-300">
+            Buzzers de la manche : <span id="buzzerOrderList" class="font-semibold text-goldLight">Aucun buzz pour l’instant</span>
+          </div>
+        </div>
+
+        <!-- Échange de Code de Synchro (Zéro serveur, fonctionne entre tous appareils / navigateurs) -->
+        <div class="space-y-3 rounded-2xl border border-slate-700/75 bg-midnight/80 p-4 lg:col-span-7">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label for="syncCodeTextarea" class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Code de Synchro (Piste · Seconde · Lecture/Pause · Scores · Buzzers)
+            </label>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button
+                id="generateSyncCodeBtn"
+                type="button"
+                class="rounded-xl border border-gold/45 bg-gold/15 px-3 py-1.5 text-xs font-semibold text-goldLight"
+              >
+                ⚡ Générer Code Synchro
+              </button>
+              <button
+                id="copySyncCodeBtn"
+                type="button"
+                class="rounded-xl border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200"
+              >
+                📋 Copier
+              </button>
+              <button
+                id="applySyncCodeBtn"
+                type="button"
+                class="rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200"
+              >
+                ✓ Appliquer &amp; Caler Audio
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            id="syncCodeTextarea"
+            rows="2"
+            placeholder="Collez ici un Code de Synchro reçu de l'Hôte ou d'un joueur, puis cliquez sur 'Appliquer & Caler Audio'..."
+            class="w-full rounded-xl border border-slate-600 bg-slate-900 p-2.5 font-mono text-xs text-slate-100 outline-none"
+          ></textarea>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+            <span id="syncStatusText">Synchro locale + BroadcastChannel active · Dernière synchro : —</span>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer text-slate-300">
+              <input id="autoBroadcastToggle" type="checkbox" checked />
+              <span>Diffusion auto (onglets / salon)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grille principale : Colonne Gauche (Manche, Sélection & Audio) | Colonne Droite (Joueurs & Classement) -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-      <!-- COLONNE GAUCHE -->
-      <section class="space-y-6 lg:col-span-6">
-        <!-- Carte Manche, Modes de sélection & Lecteur Audio Automatique -->
-        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b from-twilight/90 to-midnight/95 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+      <!-- COLONNE GAUCHE : Sélection playlist, manche en cours, audio sans vidéo & historique -->
+      <section class="space-y-6 lg:col-span-5">
+        <!-- Modes de sélection parmi les 151 pistes de la playlist -->
+        <div class="rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-display text-base font-bold text-goldLight sm:text-lg">
+              🎛️ Modes de Sélection Playlist
+            </h2>
+            <span id="filteredTracksCount" class="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-sky-200">
+              151 pistes
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <div>
+              <label for="selectionModeSelect" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Mode de tirage
+              </label>
+              <select
+                id="selectionModeSelect"
+                class="w-full rounded-xl border border-slate-600 bg-midnight px-3 py-2 text-xs font-semibold text-white outline-none"
+              >
+                <option value="random">🎲 Aléatoire (sans répétition)</option>
+                <option value="sequential">⏭️ Séquentiel (ordre de liste)</option>
+                <option value="manual">🎯 Choix manuel dans la liste</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="decadeFilterSelect" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Époque / Décennie
+              </label>
+              <select
+                id="decadeFilterSelect"
+                class="w-full rounded-xl border border-slate-600 bg-midnight px-3 py-2 text-xs font-semibold text-white outline-none"
+              >
+                <option value="all">Toutes époques (1937–2025)</option>
+                <option value="classics">Classiques (1937–1969)</option>
+                <option value="70s-80s">Années 70–80 (1970–1989)</option>
+                <option value="renaissance">Renaissance (1990–1999)</option>
+                <option value="2000s">Années 2000 (2000–2009)</option>
+                <option value="modern">Moderne (2010–2025)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="typeFilterSelect" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Type de morceau
+              </label>
+              <select
+                id="typeFilterSelect"
+                class="w-full rounded-xl border border-slate-600 bg-midnight px-3 py-2 text-xs font-semibold text-white outline-none"
+              >
+                <option value="all">Chansons &amp; Instrumentaux</option>
+                <option value="Chanson">🎤 Chansons uniquement</option>
+                <option value="Instrumental">🎻 Instrumentaux uniquement</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="searchTrackInput" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Filtrer par film / titre
+              </label>
+              <input
+                id="searchTrackInput"
+                type="text"
+                placeholder="Ex: Roi Lion, Encanto, Frozen..."
+                class="w-full rounded-xl border border-slate-600 bg-midnight px-3 py-2 text-xs text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Sélecteur direct de piste pour le mode Manuel ou saut rapide -->
+          <div class="mt-3">
+            <label for="manualTrackSelect" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Sélection directe d’une piste dans la sélection filtrée
+            </label>
+            <select
+              id="manualTrackSelect"
+              class="w-full rounded-xl border border-gold/35 bg-midnight px-3 py-2 text-xs font-semibold text-goldLight outline-none"
+            ></select>
+          </div>
+        </div>
+
+        <!-- Carte Manche & Réponse -->
+        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b-twilight p-5 shadow-cardDark backdrop-blur-md sm:p-6">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
               <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gold/20 text-sm font-bold text-goldLight border border-gold/30">
                 #<span id="roundNumberDisplay">1</span>
               </span>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Manche en cours</p>
-                <p id="poolStatusText" class="text-xs text-goldLight/90">Pioche : 0 / 151 disponibles</p>
+                <p id="poolStatusText" class="text-xs text-goldLight">Pioche : 0 / 151 joués</p>
               </div>
             </div>
 
             <button
               id="resetPoolBtn"
               type="button"
-              class="rounded-xl border border-slate-600/60 bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
-              title="Réinitialiser la liste des pistes déjà tirées dans la sélection courante"
+              class="rounded-xl border border-slate-600/60 bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition"
+              title="Relancer le tirage de toutes les chansons"
             >
               🎲 Réinitialiser la pioche
             </button>
           </div>
 
-          <!-- Sélecteur de Mode de Sélection dans la Playlist -->
-          <div class="mb-4 rounded-2xl border border-slate-700/70 bg-midnight/75 p-3.5">
-            <div class="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-goldLight">
-                🎯 Mode de sélection dans la playlist
-              </span>
-              <span id="selectionModeHint" class="text-[11px] text-slate-400">
-                Tirage aléatoire sans répétition
-              </span>
-            </div>
-
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                data-selection-mode="random"
-                class="selection-mode-btn rounded-xl border px-3 py-2 text-xs font-bold transition"
-              >
-                🎲 Aléatoire (Pioche)
-              </button>
-              <button
-                type="button"
-                data-selection-mode="sequential"
-                class="selection-mode-btn rounded-xl border px-3 py-2 text-xs font-bold transition"
-              >
-                📑 Séquentiel
-              </button>
-              <button
-                type="button"
-                data-selection-mode="manual"
-                class="selection-mode-btn rounded-xl border px-3 py-2 text-xs font-bold transition"
-              >
-                🎛️ Choix manuel
-              </button>
-            </div>
-
-            <!-- Filtres & Thèmes (Film, Décennie, Type) -->
-            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div>
-                <label for="filterDecadeSelect" class="mb-1 block text-[11px] font-medium text-slate-400">Époque / Décennie</label>
-                <select
-                  id="filterDecadeSelect"
-                  class="w-full rounded-xl border border-slate-700 bg-twilight px-2.5 py-2 text-xs text-white outline-none focus:border-gold"
-                >
-                  <option value="all">Toutes époques (1937–2025)</option>
-                  <option value="classic">Classiques (1937–1988)</option>
-                  <option value="renaissance">Renaissance (1989–1999)</option>
-                  <option value="2000s">Années 2000 (2000–2009)</option>
-                  <option value="2010s">Années 2010 (2010–2019)</option>
-                  <option value="2020s">Récents (2020–2025)</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="filterTypeSelect" class="mb-1 block text-[11px] font-medium text-slate-400">Type de piste</label>
-                <select
-                  id="filterTypeSelect"
-                  class="w-full rounded-xl border border-slate-700 bg-twilight px-2.5 py-2 text-xs text-white outline-none focus:border-gold"
-                >
-                  <option value="all">Chansons &amp; Instrumentaux</option>
-                  <option value="Chanson">Chansons uniquement</option>
-                  <option value="Instrumental">Instrumentaux uniquement</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="filterFilmSelect" class="mb-1 block text-[11px] font-medium text-slate-400">Disney / Film / Série</label>
-                <select
-                  id="filterFilmSelect"
-                  class="w-full rounded-xl border border-slate-700 bg-twilight px-2.5 py-2 text-xs text-white outline-none focus:border-gold"
-                >
-                  <option value="all">Tous les Disney</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Raccourcis thématiques rapides -->
-            <div class="mt-2.5 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                data-preset="all"
-                class="preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight"
-              >
-                Tout (151)
-              </button>
-              <button
-                type="button"
-                data-preset="renaissance"
-                class="preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight"
-              >
-                Âge d'or 89–99
-              </button>
-              <button
-                type="button"
-                data-preset="lion_king"
-                class="preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight"
-              >
-                Le Roi Lion &amp; Garde
-              </button>
-              <button
-                type="button"
-                data-preset="princess_modern"
-                class="preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight"
-              >
-                Raiponce / Reine des Neiges / Encanto
-              </button>
-              <button
-                type="button"
-                data-preset="instrumental"
-                class="preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight"
-              >
-                Instrumentaux
-              </button>
-            </div>
-
-            <!-- Sélecteur direct de piste (visible en mode Choix manuel ou utilisable à tout moment) -->
-            <div id="manualTrackPickerBox" class="mt-3 hidden border-t border-slate-800 pt-3">
-              <label for="manualTrackSelect" class="mb-1 block text-[11px] font-semibold text-sky-300">
-                Choisir une piste directement dans la sélection filtrée (<span id="filteredCountBadge">0</span> titres) :
-              </label>
-              <select
-                id="manualTrackSelect"
-                class="w-full rounded-xl border border-sky-400/40 bg-twilight px-3 py-2 text-xs text-white outline-none focus:border-gold"
-              ></select>
-            </div>
-          </div>
-
-          <!-- Zone d'affichage de la piste / réponse (sans aucune vidéo) -->
-          <div id="trackStage" class="mb-4 rounded-2xl border border-slate-700/70 bg-midnight/80 p-4 sm:p-5">
+          <!-- Zone d'affichage de la piste / réponse -->
+          <div id="trackStage" class="mb-5 rounded-2xl border border-slate-700/70 bg-midnight/80 p-4 sm:p-5">
             <div class="flex items-start gap-4">
               <div
                 id="coverBadge"
-                class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gradient-to-br from-sapphire via-indigo-950 to-midnight text-2xl shadow-inner sm:h-20 sm:w-20 sm:text-3xl"
+                class="bg-cover-badge flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-gold/35 text-2xl sm:h-20 sm:w-20"
               >
-                🎶
+                🏰
               </div>
 
               <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <p id="trackHintLabel" class="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
-                    Lecture audio automatique en cours...
-                  </p>
-                  <span id="trackMetaPill" class="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
-                    —
-                  </span>
-                </div>
+                <p id="trackHintLabel" class="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
+                  Écoutez l'extrait audio...
+                </p>
 
                 <!-- Réponse masquée tant que non révélée -->
                 <div id="hiddenAnswerBox" class="mt-1.5 space-y-1">
-                  <p class="text-lg font-bold text-white sm:text-xl">
-                    Titre : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-goldLight">??? (1 pt)</span>
-                  </p>
-                  <p class="text-sm font-medium text-slate-300">
-                    Disney : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-sky-300">??? (1 pt)</span>
-                  </p>
+                  <p class="text-lg font-bold text-white sm:text-xl">Titre : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-goldLight">??? (1 pt)</span></p>
+                  <p class="text-sm font-medium text-slate-300">Disney : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-sky-300">??? (1 pt)</span></p>
                   <p id="judgeCheatPeek" class="mt-2 rounded-xl border border-gold/25 bg-gold/10 px-2.5 py-1.5 text-xs text-goldLight">
                     💡 <span class="font-semibold">Aperçu Juge :</span> <span id="judgePeekText">Chargement...</span>
                   </p>
@@ -362,44 +724,51 @@
                 <!-- Réponse révélée -->
                 <div id="revealedAnswerBox" class="mt-1.5 hidden space-y-1.5">
                   <p class="text-lg font-bold text-goldLight sm:text-xl" id="revealedTitle">—</p>
-                  <p class="text-xs font-medium text-amber-200/85" id="revealedTitleEn"></p>
                   <p class="text-sm font-semibold text-sky-300 sm:text-base" id="revealedMovie">—</p>
                   <p id="revealedNotes" class="text-xs text-slate-300"></p>
+                  <a
+                    id="fallbackSearchLink"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-1 inline-block text-xs font-semibold text-amber-300"
+                  >
+                    🔎 Recherche de secours (lien externe)
+                  </a>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Lecteur Audio 100% Automatique (Audio seul, zéro vidéo) -->
-          <div class="mb-5 rounded-2xl border border-gold/25 bg-slate-900/80 p-3.5">
+          <!-- Lecteur Audio Automatique 100% Sans Vidéo (iTunes Preview + Synthèse Web Audio de secours) -->
+          <div class="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/75 p-3.5">
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span id="audioSourceStatus" class="font-medium text-sky-300">
-                Recherche audio automatique...
-              </span>
+              <span id="audioSourceStatus" class="font-medium text-sky-200">Initialisation audio automatique...</span>
               <span id="audioTimeDisplay" class="font-mono text-slate-400">00:00 / 00:00</span>
             </div>
+
+            <audio id="audioPlayer" preload="auto" class="hidden"></audio>
 
             <div class="flex flex-wrap items-center gap-2.5">
               <button
                 id="playPauseBtn"
                 type="button"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-midnight transition hover:bg-goldLight active:scale-[0.99]"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-midnight transition"
               >
-                <span id="playPauseIcon">⏸</span>
-                <span id="playPauseLabel">Pause</span>
+                <span id="playPauseIcon">▶</span>
+                <span id="playPauseLabel">Lecture</span>
               </button>
 
               <button
-                id="replayAudioBtn"
+                id="syncTimeBtn"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
-                title="Relancer l'extrait depuis le début"
+                class="inline-flex items-center gap-1 rounded-xl border border-sky-400/40 bg-sky-500/15 px-2.5 py-2 text-xs font-semibold text-sky-200 transition"
+                title="Recaler la seconde de lecture sur l'état synchronisé"
               >
-                <span>🔁</span>
-                <span>Rejouer</span>
+                <span>⏱️</span>
+                <span>Recaler</span>
               </button>
 
-              <!-- Barre de progression cliquable -->
               <input
                 id="seekSlider"
                 type="range"
@@ -408,10 +777,9 @@
                 value="0"
                 step="0.1"
                 aria-label="Position de lecture audio"
-                class="h-2 min-w-[100px] flex-1 cursor-pointer accent-gold"
+                class="h-2 flex-1 cursor-pointer"
               />
 
-              <!-- Volume -->
               <div class="flex items-center gap-1.5">
                 <span class="text-xs text-slate-300" aria-hidden="true">🔊</span>
                 <input
@@ -422,30 +790,19 @@
                   value="0.8"
                   step="0.05"
                   aria-label="Volume audio"
-                  class="h-1.5 w-20 cursor-pointer accent-gold"
+                  class="h-1.5 w-20 cursor-pointer"
                 />
               </div>
             </div>
 
-            <!-- Options d'automatisation audio -->
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-2.5 text-[11px] text-slate-300">
-              <label class="inline-flex cursor-pointer items-center gap-2">
-                <input
-                  id="autoPlayToggle"
-                  type="checkbox"
-                  checked
-                  class="h-3.5 w-3.5 rounded accent-gold"
-                />
-                <span>Lecture automatique à chaque manche</span>
+            <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input id="autoPlayTrackToggle" type="checkbox" checked />
+                <span>Lecture automatique à chaque nouvelle piste (sans vidéo)</span>
               </label>
-
-              <label class="inline-flex cursor-pointer items-center gap-2">
-                <input
-                  id="autoNextToggle"
-                  type="checkbox"
-                  class="h-3.5 w-3.5 rounded accent-gold"
-                />
-                <span>Enchaîner automatiquement la piste suivante</span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input id="autoAdvanceToggle" type="checkbox" />
+                <span>Enchaînement auto manche suivante</span>
               </label>
             </div>
           </div>
@@ -458,7 +815,7 @@
               class="flex items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-gradient-to-r from-amber-500/25 to-gold/25 px-4 py-3 text-sm font-bold text-goldLight shadow-goldGlow transition hover:from-amber-500/35 hover:to-gold/35 active:scale-[0.99]"
             >
               <span>✨</span>
-              <span>Révéler la réponse (Entrée)</span>
+              <span>Révéler la réponse</span>
             </button>
 
             <button
@@ -467,9 +824,97 @@
               class="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold to-amber-400 px-4 py-3 text-sm font-bold text-midnight shadow-lg transition hover:brightness-105 active:scale-[0.99]"
             >
               <span>⏭️</span>
-              <span>Piste suivante</span>
+              <span>Manche suivante</span>
             </button>
           </div>
+        </div>
+
+        <!-- Nouvel encart : Réponse / Proposition (Titre + Disney avec vérification tolérante) -->
+        <div id="proposalCard" class="rounded-3xl border border-gold/30 bg-twilight/85 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="font-display text-base font-bold text-goldLight sm:text-lg">
+                ✍️ Réponse / Proposition
+              </h2>
+              <p class="text-xs text-slate-300">
+                Saisissez le <strong class="text-goldLight">Titre</strong> et le <strong class="text-sky-300">Disney</strong> pour vérifier et attribuer les points.
+              </p>
+            </div>
+            <label class="flex items-center gap-1.5 text-xs text-slate-300">
+              <span>Joueur :</span>
+              <select
+                id="proposalPlayerSelect"
+                class="rounded-xl border border-slate-600/80 bg-midnight/90 px-2.5 py-1.5 text-xs font-semibold text-white outline-none focus:border-gold"
+              ></select>
+            </label>
+          </div>
+
+          <form id="proposalForm" class="space-y-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label for="proposalTitleInput" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-goldLight">
+                  Titre de la chanson (1 pt)
+                </label>
+                <input
+                  id="proposalTitleInput"
+                  type="text"
+                  placeholder="Ex: Libérée, délivrée..."
+                  class="w-full rounded-xl border border-slate-600/80 bg-midnight/85 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-gold"
+                />
+              </div>
+
+              <div>
+                <label for="proposalDisneyInput" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-sky-300">
+                  Disney / Film / Série (1 pt)
+                </label>
+                <input
+                  id="proposalDisneyInput"
+                  type="text"
+                  placeholder="Ex: La Reine des neiges..."
+                  class="w-full rounded-xl border border-slate-600/80 bg-midnight/85 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-sky-400"
+                />
+              </div>
+            </div>
+
+            <!-- Zone de retour visuel immédiat sur la proposition -->
+            <div id="proposalFeedback" class="hidden rounded-2xl border px-3.5 py-2.5 text-xs"></div>
+
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                id="checkProposalBtn"
+                type="submit"
+                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-gold to-amber-400 px-4 py-2.5 text-xs font-bold text-midnight transition hover:brightness-105"
+              >
+                <span>🔍</span>
+                <span>Vérifier &amp; Valider</span>
+              </button>
+
+              <button
+                id="grantTitleFromProposalBtn"
+                type="button"
+                class="rounded-xl border border-gold/45 bg-gold/15 px-3 py-2.5 text-xs font-bold text-goldLight transition hover:bg-gold/25"
+              >
+                +1 Titre
+              </button>
+
+              <button
+                id="grantDisneyFromProposalBtn"
+                type="button"
+                class="rounded-xl border border-sky-400/45 bg-sky-500/15 px-3 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25"
+              >
+                +1 Disney
+              </button>
+
+              <button
+                id="clearProposalBtn"
+                type="button"
+                class="rounded-xl border border-slate-600/70 bg-slate-800/80 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700"
+                title="Effacer la proposition"
+              >
+                Effacer
+              </button>
+            </div>
+          </form>
         </div>
 
         <!-- Carte Historique des manches -->
@@ -484,43 +929,16 @@
           </div>
           <div id="historyList" class="max-h-72 space-y-2.5 overflow-y-auto pr-1 text-sm">
             <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-center text-xs text-slate-400">
-              Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la piste suivante !
+              Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la manche suivante !
             </p>
           </div>
         </div>
       </section>
 
-      <!-- COLONNE DROITE : Buzzer / Joueur actif, cartes de score & classement en direct -->
-      <section class="space-y-6 lg:col-span-6">
-        <!-- Buzzer / Joueur actif + Ajout d'un joueur -->
-        <div class="space-y-4 rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md">
-          <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-midnight/85 p-3.5">
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-wider text-amber-300/80">
-                🔔 Buzzer / Joueur actif (Raccourci : Espace)
-              </p>
-              <p id="activeBuzzerName" class="text-base font-bold text-goldLight">
-                Aucun joueur sélectionné
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <button
-                id="buzzerTriggerBtn"
-                type="button"
-                class="rounded-xl bg-gradient-to-r from-amber-400 to-gold px-3.5 py-2 text-xs font-bold text-midnight shadow transition hover:brightness-105 active:scale-[0.98]"
-              >
-                🔔 Buzze !
-              </button>
-              <button
-                id="clearBuzzerBtn"
-                type="button"
-                class="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:text-white"
-              >
-                Réinitialiser
-              </button>
-            </div>
-          </div>
-
+      <!-- COLONNE DROITE : Ajout joueurs, cartes de score & classement en direct -->
+      <section class="space-y-6 lg:col-span-7">
+        <!-- Ajout d'un joueur -->
+        <div class="rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md">
           <form id="addPlayerForm" class="flex flex-col gap-3 sm:flex-row">
             <label for="newPlayerInput" class="sr-only">Nom du joueur ou de l'équipe</label>
             <input
@@ -528,11 +946,11 @@
               type="text"
               maxlength="28"
               placeholder="Ajouter un joueur ou une équipe (ex: Belle, Stitch, Équipe Étoiles...)"
-              class="flex-1 rounded-2xl border border-slate-600/70 bg-midnight/85 px-4 py-3 text-sm text-white placeholder-slate-400 outline-none transition focus:border-gold"
+              class="flex-1 rounded-2xl border border-slate-600/70 bg-midnight/85 px-4 py-3 text-sm text-white outline-none transition"
             />
             <button
               type="submit"
-              class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-3 text-sm font-bold text-midnight transition hover:bg-goldLight active:scale-[0.99]"
+              class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-3 text-sm font-bold text-midnight transition"
             >
               <span>➕</span>
               <span>Ajouter</span>
@@ -540,29 +958,29 @@
           </form>
         </div>
 
-        <!-- Cartes d'attribution rapide des points (+1 Titre / +1 Disney / +2 Combo / -1) -->
+        <!-- Cartes d'attribution rapide des points (+1 Titre / +1 Disney) -->
         <div class="rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 class="font-display text-lg font-bold text-goldLight sm:text-xl">
-                ⭐ Comptoir des Points
+                ⭐ Comptoir des Points (+1 Titre · +1 Disney)
               </h2>
               <p class="text-xs text-slate-300">
-                <strong class="text-goldLight">+1 Titre</strong> · <strong class="text-sky-300">+1 Disney</strong> · <strong class="text-emerald-300">+2 Combo</strong> (max +2 pts / manche / joueur).
+                Attribuez <strong class="text-goldLight">+1 Titre</strong> et <strong class="text-sky-300">+1 Disney</strong> par joueur (jusqu’à +2 pts par manche).
               </p>
             </div>
             <span class="rounded-xl border border-gold/25 bg-midnight/70 px-3 py-1 text-xs font-semibold text-slate-300">
-              <span id="playersCountLabel">0</span> joueur(s)
+              <span id="playersCountLabel">2</span> joueur(s)
             </span>
           </div>
 
-          <div id="playersGrid" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div id="playersGrid" class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <!-- Rempli dynamiquement en JavaScript -->
           </div>
         </div>
 
         <!-- Classement en direct (Leaderboard) -->
-        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b from-twilight/85 to-midnight/95 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b-twilight p-5 shadow-cardDark backdrop-blur-md sm:p-6">
           <div class="mb-4 flex items-center justify-between">
             <h2 class="font-display text-lg font-bold text-goldLight sm:text-xl">
               🏆 Classement en Direct
@@ -581,7 +999,7 @@
   <!-- MODALE PLAYLIST JSON (Coller, Importer .json, Exporter) -->
   <div
     id="jsonModal"
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+    class="modal-backdrop hidden"
     role="dialog"
     aria-modal="true"
     aria-labelledby="jsonModalTitle"
@@ -590,25 +1008,24 @@
       <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-700/80 pb-3">
         <div>
           <h2 id="jsonModalTitle" class="font-display text-lg font-bold text-goldLight sm:text-xl">
-            📂 Gestionnaire de Playlist JSON
+            📂 Gestionnaire de Playlist JSON (151 pistes Disney)
           </h2>
           <p class="text-xs text-slate-300">
-            Supporte le format <code class="rounded bg-midnight px-1.5 py-0.5 text-goldLight">titre_fr</code> / <code class="rounded bg-midnight px-1.5 py-0.5 text-sky-300">film</code> / <code class="text-amber-300">annee</code> / <code class="text-emerald-300">type</code> (et <code class="text-emerald-300">audio_url</code> optionnel).
+            Compatible avec <code class="text-goldLight">titre_fr</code>, <code class="text-sky-300">titre_en</code>, <code class="text-sky-300">film</code>, <code class="text-emerald-300">annee</code>, <code class="text-emerald-300">type</code>, <code class="text-emerald-300">yt_fallback</code> et <code class="text-goldLight">audioUrl</code> optionnel.
           </p>
         </div>
         <button
           id="closeJsonModalBtn"
           type="button"
           aria-label="Fermer la fenêtre JSON"
-          class="rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm font-bold text-slate-200 transition hover:bg-slate-700"
+          class="rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm font-bold text-slate-200"
         >
           ✕
         </button>
       </div>
 
-      <!-- Barre d'import fichier & export -->
       <div class="mb-4 flex flex-wrap items-center gap-2.5">
-        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3.5 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/25">
+        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3.5 py-2 text-xs font-semibold text-sky-200">
           <span>📥 Importer un fichier .json</span>
           <input id="jsonFileInput" type="file" accept=".json,application/json" class="hidden" />
         </label>
@@ -616,7 +1033,7 @@
         <button
           id="exportJsonBtn"
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2 text-xs font-semibold text-goldLight transition hover:bg-gold/25"
+          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2 text-xs font-semibold text-goldLight"
         >
           <span>📤 Exporter / Télécharger .json</span>
         </button>
@@ -624,13 +1041,12 @@
         <button
           id="loadDefaultJsonBtn"
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/75 px-3.5 py-2 text-xs font-semibold text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/75 px-3.5 py-2 text-xs font-semibold text-slate-200"
         >
-          <span>✨ Restaurer les 151 pistes Disney</span>
+          <span>✨ 151 pistes Disney par défaut</span>
         </button>
       </div>
 
-      <!-- Zone d'édition / collage JSON -->
       <div class="mb-3">
         <label for="jsonTextarea" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
           Contenu JSON (tableau de pistes)
@@ -639,25 +1055,24 @@
           id="jsonTextarea"
           rows="12"
           spellcheck="false"
-          class="w-full rounded-2xl border border-slate-600/80 bg-midnight p-3.5 font-mono text-xs leading-relaxed text-slate-100 outline-none focus:border-gold"
+          class="w-full rounded-2xl border border-slate-600/80 bg-midnight p-3.5 font-mono text-xs leading-relaxed text-slate-100 outline-none"
         ></textarea>
       </div>
 
-      <!-- Message de validation JSON -->
       <div id="jsonValidationBox" class="mb-4 hidden rounded-2xl border px-3.5 py-2.5 text-xs"></div>
 
       <div class="flex flex-wrap justify-end gap-2.5">
         <button
           id="cancelJsonModalBtn"
           type="button"
-          class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+          class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200"
         >
           Annuler
         </button>
         <button
           id="applyJsonBtn"
           type="button"
-          class="rounded-xl bg-gold px-5 py-2.5 text-xs font-bold text-midnight transition hover:bg-goldLight"
+          class="rounded-xl bg-gold px-5 py-2.5 text-xs font-bold text-midnight"
         >
           ✓ Appliquer et sauvegarder la playlist
         </button>
@@ -668,7 +1083,7 @@
   <script>
     /**
      * =========================================================================
-     * DISNEY BLIND TEST — CATALOGUE COMPLET DE 151 PISTES (DISNEY_TRACKS)
+     * DISNEY BLIND TEST — 151 PISTES DISNEY_TRACKS INTÉGRÉES
      * =========================================================================
      */
     const DISNEY_TRACKS = [
@@ -2035,59 +2450,57 @@
 
     /**
      * =========================================================================
-     * DISNEY BLIND TEST — LOGIQUE PRINCIPALE (SINGLE FILE / GITHUB PAGES READY)
-     * Règles de score :
-     *   - +1 pt pour le Titre ("Titre")
-     *   - +1 pt pour le Disney ("Disney")
-     *   - Maximum +2 pts par manche et par joueur
+     * ÉTAT GLOBAL & PERSISTANCE (ZÉRO SERVEUR, SYNCHRO À DISTANCE)
      * =========================================================================
      */
-
-    const STORAGE_KEY = 'disney_blind_test_state_v2';
+    const STORAGE_KEYS = {
+      STATE: 'disney_blind_test_remote_v2',
+    };
 
     const DEFAULT_PLAYERS = [
       { id: 'p-1', name: 'Joueur 1', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
       { id: 'p-2', name: 'Joueur 2', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
     ];
 
-    // Cache mémoire des URLs audio résolues pour éviter de refaire des requêtes réseau
-    const resolvedAudioCache = new Map();
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return code;
+    }
 
-    // État du synthétiseur musical de secours (Web Audio API — sans vidéo)
-    let synthCtx = null;
-    let synthTimerId = null;
-    let synthPlaying = false;
-    let synthStep = 0;
-
-    // État global de l'application
     let state = {
-      playlist: normalizeTracks(DISNEY_TRACKS),
+      role: 'host', // 'host' | 'player' | 'local'
+      roomCode: generateRoomCode(),
+      remotePlayerId: 'p-1',
+      autoBroadcast: true,
+      playlist: cloneData(DISNEY_TRACKS),
       players: cloneData(DEFAULT_PLAYERS),
-      activeBuzzerId: null,
-      currentTrackId: null,
+      currentTrackId: 1,
       playedTrackIds: [],
       roundNumber: 1,
       answerRevealed: false,
       judgeMode: true,
       selectionMode: 'random', // 'random' | 'sequential' | 'manual'
-      filters: {
-        decade: 'all',
-        type: 'all',
-        film: 'all',
-        preset: 'all',
-      },
-      audioSettings: {
-        autoPlay: true,
-        autoNext: false,
-        volume: 0.8,
-      },
+      decadeFilter: 'all',
+      typeFilter: 'all',
+      searchQuery: '',
+      autoPlayTrack: true,
+      autoAdvance: false,
+      buzzers: [], // [{ playerId, playerName, buzzedAt }]
       history: [],
       undoStack: [],
+      lastSyncAt: null,
     };
 
-    // Références DOM
+    let broadcastChannel = null;
+    let webAudioCtx = null;
+    let synthInterval = null;
+    let isUsingSynthFallback = false;
+
     const dom = {
-      audioPlayer: document.getElementById('audioPlayer'),
       toastBanner: document.getElementById('toastBanner'),
       toastInner: document.getElementById('toastInner'),
       toastIcon: document.getElementById('toastIcon'),
@@ -2096,55 +2509,63 @@
       toggleJudgeModeBtn: document.getElementById('toggleJudgeModeBtn'),
       judgeModeIcon: document.getElementById('judgeModeIcon'),
       judgeModeLabel: document.getElementById('judgeModeLabel'),
-      undoActionBtn: document.getElementById('undoActionBtn'),
       openJsonModalBtn: document.getElementById('openJsonModalBtn'),
       playlistCountBadge: document.getElementById('playlistCountBadge'),
+      undoScoreBtn: document.getElementById('undoScoreBtn'),
       resetScoresBtn: document.getElementById('resetScoresBtn'),
+
+      roomCodeInput: document.getElementById('roomCodeInput'),
+      newRoomCodeBtn: document.getElementById('newRoomCodeBtn'),
+      copyInviteBtn: document.getElementById('copyInviteBtn'),
+      remotePlayerSelect: document.getElementById('remotePlayerSelect'),
+      remoteBuzzBtn: document.getElementById('remoteBuzzBtn'),
+      buzzerOrderList: document.getElementById('buzzerOrderList'),
+      syncCodeTextarea: document.getElementById('syncCodeTextarea'),
+      generateSyncCodeBtn: document.getElementById('generateSyncCodeBtn'),
+      copySyncCodeBtn: document.getElementById('copySyncCodeBtn'),
+      applySyncCodeBtn: document.getElementById('applySyncCodeBtn'),
+      syncStatusText: document.getElementById('syncStatusText'),
+      autoBroadcastToggle: document.getElementById('autoBroadcastToggle'),
+
+      selectionModeSelect: document.getElementById('selectionModeSelect'),
+      decadeFilterSelect: document.getElementById('decadeFilterSelect'),
+      typeFilterSelect: document.getElementById('typeFilterSelect'),
+      searchTrackInput: document.getElementById('searchTrackInput'),
+      manualTrackSelect: document.getElementById('manualTrackSelect'),
+      filteredTracksCount: document.getElementById('filteredTracksCount'),
 
       roundNumberDisplay: document.getElementById('roundNumberDisplay'),
       poolStatusText: document.getElementById('poolStatusText'),
       resetPoolBtn: document.getElementById('resetPoolBtn'),
 
-      selectionModeHint: document.getElementById('selectionModeHint'),
-      filterDecadeSelect: document.getElementById('filterDecadeSelect'),
-      filterTypeSelect: document.getElementById('filterTypeSelect'),
-      filterFilmSelect: document.getElementById('filterFilmSelect'),
-      manualTrackPickerBox: document.getElementById('manualTrackPickerBox'),
-      filteredCountBadge: document.getElementById('filteredCountBadge'),
-      manualTrackSelect: document.getElementById('manualTrackSelect'),
-
       coverBadge: document.getElementById('coverBadge'),
       trackHintLabel: document.getElementById('trackHintLabel'),
-      trackMetaPill: document.getElementById('trackMetaPill'),
       hiddenAnswerBox: document.getElementById('hiddenAnswerBox'),
       judgeCheatPeek: document.getElementById('judgeCheatPeek'),
       judgePeekText: document.getElementById('judgePeekText'),
       revealedAnswerBox: document.getElementById('revealedAnswerBox'),
       revealedTitle: document.getElementById('revealedTitle'),
-      revealedTitleEn: document.getElementById('revealedTitleEn'),
       revealedMovie: document.getElementById('revealedMovie'),
       revealedNotes: document.getElementById('revealedNotes'),
+      fallbackSearchLink: document.getElementById('fallbackSearchLink'),
 
+      audioPlayer: document.getElementById('audioPlayer'),
       audioSourceStatus: document.getElementById('audioSourceStatus'),
       audioTimeDisplay: document.getElementById('audioTimeDisplay'),
       playPauseBtn: document.getElementById('playPauseBtn'),
       playPauseIcon: document.getElementById('playPauseIcon'),
       playPauseLabel: document.getElementById('playPauseLabel'),
-      replayAudioBtn: document.getElementById('replayAudioBtn'),
+      syncTimeBtn: document.getElementById('syncTimeBtn'),
       seekSlider: document.getElementById('seekSlider'),
       volumeSlider: document.getElementById('volumeSlider'),
-      autoPlayToggle: document.getElementById('autoPlayToggle'),
-      autoNextToggle: document.getElementById('autoNextToggle'),
+      autoPlayTrackToggle: document.getElementById('autoPlayTrackToggle'),
+      autoAdvanceToggle: document.getElementById('autoAdvanceToggle'),
 
       revealAnswerBtn: document.getElementById('revealAnswerBtn'),
       nextTrackBtn: document.getElementById('nextTrackBtn'),
 
       historyCountLabel: document.getElementById('historyCountLabel'),
       historyList: document.getElementById('historyList'),
-
-      activeBuzzerName: document.getElementById('activeBuzzerName'),
-      buzzerTriggerBtn: document.getElementById('buzzerTriggerBtn'),
-      clearBuzzerBtn: document.getElementById('clearBuzzerBtn'),
 
       addPlayerForm: document.getElementById('addPlayerForm'),
       newPlayerInput: document.getElementById('newPlayerInput'),
@@ -2161,6 +2582,17 @@
       jsonTextarea: document.getElementById('jsonTextarea'),
       jsonValidationBox: document.getElementById('jsonValidationBox'),
       applyJsonBtn: document.getElementById('applyJsonBtn'),
+
+      // Encart Réponse / Proposition
+      proposalPlayerSelect: document.getElementById('proposalPlayerSelect'),
+      proposalForm: document.getElementById('proposalForm'),
+      proposalTitleInput: document.getElementById('proposalTitleInput'),
+      proposalDisneyInput: document.getElementById('proposalDisneyInput'),
+      proposalFeedback: document.getElementById('proposalFeedback'),
+      checkProposalBtn: document.getElementById('checkProposalBtn'),
+      grantTitleFromProposalBtn: document.getElementById('grantTitleFromProposalBtn'),
+      grantDisneyFromProposalBtn: document.getElementById('grantDisneyFromProposalBtn'),
+      clearProposalBtn: document.getElementById('clearProposalBtn'),
     };
 
     let toastTimeoutId = null;
@@ -2169,21 +2601,13 @@
       return JSON.parse(JSON.stringify(obj));
     }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
     function showToast(message, type = 'info') {
       if (toastTimeoutId) clearTimeout(toastTimeoutId);
+
       const styles = {
-        info: { icon: '✨', border: 'border-gold/45', text: 'text-slate-100' },
-        success: { icon: '🌟', border: 'border-emerald-400/50', text: 'text-emerald-100' },
-        error: { icon: '⚠️', border: 'border-rose-400/60', text: 'text-rose-100' },
+        info: { icon: '✨', border: 'border-gold/40', text: 'text-slate-100' },
+        success: { icon: '🌟', border: 'border-emerald-400/40', text: 'text-emerald-200' },
+        error: { icon: '⚠️', border: 'border-rose-400/35', text: 'text-rose-200' },
       };
       const cfg = styles[type] || styles.info;
 
@@ -2191,23 +2615,28 @@
       dom.toastIcon.textContent = cfg.icon;
       dom.toastMessage.textContent = message;
 
-      dom.toastBanner.classList.remove('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
-      dom.toastBanner.classList.add('translate-x-0', 'opacity-100');
+      dom.toastBanner.classList.add('is-visible');
 
       toastTimeoutId = setTimeout(() => {
-        dom.toastBanner.classList.remove('translate-x-0', 'opacity-100');
-        dom.toastBanner.classList.add('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
-      }, 3000);
+        dom.toastBanner.classList.remove('is-visible');
+      }, 3200);
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
+      } catch (err) {
+        console.error('Erreur sauvegarde localStorage :', err);
+      }
     }
 
     /**
-     * Normalise un tableau de pistes (compatible avec DISNEY_TRACKS et formats JSON variés)
+     * =========================================================================
+     * NORMALISATION PLAYLIST (CONSERVE id, film, annee, titre_fr, titre_en, type, yt_fallback)
+     * =========================================================================
      */
-    function normalizeTracks(rawInput) {
-      let parsed = rawInput;
-      if (typeof rawInput === 'string') {
-        parsed = JSON.parse(rawInput);
-      }
+    function parseAndNormalizePlaylist(rawInput) {
+      let parsed = typeof rawInput === 'string' ? JSON.parse(rawInput) : rawInput;
 
       if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.playlist)) parsed = parsed.playlist;
@@ -2221,375 +2650,891 @@
 
       return parsed.map((item, idx) => {
         if (!item || typeof item !== 'object') {
-          throw new Error(`Piste #${idx + 1} invalide.`);
+          throw new Error(`Élément #${idx + 1} invalide.`);
         }
-        const titre_fr = String(item.titre_fr ?? item.title ?? item.titre ?? item.song ?? '').trim();
-        const titre_en = String(item.titre_en ?? item.title_en ?? titre_fr).trim();
-        const film = String(item.film ?? item.disney ?? item.movie ?? item.source ?? '').trim();
-        const rawYear = Number(item.annee ?? item.year);
-        const annee = Number.isFinite(rawYear) && rawYear > 1900 ? rawYear : 1990;
-        const type = String(item.type ?? 'Chanson').trim() || 'Chanson';
-        const yt_fallback = String(item.yt_fallback ?? '').trim();
-        const audio_url = String(item.audio_url ?? item.audioUrl ?? item.previewUrl ?? '').trim();
 
-        if (!titre_fr || !film) {
-          throw new Error(`Piste #${idx + 1} incomplète : "titre_fr" (ou "title") et "film" (ou "disney") sont requis.`);
+        const titreFr = String(item.titre_fr ?? item.title ?? item.titre ?? item.name ?? '').trim();
+        const titreEn = String(item.titre_en ?? item.title_en ?? titreFr).trim();
+        const film = String(item.film ?? item.disney ?? item.movie ?? 'Disney').trim();
+        const anneeNum = Number(item.annee ?? item.year ?? 0);
+        const annee = Number.isFinite(anneeNum) && anneeNum > 0 ? anneeNum : 1990;
+        const type = String(item.type ?? 'Chanson').trim() || 'Chanson';
+        const audioUrl = String(item.audioUrl ?? item.previewUrl ?? item.audio ?? '').trim();
+        const queryLabel = encodeURIComponent(`${titreFr} ${film} Disney bande originale`);
+        const ytFallback = String(
+          item.yt_fallback ?? `https://www.youtube.com/results?search_query=${queryLabel}`
+        ).trim();
+
+        if (!titreFr || !film) {
+          throw new Error(`Piste #${idx + 1} : "titre_fr" et "film" sont requis.`);
         }
 
         let safeAudioUrl = '';
-        if (audio_url && (/^https?:\/\//i.test(audio_url) || /^(\.\/|\.\.\/|\/|[\w.-]+\/)/.test(audio_url))) {
-          safeAudioUrl = audio_url;
+        if (audioUrl && (/^https?:\/\//i.test(audioUrl) || /^(\.\/|\.\.\/|\/|[\w.-]+\/)/.test(audioUrl))) {
+          safeAudioUrl = audioUrl;
         }
 
         return {
-          id: Number.isFinite(Number(item.id)) ? Number(item.id) : idx + 1,
+          id: item.id ?? idx + 1,
           film,
           annee,
-          titre_fr,
-          titre_en,
+          titre_fr: titreFr,
+          titre_en: titreEn,
           type,
-          yt_fallback,
-          audio_url: safeAudioUrl,
+          yt_fallback: ytFallback,
+          audioUrl: safeAudioUrl,
         };
       });
     }
 
-    function saveState() {
-      try {
-        const toSave = {
-          playlist: state.playlist,
-          players: state.players,
-          activeBuzzerId: state.activeBuzzerId,
-          currentTrackId: state.currentTrackId,
-          playedTrackIds: state.playedTrackIds,
-          roundNumber: state.roundNumber,
-          answerRevealed: state.answerRevealed,
-          judgeMode: state.judgeMode,
-          selectionMode: state.selectionMode,
-          filters: state.filters,
-          audioSettings: state.audioSettings,
-          history: state.history,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-      } catch (err) {
-        console.warn('Sauvegarde localStorage impossible :', err);
+    /**
+     * =========================================================================
+     * SYNCHRO À DISTANCE SANS STREAM (CODE DE SYNCHRO + BROADCAST + HASH URL)
+     * =========================================================================
+     */
+    function buildSyncPayload() {
+      const currentAudioTime = isUsingSynthFallback
+        ? 0
+        : Number(dom.audioPlayer.currentTime || 0);
+      const isCurrentlyPlaying = isUsingSynthFallback
+        ? Boolean(synthInterval)
+        : !dom.audioPlayer.paused;
+
+      return {
+        v: 1,
+        room: state.roomCode,
+        trackId: state.currentTrackId,
+        currentTime: Number(currentAudioTime.toFixed(2)),
+        isPlaying: isCurrentlyPlaying,
+        roundNumber: state.roundNumber,
+        answerRevealed: state.answerRevealed,
+        players: state.players,
+        buzzers: state.buzzers,
+        history: state.history.slice(0, 20),
+        ts: Date.now(),
+      };
+    }
+
+    function encodeSyncCode() {
+      const jsonStr = JSON.stringify(buildSyncPayload());
+      const bytes = new TextEncoder().encode(jsonStr);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) {
+        bin += String.fromCharCode(bytes[i]);
+      }
+      return 'DBT1.' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function decodeSyncCode(rawText) {
+      const trimmed = String(rawText || '').trim();
+      if (!trimmed) throw new Error('Code de synchro vide.');
+
+      if (trimmed.startsWith('DBT1.')) {
+        const b64 = trimmed.slice(5).replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+        const bin = atob(b64 + pad);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) {
+          bytes[i] = bin.charCodeAt(i);
+        }
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
+
+      return JSON.parse(trimmed);
+    }
+
+    function applyRemoteSyncPayload(payload, fromBroadcast = false) {
+      if (!payload || typeof payload !== 'object') return;
+      if (payload.room && String(payload.room).toUpperCase() !== state.roomCode.toUpperCase()) {
+        return;
+      }
+
+      const trackChanged = payload.trackId != null && String(payload.trackId) !== String(state.currentTrackId);
+      if (payload.trackId != null) {
+        const exists = state.playlist.some((t) => String(t.id) === String(payload.trackId));
+        if (exists) {
+          state.currentTrackId = payload.trackId;
+          if (!state.playedTrackIds.includes(payload.trackId)) {
+            state.playedTrackIds.push(payload.trackId);
+          }
+        }
+      }
+
+      if (Number.isFinite(Number(payload.roundNumber)) && Number(payload.roundNumber) >= 1) {
+        state.roundNumber = Number(payload.roundNumber);
+      }
+      if (typeof payload.answerRevealed === 'boolean') {
+        state.answerRevealed = payload.answerRevealed;
+      }
+      if (Array.isArray(payload.players) && payload.players.length > 0) {
+        state.players = payload.players.map((p, i) => ({
+          id: String(p.id || `p-${i + 1}`),
+          name: String(p.name || `Joueur ${i + 1}`),
+          score: Number(p.score) || 0,
+          titlePoints: Number(p.titlePoints) || 0,
+          disneyPoints: Number(p.disneyPoints) || 0,
+          roundEarned: Number(p.roundEarned) || 0,
+        }));
+      }
+      if (Array.isArray(payload.buzzers)) {
+        state.buzzers = payload.buzzers;
+      }
+      if (Array.isArray(payload.history)) {
+        state.history = payload.history;
+      }
+
+      state.lastSyncAt = new Date().toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+
+      saveState();
+      renderAll();
+
+      const targetTime = Number(payload.currentTime || 0);
+      const shouldPlay = Boolean(payload.isPlaying);
+
+      if (trackChanged) {
+        prepareAndLoadAudioForTrack(getCurrentTrack(), shouldPlay, targetTime);
+      } else {
+        syncLocalAudioClock(targetTime, shouldPlay);
+      }
+
+      if (!fromBroadcast) {
+        showToast(`Synchro appliquée (${state.lastSyncAt}) · Calage à ${targetTime.toFixed(1)}s`, 'success');
       }
     }
 
-    function loadState() {
+    function broadcastSyncState(force = false) {
+      if (!state.autoBroadcast && !force) return;
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const saved = JSON.parse(raw);
-          if (saved && typeof saved === 'object') {
-            try {
-              state.playlist = normalizeTracks(saved.playlist);
-            } catch {
-              state.playlist = normalizeTracks(DISNEY_TRACKS);
-            }
+        const payload = buildSyncPayload();
+        if (broadcastChannel) {
+          broadcastChannel.postMessage({ type: 'SYNC_STATE', payload });
+        }
+        state.lastSyncAt = new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        dom.syncStatusText.textContent = `Salon ${state.roomCode} · Dernière synchro : ${state.lastSyncAt}`;
+      } catch (err) {
+        console.warn('Diffusion synchro impossible :', err);
+      }
+    }
 
-            if (Array.isArray(saved.players) && saved.players.length > 0) {
-              state.players = saved.players.map((p, idx) => ({
-                id: String(p.id || `p-${idx + 1}`),
-                name: String(p.name || `Joueur ${idx + 1}`).trim() || `Joueur ${idx + 1}`,
-                score: Number.isFinite(Number(p.score)) ? Number(p.score) : 0,
-                titlePoints: Number.isFinite(Number(p.titlePoints)) ? Number(p.titlePoints) : 0,
-                disneyPoints: Number.isFinite(Number(p.disneyPoints)) ? Number(p.disneyPoints) : 0,
-                roundEarned: Number.isFinite(Number(p.roundEarned)) ? Number(p.roundEarned) : 0,
-              }));
+    function initBroadcastChannel() {
+      try {
+        if (broadcastChannel) {
+          broadcastChannel.close();
+        }
+        if ('BroadcastChannel' in window) {
+          broadcastChannel = new BroadcastChannel(`disney_blind_test_${state.roomCode}`);
+          broadcastChannel.onmessage = (event) => {
+            const msg = event.data;
+            if (!msg || typeof msg !== 'object') return;
+            if (msg.type === 'SYNC_STATE') {
+              applyRemoteSyncPayload(msg.payload, true);
+            } else if (msg.type === 'REMOTE_BUZZ' && msg.payload) {
+              registerBuzz(msg.payload.playerId, true);
             }
-
-            state.activeBuzzerId = saved.activeBuzzerId || null;
-            state.currentTrackId = saved.currentTrackId ?? null;
-            state.playedTrackIds = Array.isArray(saved.playedTrackIds) ? saved.playedTrackIds : [];
-            state.roundNumber = Number.isFinite(Number(saved.roundNumber)) && Number(saved.roundNumber) >= 1 ? Number(saved.roundNumber) : 1;
-            state.answerRevealed = Boolean(saved.answerRevealed);
-            state.judgeMode = typeof saved.judgeMode === 'boolean' ? saved.judgeMode : true;
-            state.selectionMode = ['random', 'sequential', 'manual'].includes(saved.selectionMode) ? saved.selectionMode : 'random';
-            if (saved.filters && typeof saved.filters === 'object') {
-              state.filters = {
-                decade: saved.filters.decade || 'all',
-                type: saved.filters.type || 'all',
-                film: saved.filters.film || 'all',
-                preset: saved.filters.preset || 'all',
-              };
-            }
-            if (saved.audioSettings && typeof saved.audioSettings === 'object') {
-              state.audioSettings = {
-                autoPlay: typeof saved.audioSettings.autoPlay === 'boolean' ? saved.audioSettings.autoPlay : true,
-                autoNext: typeof saved.audioSettings.autoNext === 'boolean' ? saved.audioSettings.autoNext : false,
-                volume: Number.isFinite(Number(saved.audioSettings.volume)) ? Number(saved.audioSettings.volume) : 0.8,
-              };
-            }
-            state.history = Array.isArray(saved.history) ? saved.history : [];
-          }
+          };
         }
       } catch (err) {
-        console.warn('Chargement état par défaut :', err);
+        console.warn('BroadcastChannel indisponible :', err);
+      }
+    }
+
+    function registerBuzz(playerId, fromRemote = false) {
+      const player = state.players.find((p) => p.id === playerId) || state.players[0];
+      if (!player) return;
+
+      const alreadyBuzzed = state.buzzers.some((b) => b.playerId === player.id);
+      if (alreadyBuzzed) {
+        if (!fromRemote) showToast(`${player.name} a déjà buzzé sur cette manche.`, 'info');
+        return;
       }
 
-      ensureCurrentTrackInPool();
+      const buzzEntry = {
+        playerId: player.id,
+        playerName: player.name,
+        buzzedAt: new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
+      };
+      state.buzzers.push(buzzEntry);
+      saveState();
+      renderBuzzers();
+
+      if (!fromRemote && broadcastChannel && state.autoBroadcast) {
+        broadcastChannel.postMessage({ type: 'REMOTE_BUZZ', payload: { playerId: player.id } });
+      }
+
+      // Met à jour le code de synchro pour permettre un partage immédiat si besoin
+      dom.syncCodeTextarea.value = encodeSyncCode();
+      showToast(`🔔 ${player.name} a buzzé (#${state.buzzers.length}) !`, 'success');
+    }
+
+    function renderBuzzers() {
+      if (!state.buzzers.length) {
+        dom.buzzerOrderList.textContent = 'Aucun buzz pour l’instant';
+        return;
+      }
+      dom.buzzerOrderList.textContent = state.buzzers
+        .map((b, idx) => `#${idx + 1} ${b.playerName} (${b.buzzedAt})`)
+        .join(' · ');
+    }
+
+    function updateRoomHash() {
+      try {
+        const cleanCode = encodeURIComponent(state.roomCode);
+        if (window.location.hash !== `#room=${cleanCode}`) {
+          history.replaceState(null, '', `#room=${cleanCode}`);
+        }
+      } catch {
+        // Ignore si restrictions d'historique
+      }
     }
 
     /**
-     * Retourne la sous-liste filtrée selon époque, type, film et preset
+     * =========================================================================
+     * FILTRES & MODES DE SÉLECTION PLAYLIST
+     * =========================================================================
      */
     function getFilteredTracks() {
+      const q = String(state.searchQuery || '').trim().toLowerCase();
+
       return state.playlist.filter((track) => {
-        const f = state.filters;
-
-        if (f.preset === 'renaissance' && (track.annee < 1989 || track.annee > 1999)) {
-          return false;
-        }
-        if (f.preset === 'lion_king' && !/roi lion|garde du roi lion|mufasa/i.test(track.film)) {
-          return false;
-        }
-        if (f.preset === 'princess_modern' && !/raiponce|reine des neiges|encanto/i.test(track.film)) {
-          return false;
-        }
-        if (f.preset === 'instrumental' && track.type !== 'Instrumental') {
+        if (state.typeFilter !== 'all' && track.type !== state.typeFilter) {
           return false;
         }
 
-        if (f.decade === 'classic' && track.annee >= 1989) return false;
-        if (f.decade === 'renaissance' && (track.annee < 1989 || track.annee > 1999)) return false;
-        if (f.decade === '2000s' && (track.annee < 2000 || track.annee > 2009)) return false;
-        if (f.decade === '2010s' && (track.annee < 2010 || track.annee > 2019)) return false;
-        if (f.decade === '2020s' && track.annee < 2020) return false;
+        const y = Number(track.annee || 0);
+        if (state.decadeFilter === 'classics' && !(y >= 1937 && y <= 1969)) return false;
+        if (state.decadeFilter === '70s-80s' && !(y >= 1970 && y <= 1989)) return false;
+        if (state.decadeFilter === 'renaissance' && !(y >= 1990 && y <= 1999)) return false;
+        if (state.decadeFilter === '2000s' && !(y >= 2000 && y <= 2009)) return false;
+        if (state.decadeFilter === 'modern' && !(y >= 2010)) return false;
 
-        if (f.type !== 'all' && track.type !== f.type) return false;
-        if (f.film !== 'all' && track.film !== f.film) return false;
+        if (q) {
+          const hay = `${track.titre_fr} ${track.titre_en} ${track.film} ${track.annee} ${track.type}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
 
         return true;
       });
     }
 
-    function getCurrentTrack() {
-      return state.playlist.find((t) => String(t.id) === String(state.currentTrackId)) || getFilteredTracks()[0] || state.playlist[0] || null;
-    }
+    function renderSelectionControls() {
+      dom.selectionModeSelect.value = state.selectionMode;
+      dom.decadeFilterSelect.value = state.decadeFilter;
+      dom.typeFilterSelect.value = state.typeFilter;
+      dom.searchTrackInput.value = state.searchQuery;
 
-    function ensureCurrentTrackInPool() {
-      const pool = getFilteredTracks();
-      const source = pool.length > 0 ? pool : state.playlist;
-      if (!source.length) {
-        state.currentTrackId = null;
+      const filtered = getFilteredTracks();
+      dom.filteredTracksCount.textContent = `${filtered.length} / ${state.playlist.length} pistes`;
+
+      dom.manualTrackSelect.innerHTML = '';
+      if (!filtered.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Aucune piste ne correspond aux filtres';
+        dom.manualTrackSelect.appendChild(opt);
         return;
       }
 
-      const existsInSource = source.some((t) => String(t.id) === String(state.currentTrackId));
-      if (!existsInSource) {
-        const first = source[0];
-        state.currentTrackId = first.id;
-        if (!state.playedTrackIds.includes(first.id)) {
-          state.playedTrackIds.push(first.id);
+      filtered.forEach((track) => {
+        const opt = document.createElement('option');
+        opt.value = String(track.id);
+        opt.textContent = `#${track.id} · ${track.titre_fr} — ${track.film} (${track.annee})`;
+        if (String(track.id) === String(state.currentTrackId)) {
+          opt.selected = true;
+        }
+        dom.manualTrackSelect.appendChild(opt);
+      });
+    }
+
+    function getCurrentTrack() {
+      return (
+        state.playlist.find((t) => String(t.id) === String(state.currentTrackId)) ||
+        state.playlist[0] ||
+        null
+      );
+    }
+
+    function ensureCurrentTrack() {
+      if (!state.playlist.length) {
+        state.currentTrackId = null;
+        return;
+      }
+      const exists = state.playlist.some((t) => String(t.id) === String(state.currentTrackId));
+      if (!exists) {
+        state.currentTrackId = state.playlist[0].id;
+      }
+      if (!state.playedTrackIds.includes(state.currentTrackId)) {
+        state.playedTrackIds.push(state.currentTrackId);
+      }
+    }
+
+    function selectTrackById(trackId, incrementRound = true) {
+      const track = state.playlist.find((t) => String(t.id) === String(trackId));
+      if (!track) return;
+
+      const prevTrack = getCurrentTrack();
+      if (prevTrack && incrementRound) {
+        const scorers = state.players
+          .filter((p) => p.roundEarned !== 0)
+          .map((p) => ({ name: p.name, earned: p.roundEarned }));
+        if (scorers.length > 0 || state.answerRevealed) {
+          state.history.unshift({
+            round: state.roundNumber,
+            title: prevTrack.titre_fr,
+            disney: `${prevTrack.film} (${prevTrack.annee})`,
+            scorers,
+            timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          });
+          if (state.history.length > 40) state.history.pop();
         }
       }
+
+      state.players.forEach((p) => {
+        p.roundEarned = 0;
+      });
+      state.buzzers = [];
+      state.currentTrackId = track.id;
+      if (!state.playedTrackIds.includes(track.id)) {
+        state.playedTrackIds.push(track.id);
+      }
+      if (incrementRound) {
+        state.roundNumber += 1;
+      }
+      state.answerRevealed = false;
+
+      saveState();
+      renderAll();
+      prepareAndLoadAudioForTrack(track, state.autoPlayTrack, 0);
+      broadcastSyncState();
+    }
+
+    function nextRound() {
+      if (!state.playlist.length) {
+        showToast('Ajoutez d’abord des chansons dans la playlist JSON.', 'error');
+        return;
+      }
+
+      // Réinitialise l'encart de proposition à chaque nouvelle manche
+      resetProposalBox();
+      if (state.selectionMode === 'manual') {
+        const selectedId = dom.manualTrackSelect.value || sourcePool[0].id;
+        selectTrackById(selectedId, true);
+        return;
+      }
+
+      if (state.selectionMode === 'sequential') {
+        const idx = sourcePool.findIndex((t) => String(t.id) === String(state.currentTrackId));
+        const nextIdx = idx >= 0 ? (idx + 1) % sourcePool.length : 0;
+        selectTrackById(sourcePool[nextIdx].id, true);
+        return;
+      }
+
+      // Mode Aléatoire sans répétition dans le pool filtré
+      const unplayed = sourcePool.filter((t) => !state.playedTrackIds.includes(t.id));
+      if (unplayed.length === 0) {
+        showToast('Toutes les pistes de cette sélection ont déjà été jouées ! Réinitialisez la pioche.', 'info');
+        if (state.autoAdvance) {
+          dom.autoAdvanceToggle.checked = false;
+          state.autoAdvance = false;
+        }
+        return;
+      }
+
+      const chosen = unplayed[Math.floor(Math.random() * unplayed.length)];
+      selectTrackById(chosen.id, true);
+    }
+
+    function resetPool() {
+      state.playedTrackIds = [];
+      const cur = getCurrentTrack();
+      if (cur) state.playedTrackIds.push(cur.id);
+      saveState();
+      renderTrackStage();
+      broadcastSyncState();
+      showToast('Pioche réinitialisée.', 'success');
     }
 
     /**
      * =========================================================================
-     * MOTEUR AUDIO 100% AUTOMATIQUE SANS VIDÉO
-     * 1. URL audio directe si fournie (audio_url)
-     * 2. Recherche automatique d'extrait audio MP3/M4A via l'API iTunes (JSONP + fetch)
-     * 3. Synthèse musicale douce Web Audio en secours (zéro vidéo, aucun clic YouTube)
+     * SCORES (+1 TITRE / +1 DISNEY), ANNULER & JOUEURS
      * =========================================================================
      */
-    function stopSynthFallback() {
-      synthPlaying = false;
-      if (synthTimerId) {
-        clearInterval(synthTimerId);
-        synthTimerId = null;
+    function pushUndoSnapshot() {
+      state.undoStack.unshift({
+        players: cloneData(state.players),
+        history: cloneData(state.history),
+      });
+      if (state.undoStack.length > 25) state.undoStack.pop();
+    }
+
+    function undoLastAction() {
+      if (!state.undoStack.length) {
+        showToast('Aucune action de score à annuler.', 'info');
+        return;
+      }
+      const prev = state.undoStack.shift();
+      state.players = prev.players;
+      state.history = prev.history;
+      saveState();
+      renderPlayersAndLeaderboard();
+      renderHistory();
+      broadcastSyncState();
+      showToast('Dernière modification de score annulée.', 'success');
+    }
+
+    function adjustPlayerScore(playerId, type) {
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player) return;
+
+      pushUndoSnapshot();
+      const roundEarned = Number(player.roundEarned || 0);
+
+      if (type === 'title') {
+        if (roundEarned + 1 > 2) {
+          state.undoStack.shift();
+          showToast(`${player.name} a déjà +2 pts sur cette manche.`, 'info');
+          return;
+        }
+        player.score += 1;
+        player.titlePoints += 1;
+        player.roundEarned = roundEarned + 1;
+        showToast(`+1 Titre pour ${player.name} !`, 'success');
+      } else if (type === 'disney') {
+        if (roundEarned + 1 > 2) {
+          state.undoStack.shift();
+          showToast(`${player.name} a déjà +2 pts sur cette manche.`, 'info');
+          return;
+        }
+        player.score += 1;
+        player.disneyPoints += 1;
+        player.roundEarned = roundEarned + 1;
+        showToast(`+1 Disney pour ${player.name} !`, 'success');
+      } else if (type === 'combo') {
+        const add = Math.max(0, 2 - roundEarned);
+        if (add === 0) {
+          state.undoStack.shift();
+          showToast(`${player.name} a déjà son maximum de +2 pts.`, 'info');
+          return;
+        }
+        player.score += add;
+        player.roundEarned = roundEarned + add;
+        if (add === 2) {
+          player.titlePoints += 1;
+          player.disneyPoints += 1;
+        }
+        showToast(`+${add} pt pour ${player.name} !`, 'success');
+      } else if (type === 'minus') {
+        player.score -= 1;
+        player.roundEarned = Math.max(-2, roundEarned - 1);
+        showToast(`-1 pt pour ${player.name}.`, 'info');
+      }
+
+      saveState();
+      renderPlayersAndLeaderboard(playerId);
+    }
+
+    /**
+     * =========================================================================
+     * ENCART RÉPONSE / PROPOSITION — NORMALISATION & VÉRIFICATION TOLÉRANTE
+     * =========================================================================
+     */
+    function normalizeAnswerText(input) {
+      return String(input || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // retire les accents
+        .replace(/[^a-z0-9\s]/g, ' ')    // remplace ponctuation par espace
+        .replace(/\b(le|la|les|l|un|une|des|the|a|an)\b/g, ' ') // ignore articles simples
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function isFuzzyMatch(proposed, expectedList) {
+      const cleanProp = normalizeAnswerText(proposed);
+      if (!cleanProp || cleanProp.length < 2) return false;
+
+      return expectedList.some((exp) => {
+        const cleanExp = normalizeAnswerText(exp);
+        if (!cleanExp) return false;
+        if (cleanProp === cleanExp) return true;
+        if (cleanExp.length >= 5 && (cleanExp.includes(cleanProp) || cleanProp.includes(cleanExp))) {
+          return true;
+        }
+        return false;
+      });
+    }
+
+    function getSelectedProposalPlayer() {
+      const selectedId = dom.proposalPlayerSelect.value;
+      return state.players.find((p) => p.id === selectedId) || state.players[0] || null;
+    }
+
+    function setProposalFeedback(message, tone = 'info') {
+      dom.proposalFeedback.classList.remove('hidden');
+      const map = {
+        info: 'border-sky-400/40 bg-sky-500/15 text-sky-100',
+        success: 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100',
+        partial: 'border-gold/50 bg-gold/15 text-goldLight',
+        error: 'border-rose-400/50 bg-rose-500/15 text-rose-200',
+      };
+      dom.proposalFeedback.className = `rounded-2xl border px-3.5 py-2.5 text-xs font-medium ${map[tone] || map.info}`;
+      dom.proposalFeedback.textContent = message;
+    }
+
+    function resetProposalBox() {
+      dom.proposalTitleInput.value = '';
+      dom.proposalDisneyInput.value = '';
+      dom.proposalFeedback.classList.add('hidden');
+      dom.proposalFeedback.textContent = '';
+    }
+
+    function syncProposalPlayerSelect() {
+      const currentVal = dom.proposalPlayerSelect.value;
+      dom.proposalPlayerSelect.innerHTML = '';
+      state.players.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        dom.proposalPlayerSelect.appendChild(opt);
+      });
+      if (state.players.some((p) => p.id === currentVal)) {
+        dom.proposalPlayerSelect.value = currentVal;
       }
     }
 
+    function evaluateAndApplyProposal(e) {
+      e.preventDefault();
+      const track = getCurrentTrack();
+      const player = getSelectedProposalPlayer();
+
+      if (!track) {
+        setProposalFeedback('Aucune piste active pour vérifier la réponse.', 'error');
+        return;
+      }
+      if (!player) {
+        setProposalFeedback('Ajoutez d’abord un joueur pour attribuer les points.', 'error');
+        return;
+      }
+
+      const titleInput = dom.proposalTitleInput.value.trim();
+      const disneyInput = dom.proposalDisneyInput.value.trim();
+
+      if (!titleInput && !disneyInput) {
+        setProposalFeedback('Saisissez au moins un Titre ou un Disney avant de valider.', 'error');
+        return;
+      }
+
+      const expectedTitles = [track.title, track.titre_fr, track.titre_en].filter(Boolean);
+      const expectedDisneys = [track.disney, track.film].filter(Boolean);
+
+      const titleOk = titleInput ? isFuzzyMatch(titleInput, expectedTitles) : false;
+      const disneyOk = disneyInput ? isFuzzyMatch(disneyInput, expectedDisneys) : false;
+
+      const messages = [];
+
+      if (titleInput) {
+        if (titleOk) {
+          adjustPlayerScore(player.id, 'title');
+          messages.push(`✓ Titre trouvé (+1 pt pour ${player.name})`);
+        } else {
+          messages.push(`✗ Titre "${titleInput}" non reconnu`);
+        }
+      }
+
+      if (disneyInput) {
+        if (disneyOk) {
+          adjustPlayerScore(player.id, 'disney');
+          messages.push(`✓ Disney trouvé (+1 pt pour ${player.name})`);
+        } else {
+          messages.push(`✗ Disney "${disneyInput}" non reconnu`);
+        }
+      }
+
+      syncProposalPlayerSelect();
+
+      if (titleOk && disneyOk) {
+        setProposalFeedback(`🎉 Parfait ! ${messages.join(' · ')} (Attendu : "${track.title}" — ${track.disney}).`, 'success');
+      } else if (titleOk || disneyOk) {
+        setProposalFeedback(`✨ Bien joué ! ${messages.join(' · ')}.`, 'partial');
+      } else {
+        setProposalFeedback(`🔎 ${messages.join(' · ')}. Vous pouvez aussi cliquer sur +1 Titre ou +1 Disney si la réponse est acceptée par le juge.`, 'error');
+      }
+    }
+
+    function grantSingleFromProposal(kind) {
+      const player = getSelectedProposalPlayer();
+      if (!player) {
+        setProposalFeedback('Ajoutez d’abord un joueur.', 'error');
+        return;
+      }
+      adjustPlayerScore(player.id, kind);
+      syncProposalPlayerSelect();
+      const label = kind === 'title' ? '+1 Titre' : '+1 Disney';
+      setProposalFeedback(`${label} attribué à ${player.name}.`, 'success');
+    }
+
+    function addPlayer(name) {
+      const clean = String(name || '').trim();
+      if (!clean) {
+        showToast('Entrez un nom de joueur ou d’équipe.', 'error');
+        return;
+      }
+      pushUndoSnapshot();
+      state.players.push({
+        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: clean,
+        score: 0,
+        titlePoints: 0,
+        disneyPoints: 0,
+        roundEarned: 0,
+      });
+      saveState();
+      renderPlayersAndLeaderboard();
+      renderRemotePlayerSelect();
+      broadcastSyncState();
+      showToast(`${clean} ajouté !`, 'success');
+    }
+
+    function renamePlayer(playerId, newName) {
+      const p = state.players.find((item) => item.id === playerId);
+      if (!p) return;
+      const clean = String(newName || '').trim();
+      if (!clean) {
+        renderPlayersAndLeaderboard();
+        return;
+      }
+      p.name = clean;
+      saveState();
+      renderPlayersAndLeaderboard();
+      renderRemotePlayerSelect();
+      broadcastSyncState();
+    }
+
+    function removePlayer(playerId) {
+      if (state.players.length <= 1) {
+        showToast('Au moins 1 joueur est requis.', 'error');
+        return;
+      }
+      pushUndoSnapshot();
+      state.players = state.players.filter((p) => p.id !== playerId);
+      if (state.remotePlayerId === playerId) {
+        state.remotePlayerId = state.players[0].id;
+      }
+      saveState();
+      renderPlayersAndLeaderboard();
+      renderRemotePlayerSelect();
+      broadcastSyncState();
+    }
+
+    function resetAllScores() {
+      pushUndoSnapshot();
+      state.players.forEach((p) => {
+        p.score = 0;
+        p.titlePoints = 0;
+        p.disneyPoints = 0;
+        p.roundEarned = 0;
+      });
+      state.history = [];
+      state.buzzers = [];
+      state.roundNumber = 1;
+      saveState();
+      renderAll();
+      broadcastSyncState();
+      showToast('Scores et historique remis à zéro.', 'success');
+    }
+
+    /**
+     * =========================================================================
+     * LECTEUR AUDIO 100% SANS VIDÉO (ITUNES PREVIEW + WEB AUDIO FALLBACK AUTO)
+     * =========================================================================
+     */
+    function stopSynthFallback() {
+      if (synthInterval) {
+        clearInterval(synthInterval);
+        synthInterval = null;
+      }
+      isUsingSynthFallback = false;
+    }
+
     function startSynthFallback(track) {
+      stopAudioPlayerOnly();
       stopSynthFallback();
+      isUsingSynthFallback = true;
+
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        if (!synthCtx) synthCtx = new AudioCtx();
-        if (synthCtx.state === 'suspended') {
-          synthCtx.resume().catch(() => {});
+        if (!AudioCtx) {
+          dom.audioSourceStatus.textContent = 'Audio indisponible sur ce navigateur';
+          updatePlayPauseUI(false);
+          return;
+        }
+        if (!webAudioCtx) {
+          webAudioCtx = new AudioCtx();
+        }
+        if (webAudioCtx.state === 'suspended') {
+          webAudioCtx.resume().catch(() => {});
         }
 
-        // Gamme pentatonique enchantée adaptée à l'identifiant de piste
-        const scale = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
+        // Mélodie douce générée selon l'identifiant de piste (100% sans vidéo)
+        const baseNotes = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
         const seed = Number(track?.id || 1);
-        synthStep = 0;
-        synthPlaying = true;
-        updatePlayPauseUI(true);
+        let step = 0;
 
-        const playNote = () => {
-          if (!synthPlaying || !synthCtx) return;
-          const now = synthCtx.currentTime;
-          const osc = synthCtx.createOscillator();
-          const gain = synthCtx.createGain();
-          const noteFreq = scale[(synthStep * 2 + seed) % scale.length];
+        const playStepNote = () => {
+          if (!webAudioCtx) return;
+          const now = webAudioCtx.currentTime;
+          const freq = baseNotes[(seed + step * 3) % baseNotes.length];
+          const osc = webAudioCtx.createOscillator();
+          const gain = webAudioCtx.createGain();
+          osc.type = track?.type === 'Instrumental' ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, now);
 
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(noteFreq, now);
-
-          const vol = Math.max(0.01, Math.min(0.16, state.audioSettings.volume * 0.14));
-          gain.gain.setValueAtTime(0.0001, now);
+          const vol = Math.max(0.01, Number(dom.volumeSlider.value || 0.8) * 0.14);
+          gain.gain.setValueAtTime(0.001, now);
           gain.gain.exponentialRampToValueAtTime(vol, now + 0.04);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.42);
 
           osc.connect(gain);
-          gain.connect(synthCtx.destination);
+          gain.connect(webAudioCtx.destination);
           osc.start(now);
           osc.stop(now + 0.45);
-          synthStep += 1;
+          step += 1;
         };
 
-        playNote();
-        synthTimerId = setInterval(playNote, 460);
+        playStepNote();
+        synthInterval = setInterval(playStepNote, 460);
+        dom.audioSourceStatus.textContent = '🎹 Mélodie de secours Web Audio (sans vidéo)';
+        dom.audioSourceStatus.className = 'font-medium text-amber-300';
+        updatePlayPauseUI(true);
       } catch (err) {
         console.warn('Synthèse audio indisponible :', err);
+        updatePlayPauseUI(false);
+      }
+    }
+
+    function stopAudioPlayerOnly() {
+      try {
+        dom.audioPlayer.pause();
+      } catch {
+        // Ignore
       }
     }
 
     function stopAllAudio() {
+      stopAudioPlayerOnly();
       stopSynthFallback();
-      try {
-        dom.audioPlayer.pause();
-        dom.audioPlayer.currentTime = 0;
-      } catch {
-        // Ignore
-      }
       updatePlayPauseUI(false);
     }
 
-    /**
-     * Requête iTunes Search API via JSONP (fonctionne sur GitHub Pages sans blocage CORS)
-     */
-    function searchItunesJsonp(term) {
+    function fetchItunesPreviewUrl(track) {
       return new Promise((resolve) => {
-        const callbackName = `itunesCb_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-        const script = document.createElement('script');
-        let settled = false;
+        if (!track) return resolve('');
+        if (track.audioUrl) return resolve(track.audioUrl);
 
-        const cleanup = () => {
-          if (script.parentNode) script.parentNode.removeChild(script);
-          try {
-            delete window[callbackName];
-          } catch {
-            window[callbackName] = undefined;
-          }
-        };
+        const term = encodeURIComponent(`${track.titre_en || track.titre_fr} ${track.film} Disney`);
+        const url = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5`;
 
-        const timer = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            cleanup();
-            resolve(null);
-          }
-        }, 4200);
-
-        window[callbackName] = (data) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          cleanup();
-          const results = Array.isArray(data?.results) ? data.results : [];
-          const match = results.find((r) => typeof r.previewUrl === 'string' && r.previewUrl.length > 0);
-          resolve(match ? match.previewUrl : null);
-        };
-
-        const encoded = encodeURIComponent(term);
-        script.src = `https://itunes.apple.com/search?term=${encoded}&media=music&entity=song&limit=6&callback=${callbackName}`;
-        script.onerror = () => {
-          if (!settled) {
-            settled = true;
-            clearTimeout(timer);
-            cleanup();
-            resolve(null);
-          }
-        };
-        document.body.appendChild(script);
+        fetch(url)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && Array.isArray(data.results)) {
+              const match = data.results.find((r) => Boolean(r.previewUrl));
+              if (match && match.previewUrl) {
+                return resolve(match.previewUrl);
+              }
+            }
+            resolve('');
+          })
+          .catch(() => resolve(''));
       });
     }
 
-    /**
-     * Résout automatiquement un flux audio direct sans aucune vidéo
-     */
-    async function resolveAudioStreamForTrack(track) {
-      if (!track) return { url: '', source: 'none' };
-
-      if (track.audio_url) {
-        return { url: track.audio_url, source: 'direct' };
-      }
-
-      const cacheKey = `${track.id}_${track.titre_en}_${track.film}`;
-      if (resolvedAudioCache.has(cacheKey)) {
-        return resolvedAudioCache.get(cacheKey);
-      }
-
-      const queries = [
-        `${track.titre_en} ${track.film} Disney`,
-        `${track.titre_fr} ${track.film} Disney`,
-        `${track.film} Disney soundtrack`,
-      ];
-
-      for (const q of queries) {
-        const previewUrl = await searchItunesJsonp(q);
-        if (previewUrl) {
-          const res = { url: previewUrl, source: 'stream' };
-          resolvedAudioCache.set(cacheKey, res);
-          return res;
-        }
-      }
-
-      const fallbackRes = { url: '', source: 'synth' };
-      resolvedAudioCache.set(cacheKey, fallbackRes);
-      return fallbackRes;
-    }
-
-    /**
-     * Charge et démarre automatiquement l'audio de la piste active (zéro vidéo)
-     */
-    async function loadAndAutoPlayTrack(track, forcePlay = null) {
+    async function prepareAndLoadAudioForTrack(track, shouldAutoPlay = true, startAtSec = 0) {
       if (!track) return;
       stopAllAudio();
       dom.seekSlider.value = 0;
       dom.audioTimeDisplay.textContent = '00:00 / 00:00';
-      dom.audioSourceStatus.textContent = 'Chargement audio automatique...';
-      dom.audioSourceStatus.className = 'font-medium text-sky-300';
+      dom.audioSourceStatus.textContent = '🔎 Recherche automatique d’un extrait audio...';
+      dom.audioSourceStatus.className = 'font-medium text-sky-200';
 
-      const shouldPlay = forcePlay !== null ? forcePlay : state.audioSettings.autoPlay;
-      const resolved = await resolveAudioStreamForTrack(track);
-
-      // Vérifie que la piste est toujours celle active
+      const previewUrl = await fetchItunesPreviewUrl(track);
+      // Vérifie que la piste n'a pas changé pendant la requête
       const current = getCurrentTrack();
       if (!current || String(current.id) !== String(track.id)) return;
 
-      if (resolved.url) {
-        dom.audioPlayer.src = resolved.url;
-        dom.audioPlayer.volume = state.audioSettings.volume;
+      if (previewUrl) {
+        isUsingSynthFallback = false;
+        dom.audioPlayer.src = previewUrl;
         dom.audioPlayer.load();
-        dom.audioSourceStatus.textContent =
-          resolved.source === 'direct'
-            ? 'Audio direct (sans vidéo)'
-            : 'Extrait audio automatique (sans vidéo)';
+        dom.audioSourceStatus.textContent = '🎧 Extrait audio prêt (100% sans vidéo)';
         dom.audioSourceStatus.className = 'font-medium text-emerald-300';
 
-        if (shouldPlay) {
-          dom.audioPlayer.play().catch(() => {
+        const applySeekAndPlay = () => {
+          if (startAtSec > 0 && Number.isFinite(dom.audioPlayer.duration)) {
+            dom.audioPlayer.currentTime = Math.min(startAtSec, Math.max(0, dom.audioPlayer.duration - 0.5));
+          }
+          if (shouldAutoPlay) {
+            dom.audioPlayer.play().catch(() => {
+              // Si le navigateur bloque l'autoplay sans geste utilisateur, on garde prêt en pause
+              updatePlayPauseUI(false);
+            });
+          } else {
             updatePlayPauseUI(false);
-            dom.audioSourceStatus.textContent = 'Cliquez sur Lecture pour lancer l’extrait audio';
-            dom.audioSourceStatus.className = 'font-medium text-amber-300';
-          });
+          }
+        };
+
+        if (dom.audioPlayer.readyState >= 1) {
+          applySeekAndPlay();
         } else {
-          updatePlayPauseUI(false);
+          dom.audioPlayer.addEventListener('loadedmetadata', applySeekAndPlay, { once: true });
+          dom.audioPlayer.addEventListener('error', () => {
+            if (shouldAutoPlay) startSynthFallback(track);
+          }, { once: true });
         }
+      } else if (shouldAutoPlay) {
+        startSynthFallback(track);
       } else {
-        dom.audioPlayer.removeAttribute('src');
-        dom.audioSourceStatus.textContent = 'Mélodie synthétique automatique (audio seul, sans vidéo)';
-        dom.audioSourceStatus.className = 'font-medium text-goldLight';
-        if (shouldPlay) {
-          startSynthFallback(track);
-        } else {
-          updatePlayPauseUI(false);
+        dom.audioSourceStatus.textContent = '🎹 Prêt (secours Web Audio si lecture lancée)';
+        dom.audioSourceStatus.className = 'font-medium text-amber-300';
+        updatePlayPauseUI(false);
+      }
+    }
+
+    function syncLocalAudioClock(targetSec, shouldPlay) {
+      if (isUsingSynthFallback) {
+        if (shouldPlay && !synthInterval) {
+          startSynthFallback(getCurrentTrack());
+        } else if (!shouldPlay && synthInterval) {
+          stopAllAudio();
         }
+        return;
+      }
+
+      if (dom.audioPlayer.src) {
+        if (Number.isFinite(targetSec) && targetSec >= 0) {
+          const maxDur = Number.isFinite(dom.audioPlayer.duration) && dom.audioPlayer.duration > 0
+            ? Math.max(0, dom.audioPlayer.duration - 0.3)
+            : targetSec;
+          dom.audioPlayer.currentTime = Math.min(targetSec, maxDur);
+        }
+        if (shouldPlay && dom.audioPlayer.paused) {
+          dom.audioPlayer.play().catch(() => updatePlayPauseUI(false));
+        } else if (!shouldPlay && !dom.audioPlayer.paused) {
+          dom.audioPlayer.pause();
+        }
+      } else if (shouldPlay) {
+        startSynthFallback(getCurrentTrack());
       }
     }
 
@@ -2607,343 +3552,34 @@
 
     /**
      * =========================================================================
-     * SÉLECTION DE PISTE & MODES (ALÉATOIRE, SÉQUENTIEL, MANUEL)
+     * RENDU INTERFACE
      * =========================================================================
      */
-    function archiveCurrentRoundToHistory() {
-      const prevTrack = getCurrentTrack();
-      if (!prevTrack) return;
-
-      const scorers = state.players
-        .filter((p) => p.roundEarned !== 0)
-        .map((p) => ({ name: p.name, earned: p.roundEarned }));
-
-      if (scorers.length > 0 || state.answerRevealed) {
-        state.history.unshift({
-          round: state.roundNumber,
-          titre_fr: prevTrack.titre_fr,
-          film: prevTrack.film,
-          annee: prevTrack.annee,
-          scorers,
-          timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        });
-        if (state.history.length > 50) state.history.pop();
-      }
-    }
-
-    function selectSpecificTrack(trackId, incrementRound = true) {
-      const pool = getFilteredTracks();
-      const source = pool.length > 0 ? pool : state.playlist;
-      const chosen = source.find((t) => String(t.id) === String(trackId)) || source[0];
-      if (!chosen) return;
-
-      if (incrementRound) {
-        archiveCurrentRoundToHistory();
-        state.roundNumber += 1;
-      }
-
-      state.players.forEach((p) => {
-        p.roundEarned = 0;
-      });
-      state.activeBuzzerId = null;
-      state.currentTrackId = chosen.id;
-      state.answerRevealed = false;
-      if (!state.playedTrackIds.includes(chosen.id)) {
-        state.playedTrackIds.push(chosen.id);
-      }
-
-      saveState();
-      renderAll();
-      loadAndAutoPlayTrack(chosen, state.audioSettings.autoPlay);
-    }
-
-    function nextTrackInMode() {
-      const pool = getFilteredTracks();
-      const source = pool.length > 0 ? pool : state.playlist;
-      if (!source.length) {
-        showToast('Aucune piste ne correspond aux filtres actifs.', 'error');
-        return;
-      }
-
-      if (state.selectionMode === 'sequential') {
-        const currentIdx = source.findIndex((t) => String(t.id) === String(state.currentTrackId));
-        const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % source.length : 0;
-        selectSpecificTrack(source[nextIdx].id, true);
-        return;
-      }
-
-      if (state.selectionMode === 'manual') {
-        const currentIdx = source.findIndex((t) => String(t.id) === String(state.currentTrackId));
-        const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % source.length : 0;
-        selectSpecificTrack(source[nextIdx].id, true);
-        return;
-      }
-
-      // Mode 'random' (pioche sans répétition dans la sélection filtrée)
-      const unplayed = source.filter((t) => !state.playedTrackIds.includes(t.id));
-      if (unplayed.length === 0) {
-        // Réinitialise automatiquement la pioche de cette sélection et continue
-        const idsToReset = new Set(source.map((t) => t.id));
-        state.playedTrackIds = state.playedTrackIds.filter((id) => !idsToReset.has(id));
-        const freshPool = source.filter((t) => String(t.id) !== String(state.currentTrackId));
-        const candidates = freshPool.length > 0 ? freshPool : source;
-        const pick = candidates[Math.floor(Math.random() * candidates.length)];
-        showToast('Nouveau tour de pioche sur la sélection active !', 'info');
-        selectSpecificTrack(pick.id, true);
-        return;
-      }
-
-      const pick = unplayed[Math.floor(Math.random() * unplayed.length)];
-      selectSpecificTrack(pick.id, true);
-    }
-
-    function resetPool() {
-      const pool = getFilteredTracks();
-      const source = pool.length > 0 ? pool : state.playlist;
-      const poolIds = new Set(source.map((t) => t.id));
-      state.playedTrackIds = state.playedTrackIds.filter((id) => !poolIds.has(id));
-      const current = getCurrentTrack();
-      if (current && !state.playedTrackIds.includes(current.id)) {
-        state.playedTrackIds.push(current.id);
-      }
-      saveState();
-      renderTrackStage();
-      showToast('Pioche réinitialisée pour la sélection actuelle.', 'success');
-    }
-
-    /**
-     * =========================================================================
-     * SCORES (+1 TITRE / +1 DISNEY), BUZZER & ANNULATION
-     * =========================================================================
-     */
-    function pushUndoSnapshot() {
-      state.undoStack.push({
-        players: cloneData(state.players),
-        activeBuzzerId: state.activeBuzzerId,
-      });
-      if (state.undoStack.length > 25) state.undoStack.shift();
-      dom.undoActionBtn.disabled = state.undoStack.length === 0;
-    }
-
-    function undoLastScoreAction() {
-      const snap = state.undoStack.pop();
-      if (!snap) return;
-      state.players = snap.players;
-      state.activeBuzzerId = snap.activeBuzzerId;
-      dom.undoActionBtn.disabled = state.undoStack.length === 0;
-      saveState();
-      renderPlayersAndLeaderboard();
-      showToast('Dernière action de score annulée.', 'info');
-    }
-
-    function adjustPlayerScore(playerId, type) {
-      const player = state.players.find((p) => p.id === playerId);
-      if (!player) return;
-
-      const currentRoundEarned = Number(player.roundEarned || 0);
-
-      if (type === 'title' && currentRoundEarned + 1 > 2) {
-        showToast(`${player.name} a déjà atteint +2 pts sur cette manche.`, 'info');
-        return;
-      }
-      if (type === 'disney' && currentRoundEarned + 1 > 2) {
-        showToast(`${player.name} a déjà atteint +2 pts sur cette manche.`, 'info');
-        return;
-      }
-
-      pushUndoSnapshot();
-
-      if (type === 'title') {
-        player.score += 1;
-        player.titlePoints += 1;
-        player.roundEarned = currentRoundEarned + 1;
-        showToast(`+1 Titre pour ${player.name} !`, 'success');
-      } else if (type === 'disney') {
-        player.score += 1;
-        player.disneyPoints += 1;
-        player.roundEarned = currentRoundEarned + 1;
-        showToast(`+1 Disney pour ${player.name} !`, 'success');
-      } else if (type === 'combo') {
-        const allowedAdd = Math.max(0, 2 - currentRoundEarned);
-        if (allowedAdd === 0) {
-          state.undoStack.pop();
-          dom.undoActionBtn.disabled = state.undoStack.length === 0;
-          showToast(`${player.name} a déjà ses +2 pts de manche.`, 'info');
-          return;
-        }
-        player.score += allowedAdd;
-        player.roundEarned = currentRoundEarned + allowedAdd;
-        if (allowedAdd === 2) {
-          player.titlePoints += 1;
-          player.disneyPoints += 1;
-          showToast(`+2 Combo (Titre + Disney) pour ${player.name} !`, 'success');
+    function renderRoleButtons() {
+      document.querySelectorAll('.role-btn').forEach((btn) => {
+        const r = btn.getAttribute('data-role');
+        if (r === state.role) {
+          btn.className = 'role-btn rounded-xl border border-gold/50 bg-gold/20 px-3 py-2 text-xs font-bold text-goldLight';
         } else {
-          showToast(`+${allowedAdd} pt pour ${player.name} (max +2/manche).`, 'success');
+          btn.className = 'role-btn rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2 text-xs font-bold text-slate-200';
         }
-      } else if (type === 'minus') {
-        player.score -= 1;
-        player.roundEarned = Math.max(-2, currentRoundEarned - 1);
-        showToast(`-1 point pour ${player.name}.`, 'info');
-      }
+      });
 
-      saveState();
-      renderPlayersAndLeaderboard(playerId);
+      // En mode Joueur distant, le mode juge est désactivé par défaut pour ne pas spoiler
+      if (state.role === 'player') {
+        state.judgeMode = false;
+      }
     }
 
-    function triggerBuzzer(playerId = null) {
-      if (!state.players.length) return;
-      let chosenPlayer = null;
-      if (playerId) {
-        chosenPlayer = state.players.find((p) => p.id === playerId) || state.players[0];
-      } else if (state.activeBuzzerId) {
-        const idx = state.players.findIndex((p) => p.id === state.activeBuzzerId);
-        chosenPlayer = state.players[(idx + 1) % state.players.length];
-      } else {
-        chosenPlayer = state.players[0];
-      }
-
-      state.activeBuzzerId = chosenPlayer.id;
-      saveState();
-      renderPlayersAndLeaderboard();
-      showToast(`🔔 Buzzer : ${chosenPlayer.name} a la main !`, 'info');
-    }
-
-    function addPlayer(name) {
-      const cleanName = String(name || '').trim();
-      if (!cleanName) {
-        showToast('Entrez un nom de joueur ou d’équipe.', 'error');
-        return;
-      }
-      const newP = {
-        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        name: cleanName,
-        score: 0,
-        titlePoints: 0,
-        disneyPoints: 0,
-        roundEarned: 0,
-      };
-      state.players.push(newP);
-      if (!state.activeBuzzerId) state.activeBuzzerId = newP.id;
-      saveState();
-      renderPlayersAndLeaderboard();
-      showToast(`${cleanName} rejoint la partie !`, 'success');
-    }
-
-    function renamePlayer(playerId, newName) {
-      const player = state.players.find((p) => p.id === playerId);
-      if (!player) return;
-      const cleanName = String(newName || '').trim();
-      if (!cleanName) {
-        renderPlayersAndLeaderboard();
-        return;
-      }
-      player.name = cleanName;
-      saveState();
-      renderPlayersAndLeaderboard();
-    }
-
-    function removePlayer(playerId) {
-      if (state.players.length <= 1) {
-        showToast('Il faut garder au moins 1 joueur ou équipe.', 'error');
-        return;
-      }
-      const target = state.players.find((p) => p.id === playerId);
-      state.players = state.players.filter((p) => p.id !== playerId);
-      if (state.activeBuzzerId === playerId) {
-        state.activeBuzzerId = state.players[0]?.id || null;
-      }
-      saveState();
-      renderPlayersAndLeaderboard();
-      if (target) showToast(`${target.name} retiré.`, 'info');
-    }
-
-    function resetAllScores() {
-      state.undoStack = [];
-      dom.undoActionBtn.disabled = true;
+    function renderRemotePlayerSelect() {
+      dom.remotePlayerSelect.innerHTML = '';
       state.players.forEach((p) => {
-        p.score = 0;
-        p.titlePoints = 0;
-        p.disneyPoints = 0;
-        p.roundEarned = 0;
-      });
-      state.history = [];
-      state.roundNumber = 1;
-      state.activeBuzzerId = null;
-      saveState();
-      renderAll();
-      showToast('Scores et historique remis à zéro.', 'success');
-    }
-
-    /**
-     * =========================================================================
-     * RENDU DE L'INTERFACE
-     * =========================================================================
-     */
-    function populateFilmFilterOptions() {
-      const uniqueFilms = [...new Set(state.playlist.map((t) => t.film))].sort((a, b) => a.localeCompare(b, 'fr'));
-      const prevVal = state.filters.film;
-      dom.filterFilmSelect.innerHTML = `<option value="all">Tous les Disney (${uniqueFilms.length})</option>`;
-      uniqueFilms.forEach((film) => {
         const opt = document.createElement('option');
-        opt.value = film;
-        opt.textContent = film;
-        if (film === prevVal) opt.selected = true;
-        dom.filterFilmSelect.appendChild(opt);
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === state.remotePlayerId) opt.selected = true;
+        dom.remotePlayerSelect.appendChild(opt);
       });
-      if (!uniqueFilms.includes(prevVal)) {
-        state.filters.film = 'all';
-        dom.filterFilmSelect.value = 'all';
-      }
-    }
-
-    function renderSelectionControls() {
-      const hints = {
-        random: 'Tirage aléatoire sans répétition dans la sélection',
-        sequential: 'Défilement dans l’ordre de la liste filtrée',
-        manual: 'Choix libre d’une piste précise dans la liste filtrée',
-      };
-      dom.selectionModeHint.textContent = hints[state.selectionMode] || hints.random;
-
-      document.querySelectorAll('.selection-mode-btn').forEach((btn) => {
-        const mode = btn.getAttribute('data-selection-mode');
-        const active = mode === state.selectionMode;
-        btn.className = active
-          ? 'selection-mode-btn rounded-xl border border-gold bg-gold/25 px-3 py-2 text-xs font-bold text-goldLight shadow-goldGlow transition'
-          : 'selection-mode-btn rounded-xl border border-slate-700 bg-slate-800/75 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-gold/40 hover:text-white';
-      });
-
-      dom.filterDecadeSelect.value = state.filters.decade;
-      dom.filterTypeSelect.value = state.filters.type;
-      dom.filterFilmSelect.value = state.filters.film;
-
-      document.querySelectorAll('.preset-btn').forEach((btn) => {
-        const p = btn.getAttribute('data-preset');
-        const active = p === state.filters.preset;
-        btn.className = active
-          ? 'preset-btn rounded-lg border border-gold bg-gold/25 px-2.5 py-1 text-[11px] font-bold text-goldLight transition'
-          : 'preset-btn rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:border-gold/50 hover:text-goldLight';
-      });
-
-      const filtered = getFilteredTracks();
-      dom.filteredCountBadge.textContent = String(filtered.length);
-
-      if (state.selectionMode === 'manual') {
-        dom.manualTrackPickerBox.classList.remove('hidden');
-        dom.manualTrackSelect.innerHTML = '';
-        filtered.forEach((t, idx) => {
-          const opt = document.createElement('option');
-          opt.value = String(t.id);
-          opt.textContent = state.judgeMode
-            ? `${idx + 1}. ${t.titre_fr} — ${t.film} (${t.annee})`
-            : `Piste #${idx + 1} (${t.type} · ${t.annee})`;
-          if (String(t.id) === String(state.currentTrackId)) {
-            opt.selected = true;
-          }
-          dom.manualTrackSelect.appendChild(opt);
-        });
-      } else {
-        dom.manualTrackPickerBox.classList.add('hidden');
-      }
     }
 
     function renderJudgeModeButton() {
@@ -2951,57 +3587,49 @@
         dom.judgeModeIcon.textContent = '👑';
         dom.judgeModeLabel.textContent = 'Mode Juge : Actif';
         dom.toggleJudgeModeBtn.className =
-          'inline-flex items-center gap-2 rounded-xl border border-gold/50 bg-gold/20 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition hover:bg-gold/30 sm:text-sm';
+          'inline-flex items-center gap-2 rounded-xl border border-gold/50 bg-gold/20 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition sm:text-sm';
       } else {
         dom.judgeModeIcon.textContent = '👀';
         dom.judgeModeLabel.textContent = 'Écran Joueurs : Masqué';
         dom.toggleJudgeModeBtn.className =
-          'inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3.5 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-gold/40 sm:text-sm';
+          'inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3.5 py-2.5 text-xs font-semibold text-slate-200 transition sm:text-sm';
       }
     }
 
     function renderTrackStage() {
       const track = getCurrentTrack();
-      const pool = getFilteredTracks();
-      const source = pool.length > 0 ? pool : state.playlist;
-      const playedInPool = source.filter((t) => state.playedTrackIds.includes(t.id)).length;
-
       dom.playlistCountBadge.textContent = String(state.playlist.length);
       dom.roundNumberDisplay.textContent = String(state.roundNumber);
-      dom.poolStatusText.textContent = `Sélection : ${playedInPool} / ${source.length} joués (${state.playlist.length} au total)`;
+      dom.poolStatusText.textContent = `Pioche : ${state.playedTrackIds.length} / ${state.playlist.length} joués`;
 
-      if (!track) {
-        dom.coverBadge.textContent = '🎶';
-        dom.trackMetaPill.textContent = '—';
-        dom.trackHintLabel.textContent = 'Aucune piste disponible';
-        return;
-      }
+      if (!track) return;
 
-      dom.trackMetaPill.textContent = `${track.type} · ${track.annee}`;
+      const badgeEmoji = track.type === 'Instrumental' ? '🎻' : '🏰';
 
       if (state.answerRevealed) {
-        dom.coverBadge.textContent = track.type === 'Instrumental' ? '🎻' : '✨';
+        dom.coverBadge.textContent = badgeEmoji;
         dom.trackHintLabel.textContent = 'Réponse révélée';
         dom.hiddenAnswerBox.classList.add('hidden');
         dom.revealedAnswerBox.classList.remove('hidden');
         dom.revealedTitle.textContent = `🎵 ${track.titre_fr}`;
-        dom.revealedTitleEn.textContent =
-          track.titre_en && track.titre_en !== track.titre_fr ? `Titre original : ${track.titre_en}` : '';
-        dom.revealedMovie.textContent = `🎬 ${track.film} (${track.annee})`;
-        dom.revealedNotes.textContent = `Piste #${track.id} · ${track.type}`;
+        dom.revealedMovie.textContent = `🎬 ${track.film} (${track.annee}) · ${track.type}`;
+        dom.revealedNotes.textContent = track.titre_en && track.titre_en !== track.titre_fr
+          ? `VO : "${track.titre_en}"`
+          : '';
+        dom.fallbackSearchLink.href = track.yt_fallback || '#';
         dom.revealAnswerBtn.innerHTML = '<span>✓</span><span>Réponse affichée</span>';
       } else {
-        dom.coverBadge.textContent = track.type === 'Instrumental' ? '🎼' : '🏰';
+        dom.coverBadge.textContent = badgeEmoji;
         dom.trackHintLabel.textContent = state.judgeMode
           ? 'Mode Juge : réponse visible uniquement pour vous'
-          : 'Écoutez : +1 Titre · +1 Disney';
+          : 'Écoutez l’extrait audio : Titre (1 pt) & Disney (1 pt)';
         dom.hiddenAnswerBox.classList.remove('hidden');
         dom.revealedAnswerBox.classList.add('hidden');
-        dom.revealAnswerBtn.innerHTML = '<span>✨</span><span>Révéler la réponse (Entrée)</span>';
+        dom.revealAnswerBtn.innerHTML = '<span>✨</span><span>Révéler la réponse</span>';
 
         if (state.judgeMode) {
           dom.judgeCheatPeek.classList.remove('hidden');
-          dom.judgePeekText.textContent = `${track.titre_fr} — ${track.film} (${track.annee})`;
+          dom.judgePeekText.textContent = `${track.titre_fr} (${track.titre_en}) — ${track.film} (${track.annee})`;
         } else {
           dom.judgeCheatPeek.classList.add('hidden');
         }
@@ -3010,52 +3638,34 @@
 
     function renderPlayersAndLeaderboard(bumpedPlayerId = null) {
       dom.playersCountLabel.textContent = String(state.players.length);
-      const activePlayer = state.players.find((p) => p.id === state.activeBuzzerId) || null;
-      dom.activeBuzzerName.textContent = activePlayer ? activePlayer.name : 'Aucun joueur sélectionné';
-
+      syncProposalPlayerSelect();
       dom.playersGrid.innerHTML = '';
 
       state.players.forEach((player) => {
         const roundEarned = Number(player.roundEarned || 0);
-        const isBuzzed = player.id === state.activeBuzzerId;
         const card = document.createElement('div');
-        card.className = `flex flex-col justify-between rounded-2xl border p-4 transition ${
-          isBuzzed
-            ? 'border-gold bg-gradient-to-b from-gold/15 to-midnight/95 shadow-goldGlow'
-            : 'border-slate-700/80 bg-midnight/80 hover:border-gold/40'
-        }`;
+        card.className =
+          'flex flex-col justify-between rounded-2xl border border-slate-700/80 bg-midnight/80 p-4 transition';
 
         const bumpClass = player.id === bumpedPlayerId ? 'score-bump' : '';
 
         card.innerHTML = `
           <div>
             <div class="mb-2 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                data-buzz-id="${escapeHtml(player.id)}"
-                title="Sélectionner comme joueur actif / buzzer"
-                class="buzz-select-btn rounded-lg px-2 py-1 text-xs font-bold transition ${
-                  isBuzzed
-                    ? 'bg-gold text-midnight'
-                    : 'border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-gold/50 hover:text-goldLight'
-                }"
-              >
-                ${isBuzzed ? '🔔 Actif' : '🔔'}
-              </button>
               <input
                 type="text"
                 value="${escapeHtml(player.name)}"
                 aria-label="Nom du joueur"
                 maxlength="28"
                 data-rename-id="${escapeHtml(player.id)}"
-                class="player-name-input min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-base font-bold text-white outline-none transition hover:border-slate-700 focus:border-gold focus:bg-slate-900"
+                class="player-name-input min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-base font-bold text-white outline-none transition"
               />
               <button
                 type="button"
                 data-remove-id="${escapeHtml(player.id)}"
                 title="Supprimer ce joueur"
                 aria-label="Supprimer ${escapeHtml(player.name)}"
-                class="remove-player-btn rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-300"
+                class="remove-player-btn rounded-lg px-2 py-1 text-xs text-slate-400"
               >
                 ✕
               </button>
@@ -3064,13 +3674,13 @@
             <div class="mb-3 flex items-baseline justify-between rounded-xl border border-gold/20 bg-twilight/70 px-3 py-2">
               <div>
                 <span class="text-xs text-slate-400">Score total</span>
-                <div class="text-[11px] text-slate-400">
+                <div class="text-xs text-slate-400">
                   Titre: <span class="text-goldLight font-semibold">${player.titlePoints}</span> · Disney: <span class="text-sky-300 font-semibold">${player.disneyPoints}</span>
                 </div>
               </div>
               <div class="text-right">
                 <span class="${bumpClass} font-display text-2xl font-bold text-goldLight">${player.score}</span>
-                <span class="block text-[11px] font-semibold ${roundEarned > 0 ? 'text-emerald-300' : 'text-slate-400'}">
+                <span class="block text-xs font-semibold ${roundEarned > 0 ? 'text-emerald-300' : 'text-slate-400'}">
                   Manche : ${roundEarned > 0 ? `+${roundEarned}` : roundEarned}/2 pt
                 </span>
               </div>
@@ -3082,7 +3692,7 @@
               type="button"
               data-score-id="${escapeHtml(player.id)}"
               data-score-type="title"
-              class="score-btn rounded-xl border border-gold/40 bg-gold/15 px-2.5 py-2 text-xs font-bold text-goldLight transition hover:bg-gold/25 active:scale-[0.98]"
+              class="score-btn rounded-xl border border-gold/40 bg-gold/15 px-2.5 py-2 text-xs font-bold text-goldLight"
             >
               +1 Titre
             </button>
@@ -3090,7 +3700,7 @@
               type="button"
               data-score-id="${escapeHtml(player.id)}"
               data-score-type="disney"
-              class="score-btn rounded-xl border border-sky-400/40 bg-sky-500/15 px-2.5 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25 active:scale-[0.98]"
+              class="score-btn rounded-xl border border-sky-400/40 bg-sky-500/15 px-2.5 py-2 text-xs font-bold text-sky-200"
             >
               +1 Disney
             </button>
@@ -3098,7 +3708,7 @@
               type="button"
               data-score-id="${escapeHtml(player.id)}"
               data-score-type="combo"
-              class="score-btn rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/25 active:scale-[0.98]"
+              class="score-btn rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-2 text-xs font-bold text-emerald-200"
             >
               +2 Combo
             </button>
@@ -3106,7 +3716,7 @@
               type="button"
               data-score-id="${escapeHtml(player.id)}"
               data-score-type="minus"
-              class="score-btn rounded-xl border border-rose-400/35 bg-rose-500/10 px-2.5 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-500/20 active:scale-[0.98]"
+              class="score-btn rounded-xl border border-rose-400/35 bg-rose-500/10 px-2.5 py-2 text-xs font-bold text-rose-200"
             >
               -1 pt
             </button>
@@ -3131,7 +3741,7 @@
 
         row.className = `flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
           isTop
-            ? 'border-gold/50 bg-gradient-to-r from-gold/15 via-amber-500/10 to-transparent'
+            ? 'border-gold/50 bg-gradient-to-r-leader'
             : 'border-slate-700/70 bg-midnight/75'
         }`;
 
@@ -3142,10 +3752,10 @@
             </div>
             <div class="min-w-0">
               <p class="truncate text-sm font-bold text-white">${escapeHtml(p.name)}</p>
-              <p class="text-[11px] text-slate-400">${p.titlePoints} Titre(s) · ${p.disneyPoints} Disney</p>
+              <p class="text-xs text-slate-400">${p.titlePoints} Titre(s) · ${p.disneyPoints} Disney</p>
             </div>
           </div>
-          <div class="font-display text-xl font-bold text-goldLight">${p.score} <span class="font-sans text-xs font-normal text-slate-400">pts</span></div>
+          <div class="font-display text-xl font-bold text-goldLight">${p.score} <span class="text-xs font-normal text-slate-400">pts</span></div>
         `;
         dom.leaderboardList.appendChild(row);
       });
@@ -3160,7 +3770,7 @@
       if (!state.history.length) {
         dom.historyList.innerHTML = `
           <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-center text-xs text-slate-400">
-            Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la piste suivante !
+            Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la manche suivante !
           </p>
         `;
         return;
@@ -3180,36 +3790,43 @@
             <span class="text-slate-400">${escapeHtml(entry.timestamp || '')}</span>
           </div>
           <p class="mt-0.5 text-xs font-semibold text-white">
-            ${escapeHtml(entry.titre_fr)} <span class="text-sky-300">— ${escapeHtml(entry.film)} (${escapeHtml(String(entry.annee || ''))})</span>
+            ${escapeHtml(entry.title)} <span class="text-sky-300">— ${escapeHtml(entry.disney)}</span>
           </p>
-          <p class="mt-1 text-[11px] text-slate-300">${scorersText}</p>
+          <p class="mt-1 text-xs text-slate-300">${scorersText}</p>
         `;
         dom.historyList.appendChild(item);
       });
     }
 
     function renderAll() {
-      populateFilmFilterOptions();
+      dom.roomCodeInput.value = state.roomCode;
+      dom.autoBroadcastToggle.checked = state.autoBroadcast;
+      dom.autoPlayTrackToggle.checked = state.autoPlayTrack;
+      dom.autoAdvanceToggle.checked = state.autoAdvance;
+      dom.syncStatusText.textContent = `Salon ${state.roomCode} · Dernière synchro : ${state.lastSyncAt || '—'}`;
+      renderRoleButtons();
       renderJudgeModeButton();
       renderSelectionControls();
       renderTrackStage();
       renderPlayersAndLeaderboard();
+      renderRemotePlayerSelect();
+      renderBuzzers();
       renderHistory();
-      dom.autoPlayToggle.checked = Boolean(state.audioSettings.autoPlay);
-      dom.autoNextToggle.checked = Boolean(state.audioSettings.autoNext);
-      dom.volumeSlider.value = String(state.audioSettings.volume);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function attachDynamicPlayerEvents() {
       document.querySelectorAll('.score-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           adjustPlayerScore(btn.getAttribute('data-score-id'), btn.getAttribute('data-score-type'));
-        });
-      });
-
-      document.querySelectorAll('.buzz-select-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          triggerBuzzer(btn.getAttribute('data-buzz-id'));
         });
       });
 
@@ -3241,38 +3858,37 @@
       dom.jsonTextarea.value = JSON.stringify(state.playlist, null, 2);
       dom.jsonValidationBox.classList.add('hidden');
       dom.jsonModal.classList.remove('hidden');
-      dom.jsonModal.classList.add('flex');
     }
 
     function closeJsonModal() {
       dom.jsonModal.classList.add('hidden');
-      dom.jsonModal.classList.remove('flex');
     }
 
     function showJsonValidation(message, isError) {
       dom.jsonValidationBox.classList.remove('hidden');
       dom.jsonValidationBox.className = isError
-        ? 'mb-4 rounded-2xl border border-rose-400/50 bg-rose-500/15 px-3.5 py-2.5 text-xs text-rose-200'
-        : 'mb-4 rounded-2xl border border-emerald-400/50 bg-emerald-500/15 px-3.5 py-2.5 text-xs text-emerald-200';
+        ? 'mb-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-200'
+        : 'mb-4 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 px-3.5 py-2.5 text-xs text-emerald-200';
       dom.jsonValidationBox.textContent = message;
     }
 
     function applyJsonPlaylist() {
       try {
-        const normalized = normalizeTracks(dom.jsonTextarea.value);
+        const normalized = parseAndNormalizePlaylist(dom.jsonTextarea.value);
         state.playlist = normalized;
         state.playedTrackIds = [];
-        state.currentTrackId = null;
+        state.currentTrackId = normalized[0].id;
+        state.playedTrackIds.push(normalized[0].id);
         state.answerRevealed = false;
-        ensureCurrentTrackInPool();
         saveState();
         renderAll();
-        showJsonValidation(`${normalized.length} piste(s) validée(s) et enregistrée(s).`, false);
+        prepareAndLoadAudioForTrack(getCurrentTrack(), state.autoPlayTrack, 0);
+        broadcastSyncState();
+        showJsonValidation(`${normalized.length} piste(s) chargée(s).`, false);
         setTimeout(() => {
           closeJsonModal();
-          loadAndAutoPlayTrack(getCurrentTrack(), state.audioSettings.autoPlay);
           showToast(`Playlist mise à jour (${normalized.length} pistes).`, 'success');
-        }, 400);
+        }, 350);
       } catch (err) {
         showJsonValidation(err.message || 'JSON invalide.', true);
       }
@@ -3280,17 +3896,18 @@
 
     function exportPlaylistJson() {
       try {
-        const content = JSON.stringify(state.playlist, null, 2);
-        const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+        const blob = new Blob([JSON.stringify(state.playlist, null, 2)], {
+          type: 'application/json;charset=utf-8',
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'disney-blind-test-playlist.json';
+        a.download = 'disney-tracks-151.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast('Fichier JSON téléchargé.', 'success');
+        showToast('Playlist JSON téléchargée.', 'success');
       } catch (err) {
         console.error(err);
         showToast('Erreur lors de l’export JSON.', 'error');
@@ -3299,88 +3916,223 @@
 
     /**
      * =========================================================================
-     * ÉCOUTEURS D'ÉVÉNEMENTS & INITIALISATION
+     * CHARGEMENT INITIAL & ÉCOUTEURS D'ÉVÉNEMENTS
      * =========================================================================
      */
+    function loadInitialState() {
+      // Vérifie un code salon dans l'URL (#room=ABC123 ou ?room=ABC123)
+      let urlRoom = '';
+      try {
+        const hashMatch = window.location.hash.match(/room=([A-Za-z0-9_-]{3,16})/i);
+        const queryMatch = new URLSearchParams(window.location.search).get('room');
+        urlRoom = (hashMatch?.[1] || queryMatch || '').toUpperCase();
+      } catch {
+        urlRoom = '';
+      }
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.STATE);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved && typeof saved === 'object') {
+            try {
+              state.playlist = parseAndNormalizePlaylist(saved.playlist);
+            } catch {
+              state.playlist = cloneData(DISNEY_TRACKS);
+            }
+            if (Array.isArray(saved.players) && saved.players.length > 0) {
+              state.players = saved.players;
+            }
+            state.role = ['host', 'player', 'local'].includes(saved.role) ? saved.role : 'host';
+            state.roomCode = urlRoom || String(saved.roomCode || generateRoomCode()).toUpperCase();
+            state.remotePlayerId = saved.remotePlayerId || state.players[0].id;
+            state.autoBroadcast = typeof saved.autoBroadcast === 'boolean' ? saved.autoBroadcast : true;
+            state.currentTrackId = saved.currentTrackId ?? state.playlist[0]?.id ?? 1;
+            state.playedTrackIds = Array.isArray(saved.playedTrackIds) ? saved.playedTrackIds : [];
+            state.roundNumber = Number(saved.roundNumber) >= 1 ? Number(saved.roundNumber) : 1;
+            state.answerRevealed = Boolean(saved.answerRevealed);
+            state.judgeMode = typeof saved.judgeMode === 'boolean' ? saved.judgeMode : true;
+            state.selectionMode = ['random', 'sequential', 'manual'].includes(saved.selectionMode)
+              ? saved.selectionMode
+              : 'random';
+            state.decadeFilter = saved.decadeFilter || 'all';
+            state.typeFilter = saved.typeFilter || 'all';
+            state.searchQuery = saved.searchQuery || '';
+            state.autoPlayTrack = typeof saved.autoPlayTrack === 'boolean' ? saved.autoPlayTrack : true;
+            state.autoAdvance = Boolean(saved.autoAdvance);
+            state.buzzers = Array.isArray(saved.buzzers) ? saved.buzzers : [];
+            state.history = Array.isArray(saved.history) ? saved.history : [];
+            state.lastSyncAt = saved.lastSyncAt || null;
+          }
+        } else if (urlRoom) {
+          state.roomCode = urlRoom;
+          state.role = 'player';
+          state.judgeMode = false;
+        }
+      } catch (err) {
+        console.warn('Erreur lecture localStorage :', err);
+        state.playlist = cloneData(DISNEY_TRACKS);
+      }
+
+      if (urlRoom) {
+        state.roomCode = urlRoom;
+      }
+      ensureCurrentTrack();
+      updateRoomHash();
+      initBroadcastChannel();
+    }
+
     function bindEvents() {
+      // Rôles Hôte / Joueur distant / Local
+      document.querySelectorAll('.role-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const r = btn.getAttribute('data-role');
+          if (!r) return;
+          state.role = r;
+          if (r === 'player') state.judgeMode = false;
+          if (r === 'host') state.judgeMode = true;
+          saveState();
+          renderAll();
+          showToast(`Mode actif : ${r === 'host' ? 'Hôte' : r === 'player' ? 'Joueur distant' : 'Local'}`, 'info');
+        });
+      });
+
+      // Salon & Lien d'invitation
+      dom.roomCodeInput.addEventListener('change', () => {
+        const clean = dom.roomCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || generateRoomCode();
+        state.roomCode = clean;
+        updateRoomHash();
+        initBroadcastChannel();
+        saveState();
+        renderAll();
+        showToast(`Salon actif : ${state.roomCode}`, 'info');
+      });
+
+      dom.newRoomCodeBtn.addEventListener('click', () => {
+        state.roomCode = generateRoomCode();
+        updateRoomHash();
+        initBroadcastChannel();
+        saveState();
+        renderAll();
+        showToast(`Nouveau code salon : ${state.roomCode}`, 'success');
+      });
+
+      dom.copyInviteBtn.addEventListener('click', () => {
+        const inviteUrl = `${window.location.origin}${window.location.pathname}#room=${encodeURIComponent(state.roomCode)}`;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(inviteUrl).catch(() => {});
+          }
+          const helper = document.createElement('input');
+          helper.value = inviteUrl;
+          document.body.appendChild(helper);
+          helper.select();
+          document.execCommand('copy');
+          document.body.removeChild(helper);
+          showToast(`Lien d'invitation copié (${state.roomCode}) !`, 'success');
+        } catch {
+          showToast(`Salon : ${inviteUrl}`, 'info');
+        }
+      });
+
+      // Joueur distant & Buzzer
+      dom.remotePlayerSelect.addEventListener('change', () => {
+        state.remotePlayerId = dom.remotePlayerSelect.value;
+        saveState();
+      });
+
+      dom.remoteBuzzBtn.addEventListener('click', () => {
+        registerBuzz(state.remotePlayerId, false);
+      });
+
+      // Code de Synchro
+      dom.generateSyncCodeBtn.addEventListener('click', () => {
+        dom.syncCodeTextarea.value = encodeSyncCode();
+        broadcastSyncState(true);
+        showToast('Code de synchro généré et prêt à être partagé.', 'success');
+      });
+
+      dom.copySyncCodeBtn.addEventListener('click', () => {
+        const code = dom.syncCodeTextarea.value.trim() || encodeSyncCode();
+        dom.syncCodeTextarea.value = code;
+        try {
+          const helper = document.createElement('textarea');
+          helper.value = code;
+          document.body.appendChild(helper);
+          helper.select();
+          document.execCommand('copy');
+          document.body.removeChild(helper);
+          showToast('Code de synchro copié.', 'success');
+        } catch {
+          showToast('Code prêt dans la zone texte.', 'info');
+        }
+      });
+
+      dom.applySyncCodeBtn.addEventListener('click', () => {
+        try {
+          const payload = decodeSyncCode(dom.syncCodeTextarea.value);
+          applyRemoteSyncPayload(payload, false);
+        } catch (err) {
+          showToast(`Code de synchro invalide : ${err.message}`, 'error');
+        }
+      });
+
+      dom.autoBroadcastToggle.addEventListener('change', () => {
+        state.autoBroadcast = dom.autoBroadcastToggle.checked;
+        saveState();
+      });
+
+      // Modes de sélection & filtres playlist
+      dom.selectionModeSelect.addEventListener('change', () => {
+        state.selectionMode = dom.selectionModeSelect.value;
+        saveState();
+        renderSelectionControls();
+      });
+
+      dom.decadeFilterSelect.addEventListener('change', () => {
+        state.decadeFilter = dom.decadeFilterSelect.value;
+        saveState();
+        renderSelectionControls();
+      });
+
+      dom.typeFilterSelect.addEventListener('change', () => {
+        state.typeFilter = dom.typeFilterSelect.value;
+        saveState();
+        renderSelectionControls();
+      });
+
+      dom.searchTrackInput.addEventListener('input', () => {
+        state.searchQuery = dom.searchTrackInput.value;
+        saveState();
+        renderSelectionControls();
+      });
+
+      dom.manualTrackSelect.addEventListener('change', () => {
+        if (!dom.manualTrackSelect.value) return;
+        state.selectionMode = 'manual';
+        selectTrackById(dom.manualTrackSelect.value, true);
+      });
+
+      // Boutons haut & manche
       dom.toggleJudgeModeBtn.addEventListener('click', () => {
         state.judgeMode = !state.judgeMode;
         saveState();
         renderJudgeModeButton();
-        renderSelectionControls();
         renderTrackStage();
       });
 
-      dom.undoActionBtn.addEventListener('click', undoLastScoreAction);
+      dom.undoScoreBtn.addEventListener('click', undoLastAction);
       dom.resetScoresBtn.addEventListener('click', resetAllScores);
       dom.resetPoolBtn.addEventListener('click', resetPool);
-
-      // Modes de sélection
-      document.querySelectorAll('.selection-mode-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          state.selectionMode = btn.getAttribute('data-selection-mode');
-          saveState();
-          renderSelectionControls();
-          showToast(`Mode : ${btn.textContent.trim()}`, 'info');
-        });
-      });
-
-      const onFiltersChanged = () => {
-        ensureCurrentTrackInPool();
-        saveState();
-        renderAll();
-        const curr = getCurrentTrack();
-        if (curr) loadAndAutoPlayTrack(curr, false);
-      };
-
-      dom.filterDecadeSelect.addEventListener('change', () => {
-        state.filters.decade = dom.filterDecadeSelect.value;
-        state.filters.preset = 'all';
-        onFiltersChanged();
-      });
-
-      dom.filterTypeSelect.addEventListener('change', () => {
-        state.filters.type = dom.filterTypeSelect.value;
-        state.filters.preset = 'all';
-        onFiltersChanged();
-      });
-
-      dom.filterFilmSelect.addEventListener('change', () => {
-        state.filters.film = dom.filterFilmSelect.value;
-        state.filters.preset = 'all';
-        onFiltersChanged();
-      });
-
-      document.querySelectorAll('.preset-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const preset = btn.getAttribute('data-preset');
-          state.filters.preset = preset;
-          state.filters.decade = 'all';
-          state.filters.type = 'all';
-          state.filters.film = 'all';
-          onFiltersChanged();
-        });
-      });
-
-      dom.manualTrackSelect.addEventListener('change', () => {
-        selectSpecificTrack(dom.manualTrackSelect.value, true);
-      });
 
       dom.revealAnswerBtn.addEventListener('click', () => {
         state.answerRevealed = !state.answerRevealed;
         saveState();
         renderTrackStage();
+        broadcastSyncState();
       });
 
-      dom.nextTrackBtn.addEventListener('click', nextTrackInMode);
-
-      // Buzzer & Joueurs
-      dom.buzzerTriggerBtn.addEventListener('click', () => triggerBuzzer(null));
-      dom.clearBuzzerBtn.addEventListener('click', () => {
-        state.activeBuzzerId = null;
-        saveState();
-        renderPlayersAndLeaderboard();
-      });
+      dom.nextTrackBtn.addEventListener('click', nextRound);
 
       dom.addPlayerForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -3389,41 +4141,64 @@
         dom.newPlayerInput.focus();
       });
 
-      // Contrôles Audio (100% sans vidéo)
-      dom.playPauseBtn.addEventListener('click', () => {
+      // Encart Réponse / Proposition
+      dom.proposalForm.addEventListener('submit', evaluateAndApplyProposal);
+      dom.grantTitleFromProposalBtn.addEventListener('click', () => grantSingleFromProposal('title'));
+      dom.grantDisneyFromProposalBtn.addEventListener('click', () => grantSingleFromProposal('disney'));
+      dom.clearProposalBtn.addEventListener('click', resetProposalBox);
+
+      // Contrôles Audio
         if (dom.audioPlayer.src) {
           if (dom.audioPlayer.paused) {
-            dom.audioPlayer.play().catch(() => {});
+            dom.audioPlayer.play().catch(() => startSynthFallback(getCurrentTrack()));
           } else {
             dom.audioPlayer.pause();
           }
-        } else if (synthPlaying) {
-          stopSynthFallback();
+          broadcastSyncState();
         } else {
-          startSynthFallback(getCurrentTrack());
+          await prepareAndLoadAudioForTrack(getCurrentTrack(), true, 0);
+          if (!dom.audioPlayer.src && !synthInterval) {
+            startSynthFallback(getCurrentTrack());
+          }
+          broadcastSyncState();
         }
       });
 
-      dom.replayAudioBtn.addEventListener('click', () => {
-        if (dom.audioPlayer.src) {
-          dom.audioPlayer.currentTime = 0;
-          dom.audioPlayer.play().catch(() => {});
-        } else {
-          startSynthFallback(getCurrentTrack());
+      dom.syncTimeBtn.addEventListener('click', () => {
+        try {
+          const raw = dom.syncCodeTextarea.value.trim();
+          if (raw) {
+            const payload = decodeSyncCode(raw);
+            syncLocalAudioClock(Number(payload.currentTime || 0), Boolean(payload.isPlaying));
+            showToast(`Recalé sur ${Number(payload.currentTime || 0).toFixed(1)}s`, 'success');
+          } else {
+            syncLocalAudioClock(Number(dom.audioPlayer.currentTime || 0), !dom.audioPlayer.paused);
+            broadcastSyncState(true);
+            showToast('Position audio synchronisée.', 'info');
+          }
+        } catch {
+          showToast('Impossible de recaler : code de synchro invalide.', 'error');
         }
       });
 
-      dom.audioPlayer.addEventListener('play', () => {
-        stopSynthFallback();
-        updatePlayPauseUI(true);
+      dom.autoPlayTrackToggle.addEventListener('change', () => {
+        state.autoPlayTrack = dom.autoPlayTrackToggle.checked;
+        saveState();
       });
+
+      dom.autoAdvanceToggle.addEventListener('change', () => {
+        state.autoAdvance = dom.autoAdvanceToggle.checked;
+        saveState();
+      });
+
+      dom.audioPlayer.addEventListener('play', () => updatePlayPauseUI(true));
       dom.audioPlayer.addEventListener('pause', () => {
-        if (!synthPlaying) updatePlayPauseUI(false);
+        if (!isUsingSynthFallback) updatePlayPauseUI(false);
       });
       dom.audioPlayer.addEventListener('ended', () => {
         updatePlayPauseUI(false);
-        if (state.audioSettings.autoNext) {
-          nextTrackInMode();
+        if (state.autoAdvance) {
+          nextRound();
         }
       });
 
@@ -3446,21 +4221,9 @@
       });
 
       dom.volumeSlider.addEventListener('input', () => {
-        const v = Number(dom.volumeSlider.value);
-        state.audioSettings.volume = v;
-        dom.audioPlayer.volume = v;
-        saveState();
+        dom.audioPlayer.volume = Number(dom.volumeSlider.value);
       });
-
-      dom.autoPlayToggle.addEventListener('change', () => {
-        state.audioSettings.autoPlay = dom.autoPlayToggle.checked;
-        saveState();
-      });
-
-      dom.autoNextToggle.addEventListener('change', () => {
-        state.audioSettings.autoNext = dom.autoNextToggle.checked;
-        saveState();
-      });
+      dom.audioPlayer.volume = Number(dom.volumeSlider.value);
 
       // Modale JSON
       dom.openJsonModalBtn.addEventListener('click', openJsonModal);
@@ -3471,7 +4234,7 @@
 
       dom.loadDefaultJsonBtn.addEventListener('click', () => {
         dom.jsonTextarea.value = JSON.stringify(DISNEY_TRACKS, null, 2);
-        showJsonValidation('151 pistes Disney par défaut chargées dans l’éditeur.', false);
+        showJsonValidation('Les 151 pistes DISNEY_TRACKS ont été chargées dans l’éditeur.', false);
       });
 
       dom.jsonFileInput.addEventListener('change', (e) => {
@@ -3481,14 +4244,13 @@
         reader.onload = () => {
           try {
             const text = String(reader.result || '');
-            normalizeTracks(text);
+            parseAndNormalizePlaylist(text);
             dom.jsonTextarea.value = JSON.stringify(JSON.parse(text), null, 2);
-            showJsonValidation(`Fichier "${file.name}" validé et prêt à être appliqué.`, false);
+            showJsonValidation(`Fichier "${file.name}" prêt à être appliqué.`, false);
           } catch (err) {
             showJsonValidation(`Fichier "${file.name}" : ${err.message}`, true);
           }
         };
-        reader.onerror = () => showJsonValidation('Erreur de lecture du fichier.', true);
         reader.readAsText(file);
         e.target.value = '';
       });
@@ -3497,33 +4259,18 @@
         if (e.target === dom.jsonModal) closeJsonModal();
       });
 
-      // Raccourcis clavier (Espace = Buzzer / Pause, Entrée = Révéler réponse)
       document.addEventListener('keydown', (e) => {
-        const tag = document.activeElement?.tagName;
-        const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
         if (e.key === 'Escape' && !dom.jsonModal.classList.contains('hidden')) {
           closeJsonModal();
-          return;
-        }
-        if (isTyping) return;
-
-        if (e.code === 'Space') {
-          e.preventDefault();
-          triggerBuzzer(null);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          state.answerRevealed = !state.answerRevealed;
-          saveState();
-          renderTrackStage();
         }
       });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      loadState();
+      loadInitialState();
       bindEvents();
       renderAll();
-      loadAndAutoPlayTrack(getCurrentTrack(), state.audioSettings.autoPlay);
+      prepareAndLoadAudioForTrack(getCurrentTrack(), false, 0);
     });
   </script>
 </body>
