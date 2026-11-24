@@ -2305,17 +2305,25 @@ if (p2pAcceptSignalBtn) {
       if (roomCodeBadge) roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
     }
 
-    if (desc.type === "offer") {
-      const conn = createPeerConnection();
-      setP2pStatus("⏳ Création du code de réponse P2P...");
-      await conn.setRemoteDescription(desc);
-      const answer = await conn.createAnswer();
-      await conn.setLocalDescription(answer);
-    } else if (desc.type === "answer" && pc) {
-      setP2pStatus("⏳ Finalisation de la liaison directe P2P...");
-      await pc.setRemoteDescription(desc);
-    } else {
-      setP2pStatus("❌ Type de code P2P non reconnu.");
+    try {
+      if (desc.type === "offer") {
+        const conn = createPeerConnection();
+        setP2pStatus("⏳ Création du code de réponse P2P...");
+        await conn.setRemoteDescription(new RTCSessionDescription(desc));
+        const answer = await conn.createAnswer();
+        await conn.setLocalDescription(answer);
+      } else if (desc.type === "answer") {
+        if (!pc || pc.signalingState !== "have-local-offer") {
+          setP2pStatus("⚠️ Impossible d'appliquer la réponse : crée d'abord un code P2P (étape 1) puis colle uniquement le code de réponse du partenaire.");
+          return;
+        }
+        setP2pStatus("⏳ Finalisation de la liaison directe P2P...");
+        await pc.setRemoteDescription(new RTCSessionDescription(desc));
+      } else {
+        setP2pStatus("❌ Type de code P2P non reconnu.");
+      }
+    } catch (err) {
+      setP2pStatus(`⚠️ Liaison P2P interrompue (${err && err.name ? err.name : "erreur"}) : recharge ou relance l'étape 1.`);
     }
   });
 }
