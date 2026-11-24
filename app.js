@@ -228,12 +228,21 @@ function getFirebaseBase() {
   return "";
 }
 
-function getRelayBaseUrl() {
+const RELAY_CANDIDATES = [
+  "https://ntfy.sh",
+  "https://ntfy.drey.co.za"
+];
+
+function getRelayBaseUrls() {
   const custom = String(roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
   if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
-    return custom;
+    return [custom, ...RELAY_CANDIDATES.filter((u) => u !== custom)];
   }
-  return DEFAULT_RELAY_BASE;
+  return RELAY_CANDIDATES;
+}
+
+function getRelayBaseUrl() {
+  return getRelayBaseUrls()[0] || DEFAULT_RELAY_BASE;
 }
 
 function getRoomTopic(code) {
@@ -288,20 +297,22 @@ function appendRoomSystemMessage(text) {
     ts: Date.now(),
     system: true
   });
-  if (roomSystem.messages.length > 60) {
-    roomSystem.messages = roomSystem.messages.slice(-60);
+  if (roomSystem.messages.length > 80) {
+    roomSystem.messages = roomSystem.messages.slice(-80);
   }
 }
 
 function upsertSelfInRoom(options = {}) {
   if (!state.roomCode) return;
   const pseudo = currentPseudo();
+  const now = Date.now();
   if (!roomSystem.hostId && options.asHost) {
     roomSystem.hostId = roomSystem.clientId;
   }
   const existing = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
   if (existing) {
     existing.pseudo = pseudo;
+    existing.lastSeen = now;
     if (typeof options.ready === "boolean") {
       existing.ready = options.ready;
     }
@@ -310,7 +321,8 @@ function upsertSelfInRoom(options = {}) {
       clientId: roomSystem.clientId,
       pseudo,
       ready: Boolean(options.ready),
-      joinedAt: Date.now(),
+      joinedAt: now,
+      lastSeen: now,
       isHost: roomSystem.hostId === roomSystem.clientId
     });
   }
@@ -320,11 +332,71 @@ function upsertSelfInRoom(options = {}) {
   ensurePlayerForPseudo(pseudo);
 }
 
+function mergeMemberLists(localList = [], incomingList = []) {
+  const map = new Map();
+  const ingest = (item) => {
+    if (!item || !item.clientId) return;
+    const prev = map.get(item.clientId);
+    if (!prev) {
+      map.set(item.clientId, { ...item });
+      return;
+    }
+    const prevSeen = Number(prev.lastSeen || prev.joinedAt || 0);
+    const nextSeen = Number(item.lastSeen || item.joinedAt || 0);
+    if (nextSeen >= prevSeen) {
+      map.set(item.clientId, { ...prev, ...item });
+    } else {
+      map.set(item.clientId, { ...item, ...prev });
+    }
+  };
+  (Array.isArray(localList) ? localList : []).forEach(ingest);
+  (Array.isArray(incomingList) ? incomingList : []).forEach(ingest);
+  return Array.from(map.values()).sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+}
+
+function mergeMessageLists(localList = [], incomingList = []) {
+  const map = new Map();
+  const ingest = (msg) => {
+    if (!msg) return;
+    const key = msg.id || `${msg.sender || ""}_${msg.ts || 0}_${msg.text || ""}`;
+    if (!map.has(key)) {
+      map.set(key, msg);
+    }
+  };
+  (Array.isArray(localList) ? localList : []).forEach(ingest);
+  (Array.isArray(incomingList) ? incomingList : []).forEach(ingest);
+  return Array.from(map.values())
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+    .slice(-80);
+}
+
+function mergePlayerLists(localList = [], incomingList = []) {
+  const map = new Map();
+  const addPlayer = (pl) => {
+    if (!pl || !pl.name) return;
+    const key = String(pl.name).trim().toLowerCase();
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { ...pl });
+    } else {
+      map.set(key, {
+        ...prev,
+        ...pl,
+        score: Math.max(Number(prev.score || 0), Number(pl.score || 0))
+      });
+    }
+  };
+  (Array.isArray(localList) ? localList : []).forEach(addPlayer);
+  (Array.isArray(incomingList) ? incomingList : []).forEach(addPlayer);
+  return Array.from(map.values());
+}
+
 function buildFullRoomSnapshot() {
   return {
     roomCode: state.roomCode,
     roomName: roomSystem.roomName || `Room ${state.roomCode}`,
     hostId: roomSystem.hostId || roomSystem.clientId,
+    senderId: roomSystem.clientId,
     members: roomSystem.members,
     messages: roomSystem.messages,
     players: state.players,
@@ -367,68 +439,89 @@ async function pullSnapshotFromFirebase(code = state.roomCode) {
 }
 
 async function publishRoomSnapshotToRelay(snapshot) {
-  if (!snapshot || !snapshot.roomCode) return;
-  const base = getRelayBaseUrl();
+  if (!snapshot || !snapshot.roomCode) return false;
+  const bases = getRelayBaseUrls();
   const topic = getRoomTopic(snapshot.roomCode);
-  const url = `${base}/${encodeURIComponent(topic)}`;
+  const bodyPayload = JSON.stringify({
+    __royaumesRoomSync: true,
+    snapshot
+  });
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      body: JSON.stringify({
-        __royaumesRoomSync: true,
-        snapshot
-      })
-    });
-    if (res.ok) {
-      setDiagStatus(
-        "connected",
-        `🟢 Connecté • ${snapshot.roomCode}`,
-        `Room ${snapshot.roomCode} synchronisée (${snapshot.members ? snapshot.members.length : 0} joueur(s)).`
-      );
-    }
-  } catch (_) {
-    // Keep local / BroadcastChannel working silently without blocking UI
+  let delivered = false;
+  for (const base of bases) {
+    const url = `${base}/${encodeURIComponent(topic)}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        body: bodyPayload
+      });
+      if (res.ok) {
+        delivered = true;
+        setDiagStatus(
+          "connected",
+          `🟢 Connecté (${base.replace(/^https?:\/\//, "")}) • ${snapshot.roomCode}`,
+          `Room ${snapshot.roomCode} active • ${snapshot.members ? snapshot.members.length : 0} joueur(s) connecté(s).`
+        );
+        break;
+      }
+    } catch (_) {}
   }
+
+  if (!delivered) {
+    setDiagStatus(
+      "",
+      `🟡 Relais local/onglets • ${snapshot.roomCode}`,
+      `Relais distant inaccessible sur ce réseau : mode multi-onglets et local actif.`
+    );
+  }
+  return delivered;
 }
 
 async function pullRoomSnapshotFromRelay(code) {
   const cleanCode = String(code || "").trim().toUpperCase();
   if (!cleanCode) return null;
-  const base = getRelayBaseUrl();
+  const bases = getRelayBaseUrls();
   const topic = getRoomTopic(cleanCode);
-  const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=15m`;
 
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    const rawText = await res.text();
-    if (!rawText.trim()) return null;
+  let newestSnap = null;
 
-    const lines = rawText.trim().split("\n");
-    let newestSnap = null;
+  for (const base of bases) {
+    const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=60m`;
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      const rawText = await res.text();
+      if (!rawText.trim()) continue;
 
-    for (const line of lines) {
-      try {
-        const evt = JSON.parse(line);
-        if (evt && evt.event === "message" && typeof evt.message === "string") {
-          const parsedMsg = JSON.parse(evt.message);
-          if (parsedMsg && parsedMsg.__royaumesRoomSync && parsedMsg.snapshot) {
-            const snap = parsedMsg.snapshot;
-            if (snap.roomCode === cleanCode) {
-              if (!newestSnap || (snap.updatedAt || 0) >= (newestSnap.updatedAt || 0)) {
-                newestSnap = snap;
+      const lines = rawText.trim().split("\n");
+      for (const line of lines) {
+        try {
+          const evt = JSON.parse(line);
+          if (evt && evt.event === "message" && typeof evt.message === "string") {
+            const parsedMsg = JSON.parse(evt.message);
+            if (parsedMsg && parsedMsg.__royaumesRoomSync && parsedMsg.snapshot) {
+              const snap = parsedMsg.snapshot;
+              if (snap.roomCode === cleanCode) {
+                if (!newestSnap || (snap.updatedAt || 0) >= (newestSnap.updatedAt || 0)) {
+                  newestSnap = snap;
+                }
               }
             }
           }
-        }
-      } catch (_) {}
-    }
-
-    return newestSnap;
-  } catch (_) {
-    return null;
+        } catch (_) {}
+      }
+      if (newestSnap) {
+        setDiagStatus(
+          "connected",
+          `🟢 Connecté (${base.replace(/^https?:\/\//, "")}) • ${cleanCode}`,
+          `Room ${cleanCode} synchronisée à distance (${newestSnap.members ? newestSnap.members.length : 0} joueur(s)).`
+        );
+        break;
+      }
+    } catch (_) {}
   }
+
+  return newestSnap;
 }
 
 function saveState(options = {}) {
@@ -567,27 +660,56 @@ function applyRemotePayload(payload) {
 
   const incomingTs = Number(payload.updatedAt || 0);
   const currentTs = Number(roomSystem.updatedAt || 0);
-  if (incomingTs > 0 && currentTs > 0 && incomingTs < currentTs) {
-    return;
+
+  // Always merge roster & messages from any valid room snapshot so distant players appear
+  roomSystem.members = mergeMemberLists(roomSystem.members, payload.members);
+  roomSystem.messages = mergeMessageLists(roomSystem.messages, payload.messages);
+  if (payload.roomName) roomSystem.roomName = payload.roomName;
+  if (payload.hostId && roomSystem.members.some((m) => m.clientId === payload.hostId)) {
+    roomSystem.hostId = payload.hostId;
+  }
+  roomSystem.members.forEach((m) => {
+    m.isHost = m.clientId === roomSystem.hostId;
+  });
+
+  state.players = mergePlayerLists(state.players, payload.players);
+  if (payload.nextPlayerId && payload.nextPlayerId > state.nextPlayerId) {
+    state.nextPlayerId = payload.nextPlayerId;
   }
 
-  const trackChanged = payload.currentTrackId && payload.currentTrackId !== state.currentTrackId;
-  const revealChanged = Boolean(payload.revealed) !== Boolean(state.revealed);
+  // Merge buzzes by pseudo so distant buzzes aren't lost
+  if (Array.isArray(payload.buzzes) && payload.buzzes.length) {
+    const bMap = new Map();
+    [...(state.buzzes || []), ...payload.buzzes].forEach((b) => {
+      if (!b || !b.pseudo) return;
+      const k = String(b.pseudo).toLowerCase();
+      if (!bMap.has(k) || (b.at || 0) < (bMap.get(k).at || 0)) {
+        bMap.set(k, b);
+      }
+    });
+    state.buzzes = Array.from(bMap.values()).sort((a, b) => (a.at || 0) - (b.at || 0));
+  }
 
-  if (payload.roomName) roomSystem.roomName = payload.roomName;
-  if (payload.hostId) roomSystem.hostId = payload.hostId;
-  if (Array.isArray(payload.members)) roomSystem.members = payload.members;
-  if (Array.isArray(payload.messages)) roomSystem.messages = payload.messages;
-  if (incomingTs > 0) roomSystem.updatedAt = incomingTs;
+  let trackChanged = false;
+  let revealChanged = false;
 
-  state.players = Array.isArray(payload.players) && payload.players.length ? payload.players : state.players;
-  state.nextPlayerId = payload.nextPlayerId || state.nextPlayerId;
-  state.roundNumber = payload.roundNumber ?? state.roundNumber;
-  state.currentTrackId = payload.currentTrackId ?? state.currentTrackId;
-  state.revealed = Boolean(payload.revealed);
-  state.playedIds = Array.isArray(payload.playedIds) ? payload.playedIds : state.playedIds;
-  state.buzzes = Array.isArray(payload.buzzes) ? payload.buzzes : [];
-  state.roundGuesses = Array.isArray(payload.roundGuesses) ? payload.roundGuesses : state.roundGuesses;
+  if (incomingTs >= currentTs || currentTs === 0) {
+    trackChanged = Boolean(payload.currentTrackId && payload.currentTrackId !== state.currentTrackId);
+    revealChanged = Boolean(payload.revealed) !== Boolean(state.revealed);
+
+    if (typeof payload.roundNumber === "number") state.roundNumber = payload.roundNumber;
+    if (payload.currentTrackId !== undefined) state.currentTrackId = payload.currentTrackId;
+    state.revealed = Boolean(payload.revealed);
+    if (Array.isArray(payload.playedIds)) {
+      state.playedIds = Array.from(new Set([...(state.playedIds || []), ...payload.playedIds]));
+    }
+    if (Array.isArray(payload.roundGuesses)) {
+      state.roundGuesses = payload.roundGuesses;
+    }
+    if (incomingTs > 0) {
+      roomSystem.updatedAt = incomingTs;
+    }
+  }
 
   saveState({ skipBroadcast: true });
   renderPlayers();
@@ -671,7 +793,16 @@ function startRoomListeners() {
     }
   };
   pollRelay();
-  relayPollTimer = setInterval(pollRelay, 1500);
+  relayPollTimer = setInterval(() => {
+    pollRelay();
+    if (state.mode === "remote" && state.roomCode) {
+      upsertSelfInRoom({ asHost: !roomSystem.hostId });
+      try {
+        localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(buildFullRoomSnapshot()));
+      } catch (_) {}
+      publishRoomSnapshotToRelay(buildFullRoomSnapshot());
+    }
+  }, 2500);
 }
 
 function setMode(newMode) {
