@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Canvas Confetti pour la célébration -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <!-- MQTT.js pour le relais multijoueur multi-appareils automatique -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <!-- Polices Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -165,7 +167,13 @@
         </div>
 
         <!-- Contrôle volume global & Badge Salle -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Badge d'état réseau multijoueur -->
+            <div id="sync-status-badge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-emerald-500/40 text-xs font-semibold text-emerald-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="sync-status-text">Multi-appareils prêt</span>
+            </div>
+
             <div id="header-room-badge" class="hidden items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-400/40 text-xs sm:text-sm">
                 <span class="text-slate-400">Salle :</span>
                 <span id="header-room-code" class="font-mono font-extrabold text-amber-400 tracking-widest text-base">----</span>
@@ -209,13 +217,24 @@
                 </div>
 
                 <!-- Sélecteur nombre de manches (Solo ou Création salle) -->
-                <div class="max-w-md mx-auto mb-8 flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3">
+                <div class="max-w-md mx-auto mb-4 flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3">
                     <span class="text-sm text-slate-300 font-medium"><i class="fa-solid fa-music text-amber-400 mr-2"></i>Nombre de manches :</span>
                     <div class="flex gap-1.5" id="rounds-selector">
                         <button type="button" onclick="selectRoundCount(5)" data-rounds="5" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">5</button>
-                        <button type="button" onclick="selectRoundCount(8)" data-rounds="8" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-amber-400 text-slate-950 transition">8</button>
-                        <button type="button" onclick="selectRoundCount(12)" data-rounds="12" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">12</button>
+                        <button type="button" onclick="selectRoundCount(10)" data-rounds="10" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-amber-400 text-slate-950 transition">10</button>
+                        <button type="button" onclick="selectRoundCount(15)" data-rounds="15" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">15</button>
+                        <button type="button" onclick="selectRoundCount(20)" data-rounds="20" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">20</button>
                     </div>
+                </div>
+
+                <!-- Sélecteur d'époque / catalogue -->
+                <div class="max-w-md mx-auto mb-8 flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3">
+                    <span class="text-sm text-slate-300 font-medium"><i class="fa-solid fa-wand-sparkles text-sky-400 mr-2"></i>Sélection :</span>
+                    <select id="era-selector" onchange="selectEraFilter(this.value)" class="bg-slate-800 text-amber-300 font-bold text-xs sm:text-sm rounded-xl px-3 py-1.5 border border-slate-700 outline-none cursor-pointer">
+                        <option value="all">Tous les Classiques (42 titres)</option>
+                        <option value="90s">Âge d'Or & Rétro (avant 2000)</option>
+                        <option value="modern">Nouvelle Génération (2000+)</option>
+                    </select>
                 </div>
 
                 <!-- Boutons Mode de Jeu -->
@@ -258,7 +277,12 @@
             <div class="magic-card rounded-3xl p-6 sm:p-8">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-700/60">
                     <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Salon d'attente</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Salon d'attente</span>
+                            <span id="lobby-sync-pill" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold">
+                                Mode Direct P2P actif
+                            </span>
+                        </div>
                         <h2 class="font-magic text-2xl sm:text-3xl font-bold text-white mt-1">Prêts pour le spectacle ?</h2>
                     </div>
                     <div class="bg-slate-950/90 border-2 border-amber-400/60 rounded-2xl px-5 py-3 text-center">
@@ -499,14 +523,14 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- INITIALISATION RÉSILIENTE & IDENTIFIANT JOUEUR IMMÉDIAT ---
+        // --- ARCHITECTURE MULTI-COUCHES : FIREBASE CLOUD + RELAIS P2P MQTT/BROADCAST ---
         let app = null;
         let auth = null;
         let db = null;
-        let isDbConfigured = false;
+        let syncLayer = 'p2p'; // 'firebase' | 'p2p'
         let authPromise = null;
 
-        // Identifiant joueur immédiat en mémoire (évite tout blocage si l'auth anonyme est lente/désactivée)
+        // Identifiant joueur unique immédiat
         const fallbackPlayerId = 'player_' + (typeof crypto !== 'undefined' && crypto.randomUUID
             ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
             : Math.random().toString(36).substring(2, 14));
@@ -514,44 +538,55 @@
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'disney-blindtest-app';
 
-        function initFirebase() {
+        function updateSyncBadges(layer) {
+            syncLayer = layer;
+            const label = layer === 'firebase' ? 'Serveur Cloud actif' : 'Mode Direct P2P actif';
+            const headerText = document.getElementById('sync-status-text');
+            const lobbyPill = document.getElementById('lobby-sync-pill');
+            if (headerText) headerText.textContent = label;
+            if (lobbyPill) lobbyPill.textContent = label;
+        }
+
+        function initSyncEngine() {
             try {
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    const firebaseConfig = typeof __firebase_config === 'string'
-                        ? JSON.parse(__firebase_config)
-                        : __firebase_config;
+                const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : window.__firebase_config;
+                if (rawConfig) {
+                    const firebaseConfig = typeof rawConfig === 'string' ? JSON.parse(rawConfig) : rawConfig;
+                    if (firebaseConfig && firebaseConfig.apiKey) {
+                        app = initializeApp(firebaseConfig);
+                        auth = getAuth(app);
+                        db = getFirestore(app);
+                        updateSyncBadges('firebase');
 
-                    app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-                    isDbConfigured = true;
+                        authPromise = (async () => {
+                            try {
+                                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : window.__initial_auth_token;
+                                const authTask = token
+                                    ? signInWithCustomToken(auth, token)
+                                    : signInAnonymously(auth);
 
-                    // Authentification en arrière-plan (avec délai max de 2,5s pour ne jamais bloquer)
-                    authPromise = (async () => {
-                        try {
-                            const authTask = (typeof __initial_auth_token !== 'undefined' && __initial_auth_token)
-                                ? signInWithCustomToken(auth, __initial_auth_token)
-                                : signInAnonymously(auth);
+                                const timeoutTask = new Promise((_, reject) =>
+                                    setTimeout(() => reject(new Error('Délai auth dépassé')), 2500)
+                                );
 
-                            const timeoutTask = new Promise((_, reject) =>
-                                setTimeout(() => reject(new Error('Délai authentification dépassé')), 2500)
-                            );
-
-                            const cred = await Promise.race([authTask, timeoutTask]);
-                            if (cred && cred.user && cred.user.uid) {
-                                currentUser = { uid: cred.user.uid };
+                                const cred = await Promise.race([authTask, timeoutTask]);
+                                if (cred?.user?.uid) {
+                                    currentUser = { uid: cred.user.uid };
+                                }
+                            } catch (authErr) {
+                                console.warn("Auth Firebase en secours local :", authErr.message);
                             }
-                        } catch (authErr) {
-                            console.warn("Authentification anonyme ignorée (utilisation de l'ID local) :", authErr.message);
-                        }
-                    })();
+                        })();
+                        return;
+                    }
                 }
             } catch (err) {
-                console.error("Erreur de configuration multijoueur :", err);
-                isDbConfigured = false;
+                console.warn("Bascule sur le mode Direct P2P :", err.message);
             }
+            // Fallback automatique et immédiat vers le relais P2P multi-appareils
+            updateSyncBadges('p2p');
         }
-        initFirebase();
+        initSyncEngine();
 
         async function ensurePlayerIdentity() {
             if (authPromise) {
@@ -563,44 +598,233 @@
             return currentUser;
         }
 
-        function formatMultiplayerError(err) {
-            const code = err?.code || '';
-            const msg = err?.message || 'Erreur inconnue';
-            if (code === 'permission-denied') {
-                return "Accès refusé par le serveur (permissions insuffisantes). Vérifiez la configuration de sécurité.";
+        // --- MOTEUR RELAIS P2P (MQTT OVER WEBSOCKETS + BROADCASTCHANNEL) ---
+        class P2PRoomTransport {
+            constructor() {
+                this.client = null;
+                this.channel = null;
+                this.roomCode = null;
+                this.onUpdateCallback = null;
+                this.localState = null;
+                this.pendingJoinResolver = null;
             }
-            if (code === 'unavailable' || msg.toLowerCase().includes('offline')) {
-                return "Serveur multijoueur inaccessible. Vérifiez votre connexion Internet.";
+
+            connectBroker() {
+                return new Promise((resolve) => {
+                    if (this.client && this.client.connected) {
+                        resolve(true);
+                        return;
+                    }
+                    if (typeof window.mqtt === 'undefined') {
+                        resolve(false);
+                        return;
+                    }
+                    try {
+                        this.client = window.mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+                            clientId: 'disney_' + currentUser.uid + '_' + Math.random().toString(16).slice(2, 6),
+                            clean: true,
+                            connectTimeout: 4000,
+                            reconnectPeriod: 2000
+                        });
+
+                        const timer = setTimeout(() => resolve(false), 4200);
+                        this.client.on('connect', () => {
+                            clearTimeout(timer);
+                            if (this.roomCode) {
+                                this.client.subscribe(`disney-blindtest-v1/${this.roomCode}/#`);
+                            }
+                            resolve(true);
+                        });
+                        this.client.on('error', () => {
+                            clearTimeout(timer);
+                            resolve(false);
+                        });
+                        this.client.on('message', (topic, payload) => {
+                            try {
+                                const msg = JSON.parse(payload.toString());
+                                this.handleIncomingMessage(msg);
+                            } catch (e) {}
+                        });
+                    } catch (e) {
+                        resolve(false);
+                    }
+                });
             }
-            return `Erreur multijoueur (${code || 'réseau'}) : ${msg}`;
+
+            setupLocalChannel(code) {
+                if (this.channel) {
+                    try { this.channel.close(); } catch (e) {}
+                }
+                if (typeof BroadcastChannel !== 'undefined') {
+                    this.channel = new BroadcastChannel(`disney_blindtest_${code}`);
+                    this.channel.onmessage = (event) => {
+                        if (event.data) this.handleIncomingMessage(event.data);
+                    };
+                }
+            }
+
+            publish(msg) {
+                const payload = JSON.stringify(msg);
+                if (this.client && this.client.connected && this.roomCode) {
+                    this.client.publish(`disney-blindtest-v1/${this.roomCode}/events`, payload, { qos: 0 });
+                }
+                if (this.channel) {
+                    try { this.channel.postMessage(msg); } catch (e) {}
+                }
+            }
+
+            handleIncomingMessage(msg) {
+                if (!msg || msg.senderId === currentUser.uid) return;
+
+                // Un invité demande l'état de la salle
+                if (msg.type === 'WHO_IS_HOST' && state.isHost && this.localState) {
+                    this.publish({
+                        type: 'ROOM_STATE',
+                        senderId: currentUser.uid,
+                        roomState: this.localState
+                    });
+                }
+
+                // Un invité rejoint la salle -> l'hôte l'ajoute et diffuse l'état à tous
+                if (msg.type === 'JOIN_REQUEST' && state.isHost && this.localState) {
+                    this.localState.players[msg.playerId] = msg.playerData;
+                    this.localState.updatedAt = Date.now();
+                    this.broadcastHostState();
+                    if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
+                }
+
+                // Un invité met à jour son score -> l'hôte fusionne et rediffuse
+                if (msg.type === 'PLAYER_SCORE' && state.isHost && this.localState) {
+                    if (this.localState.players[msg.playerId]) {
+                        this.localState.players[msg.playerId].score = msg.score;
+                        this.localState.players[msg.playerId].foundSong = msg.foundSong;
+                        this.localState.players[msg.playerId].foundMovie = msg.foundMovie;
+                        this.localState.updatedAt = Date.now();
+                        this.broadcastHostState();
+                        if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
+                    }
+                }
+
+                // Réception d'un état complet diffusé par l'hôte
+                if (msg.type === 'ROOM_STATE' && msg.roomState) {
+                    this.localState = msg.roomState;
+                    if (this.pendingJoinResolver) {
+                        const res = this.pendingJoinResolver;
+                        this.pendingJoinResolver = null;
+                        res(msg.roomState);
+                    }
+                    if (this.onUpdateCallback) {
+                        this.onUpdateCallback({ ...this.localState });
+                    }
+                }
+            }
+
+            broadcastHostState() {
+                if (!state.isHost || !this.localState) return;
+                this.publish({
+                    type: 'ROOM_STATE',
+                    senderId: currentUser.uid,
+                    roomState: this.localState
+                });
+            }
+
+            async createRoom(code, initialRoom, onUpdate) {
+                this.roomCode = code;
+                this.localState = initialRoom;
+                this.onUpdateCallback = onUpdate;
+                this.setupLocalChannel(code);
+                await this.connectBroker();
+                if (this.client && this.client.connected) {
+                    this.client.subscribe(`disney-blindtest-v1/${code}/#`);
+                }
+                if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
+            }
+
+            async joinRoom(code, playerId, playerData, onUpdate) {
+                this.roomCode = code;
+                this.onUpdateCallback = onUpdate;
+                this.setupLocalChannel(code);
+                await this.connectBroker();
+                if (this.client && this.client.connected) {
+                    this.client.subscribe(`disney-blindtest-v1/${code}/#`);
+                }
+
+                // Demander l'état à l'hôte et envoyer la requête d'inscription
+                const roomState = await new Promise((resolve) => {
+                    this.pendingJoinResolver = resolve;
+                    this.publish({ type: 'WHO_IS_HOST', senderId: playerId });
+                    this.publish({ type: 'JOIN_REQUEST', senderId: playerId, playerId, playerData });
+
+                    setTimeout(() => {
+                        if (this.pendingJoinResolver) {
+                            this.pendingJoinResolver = null;
+                            resolve(null);
+                        }
+                    }, 3500);
+                });
+
+                if (!roomState) {
+                    return null;
+                }
+
+                this.localState = roomState;
+                this.publish({ type: 'JOIN_REQUEST', senderId: playerId, playerId, playerData });
+                return roomState;
+            }
+
+            updateHostRoom(patch) {
+                if (!this.localState) return;
+                // Appliquer patch (supporte les clés imbriquées type "players.uid.foundSong")
+                for (const [key, val] of Object.entries(patch)) {
+                    if (key.startsWith('players.')) {
+                        const parts = key.split('.');
+                        if (parts.length === 3 && this.localState.players[parts[1]]) {
+                            this.localState.players[parts[1]][parts[2]] = val;
+                        }
+                    } else {
+                        this.localState[key] = val;
+                    }
+                }
+                this.broadcastHostState();
+                if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
+            }
+
+            sendPlayerScore(playerId, score, foundSong, foundMovie) {
+                if (state.isHost && this.localState?.players?.[playerId]) {
+                    this.localState.players[playerId].score = score;
+                    this.localState.players[playerId].foundSong = foundSong;
+                    this.localState.players[playerId].foundMovie = foundMovie;
+                    this.broadcastHostState();
+                    if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
+                } else {
+                    this.publish({
+                        type: 'PLAYER_SCORE',
+                        senderId: playerId,
+                        playerId,
+                        score,
+                        foundSong,
+                        foundMovie
+                    });
+                }
+            }
+
+            disconnect() {
+                if (this.client && this.roomCode) {
+                    try { this.client.unsubscribe(`disney-blindtest-v1/${this.roomCode}/#`); } catch (e) {}
+                }
+                if (this.channel) {
+                    try { this.channel.close(); } catch (e) {}
+                    this.channel = null;
+                }
+                this.roomCode = null;
+                this.localState = null;
+                this.onUpdateCallback = null;
+            }
         }
 
-        function showRetryToast(message, retryCallback) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = "pointer-events-auto border bg-rose-950/95 border-rose-400 text-rose-100 px-4 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2.5 text-sm font-semibold animate-pop";
-            toast.innerHTML = `
-                <div class="flex items-start gap-2.5">
-                    <i class="fa-solid fa-circle-exclamation text-rose-400 text-base mt-0.5 shrink-0"></i>
-                    <span class="leading-snug">${escapeHtml(message)}</span>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button type="button" class="retry-btn px-3 py-1 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-extrabold text-xs transition cursor-pointer">
-                        <i class="fa-solid fa-rotate-right mr-1"></i>Réessayer
-                    </button>
-                </div>
-            `;
-            toast.querySelector('.retry-btn').addEventListener('click', () => {
-                toast.remove();
-                if (typeof retryCallback === 'function') retryCallback();
-            });
-            container.appendChild(toast);
-            setTimeout(() => {
-                if (toast.parentNode) toast.remove();
-            }, 8000);
-        }
+        const p2pTransport = new P2PRoomTransport();
 
-        // --- CATALOGUE DES CHANSONS DISNEY (FRANÇAIS) ---
+        // --- CATALOGUE ENRICHI DES CHANSONS DISNEY (42 TITRES FRANÇAIS) ---
         const DISNEY_SONGS = [
             {
                 id: "frozen_letitgo",
@@ -609,8 +833,31 @@
                 movie: "La Reine des Neiges",
                 movieAliases: ["reine des neiges", "frozen", "la reine des neige"],
                 artist: "Anaïs Delva",
+                era: "modern",
                 itunesQuery: "Anais Delva Liberee delivree",
-                notes: [392.00, 440.00, 493.88, 392.00, 587.33, 523.25] // Mélodie secours
+                notes: [392.00, 440.00, 493.88, 392.00, 587.33, 523.25]
+            },
+            {
+                id: "frozen_snowman",
+                song: "Je voudrais un bonhomme de neige",
+                songAliases: ["bonhomme de neige", "do you want to build a snowman"],
+                movie: "La Reine des Neiges",
+                movieAliases: ["reine des neiges", "frozen"],
+                artist: "Emmylou Homs",
+                era: "modern",
+                itunesQuery: "Je voudrais un bonhomme de neige Reine des neiges",
+                notes: [329.63, 329.63, 329.63, 261.63, 329.63, 392.00]
+            },
+            {
+                id: "frozen2_intotheunknown",
+                song: "Dans un autre monde",
+                songAliases: ["dans un autre monde", "into the unknown"],
+                movie: "La Reine des Neiges 2",
+                movieAliases: ["reine des neiges 2", "reine des neiges", "frozen 2"],
+                artist: "Charlotte Hervieux",
+                era: "modern",
+                itunesQuery: "Charlotte Hervieux Dans un autre monde",
+                notes: [392.00, 440.00, 523.25, 493.88, 440.00, 392.00]
             },
             {
                 id: "lionking_hakuna",
@@ -619,28 +866,9 @@
                 movie: "Le Roi Lion",
                 movieAliases: ["roi lion", "lion king", "le roi lion"],
                 artist: "Timon, Pumbaa & Simba",
+                era: "90s",
                 itunesQuery: "Hakuna Matata Le Roi Lion",
                 notes: [329.63, 392.00, 440.00, 392.00, 329.63, 261.63]
-            },
-            {
-                id: "aladdin_wholenewworld",
-                song: "Ce rêve bleu",
-                songAliases: ["ce reve bleu", "reve bleu", "a whole new world"],
-                movie: "Aladdin",
-                movieAliases: ["aladin", "aladdin"],
-                artist: "Paolo Domingo & Karine Costa",
-                itunesQuery: "Ce reve bleu Aladdin",
-                notes: [349.23, 329.63, 392.00, 349.23, 293.66, 329.63]
-            },
-            {
-                id: "mermaid_underthesea",
-                song: "Sous l'océan",
-                songAliases: ["sous l ocean", "sous locean", "under the sea"],
-                movie: "La Petite Sirène",
-                movieAliases: ["petite sirene", "little mermaid", "la petite sirene"],
-                artist: "Henri Salvador",
-                itunesQuery: "Henri Salvador Sous l ocean",
-                notes: [261.63, 329.63, 392.00, 523.25, 493.88, 392.00]
             },
             {
                 id: "lionking_circle",
@@ -649,8 +877,86 @@
                 movie: "Le Roi Lion",
                 movieAliases: ["roi lion", "lion king"],
                 artist: "Debbie Davis",
+                era: "90s",
                 itunesQuery: "L histoire de la vie Le Roi Lion",
                 notes: [293.66, 392.00, 440.00, 493.88, 523.25, 587.33]
+            },
+            {
+                id: "lionking_king",
+                song: "Je voudrais déjà être roi",
+                songAliases: ["je voudrais deja etre roi", "deja etre roi", "i just cant wait to be king"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "lion king"],
+                artist: "Dimitri Rougeul",
+                era: "90s",
+                itunesQuery: "Je voudrais deja etre roi Le Roi Lion",
+                notes: [261.63, 329.63, 392.00, 392.00, 440.00, 392.00]
+            },
+            {
+                id: "lionking_love",
+                song: "L'amour brille sous les étoiles",
+                songAliases: ["l amour brille sous les etoiles", "amour brille sous les etoiles", "can you feel the love tonight"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "lion king"],
+                artist: "Emmanuel Curtil & Maïdi Roth",
+                era: "90s",
+                itunesQuery: "L amour brille sous les etoiles Le Roi Lion",
+                notes: [349.23, 392.00, 440.00, 392.00, 349.23, 293.66]
+            },
+            {
+                id: "aladdin_wholenewworld",
+                song: "Ce rêve bleu",
+                songAliases: ["ce reve bleu", "reve bleu", "a whole new world"],
+                movie: "Aladdin",
+                movieAliases: ["aladin", "aladdin"],
+                artist: "Paolo Domingo & Karine Costa",
+                era: "90s",
+                itunesQuery: "Ce reve bleu Aladdin",
+                notes: [349.23, 329.63, 392.00, 349.23, 293.66, 329.63]
+            },
+            {
+                id: "aladdin_friendlikeme",
+                song: "Je suis ton meilleur ami",
+                songAliases: ["je suis ton meilleur ami", "ton meilleur ami", "friend like me"],
+                movie: "Aladdin",
+                movieAliases: ["aladin", "aladdin"],
+                artist: "Richard Darbois",
+                era: "90s",
+                itunesQuery: "Je suis ton meilleur ami Aladdin",
+                notes: [293.66, 349.23, 440.00, 415.30, 349.23, 293.66]
+            },
+            {
+                id: "aladdin_princeali",
+                song: "Prince Ali",
+                songAliases: ["prince ali", "prince aly"],
+                movie: "Aladdin",
+                movieAliases: ["aladin", "aladdin"],
+                artist: "Richard Darbois",
+                era: "90s",
+                itunesQuery: "Prince Ali Aladdin",
+                notes: [329.63, 392.00, 440.00, 493.88, 523.25, 493.88]
+            },
+            {
+                id: "mermaid_underthesea",
+                song: "Sous l'océan",
+                songAliases: ["sous l ocean", "sous locean", "under the sea"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "little mermaid", "la petite sirene"],
+                artist: "Henri Salvador",
+                era: "90s",
+                itunesQuery: "Henri Salvador Sous l ocean",
+                notes: [261.63, 329.63, 392.00, 523.25, 493.88, 392.00]
+            },
+            {
+                id: "mermaid_partofyourworld",
+                song: "Partir là-bas",
+                songAliases: ["partir la bas", "partir labas", "part of your world"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "little mermaid"],
+                artist: "Claire Guyot",
+                era: "90s",
+                itunesQuery: "Partir la bas La Petite Sirene",
+                notes: [329.63, 349.23, 392.00, 440.00, 392.00, 349.23]
             },
             {
                 id: "tangled_iseethelight",
@@ -659,8 +965,20 @@
                 movie: "Raiponce",
                 movieAliases: ["raiponce", "tangled", "responce"],
                 artist: "Maeva Méline & Romain Duris",
+                era: "modern",
                 itunesQuery: "Je veux y croire Raiponce",
                 notes: [329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
+            },
+            {
+                id: "tangled_whenwillmylife",
+                song: "Où est la vraie vie",
+                songAliases: ["ou est la vraie vie", "la vraie vie", "when will my life begin"],
+                movie: "Raiponce",
+                movieAliases: ["raiponce", "tangled"],
+                artist: "Maeva Méline",
+                era: "modern",
+                itunesQuery: "Ou est la vraie vie Raiponce",
+                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 329.63]
             },
             {
                 id: "moana_howfar",
@@ -669,8 +987,20 @@
                 movie: "Vaiana",
                 movieAliases: ["vaiana", "moana", "vaiana la legende du bout du monde"],
                 artist: "Cerise Calixte",
+                era: "modern",
                 itunesQuery: "Cerise Calixte Le bleu lumiere",
                 notes: [329.63, 369.99, 415.30, 493.88, 415.30, 369.99]
+            },
+            {
+                id: "moana_yourewelcome",
+                song: "Pour les hommes",
+                songAliases: ["pour les hommes", "you re welcome"],
+                movie: "Vaiana",
+                movieAliases: ["vaiana", "moana"],
+                artist: "Anthony Kavanagh",
+                era: "modern",
+                itunesQuery: "Anthony Kavanagh Pour les hommes Vaiana",
+                notes: [261.63, 329.63, 392.00, 329.63, 440.00, 392.00]
             },
             {
                 id: "jungle_bare",
@@ -679,8 +1009,20 @@
                 movie: "Le Livre de la Jungle",
                 movieAliases: ["livre de la jungle", "jungle book"],
                 artist: "Jean Stout",
+                era: "90s",
                 itunesQuery: "Il en faut peu pour etre heureux",
                 notes: [261.63, 293.66, 329.63, 392.00, 440.00, 392.00]
+            },
+            {
+                id: "jungle_iwannabe",
+                song: "Être un homme comme vous",
+                songAliases: ["etre un homme comme vous", "homme comme vous", "i wanna be like you"],
+                movie: "Le Livre de la Jungle",
+                movieAliases: ["livre de la jungle", "jungle book"],
+                artist: "José Germain",
+                era: "90s",
+                itunesQuery: "Etre un homme comme vous Livre de la jungle",
+                notes: [293.66, 349.23, 440.00, 493.88, 440.00, 349.23]
             },
             {
                 id: "mulan_makeaman",
@@ -689,8 +1031,20 @@
                 movie: "Mulan",
                 movieAliases: ["mulan", "moulan"],
                 artist: "Patrick Fiori",
+                era: "90s",
                 itunesQuery: "Patrick Fiori Comme un homme Mulan",
                 notes: [220.00, 261.63, 329.63, 392.00, 329.63, 261.63]
+            },
+            {
+                id: "mulan_reflection",
+                song: "Réflexion",
+                songAliases: ["reflexion", "reflection"],
+                movie: "Mulan",
+                movieAliases: ["mulan", "moulan"],
+                artist: "Marie Galey",
+                era: "90s",
+                itunesQuery: "Reflexion Mulan",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
             },
             {
                 id: "toystory_friend",
@@ -699,6 +1053,7 @@
                 movie: "Toy Story",
                 movieAliases: ["toy story", "toystory", "toys story"],
                 artist: "Charlélie Couture",
+                era: "90s",
                 itunesQuery: "Je suis ton ami Toy Story",
                 notes: [311.13, 392.00, 466.16, 392.00, 311.13, 293.66]
             },
@@ -709,8 +1064,20 @@
                 movie: "La Belle et la Bête",
                 movieAliases: ["belle et la bete", "beauty and the beast"],
                 artist: "Lumière",
+                era: "90s",
                 itunesQuery: "C est la fete La Belle et la Bete",
                 notes: [261.63, 329.63, 392.00, 440.00, 493.88, 523.25]
+            },
+            {
+                id: "beauty_tale",
+                song: "Histoire éternelle",
+                songAliases: ["histoire eternelle", "beauty and the beast"],
+                movie: "La Belle et la Bête",
+                movieAliases: ["belle et la bete", "beauty and the beast"],
+                artist: "Lucie Dolène",
+                era: "90s",
+                itunesQuery: "Histoire eternelle La Belle et la Bete",
+                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
             },
             {
                 id: "aristocats_everybody",
@@ -719,6 +1086,7 @@
                 movie: "Les Aristochats",
                 movieAliases: ["aristochats", "les aristochats", "aristochat"],
                 artist: "José Germain",
+                era: "90s",
                 itunesQuery: "Tout le monde veut devenir un cat",
                 notes: [293.66, 349.23, 440.00, 523.25, 440.00, 349.23]
             },
@@ -729,6 +1097,7 @@
                 movie: "Pocahontas",
                 movieAliases: ["pocahontas", "pocahontas une legende indienne"],
                 artist: "Laura Mayne",
+                era: "90s",
                 itunesQuery: "L air du vent Pocahontas",
                 notes: [329.63, 392.00, 493.88, 440.00, 392.00, 329.63]
             },
@@ -739,8 +1108,42 @@
                 movie: "Hercule",
                 movieAliases: ["hercule", "hercules"],
                 artist: "Emmanuel Dahl",
+                era: "90s",
                 itunesQuery: "Le monde qui est le mien Hercule",
                 notes: [261.63, 349.23, 392.00, 440.00, 523.25, 440.00]
+            },
+            {
+                id: "hercules_zerotohero",
+                song: "De zéro en héros",
+                songAliases: ["de zero en heros", "zero en heros", "zero to hero"],
+                movie: "Hercule",
+                movieAliases: ["hercule", "hercules"],
+                artist: "Les Muses",
+                era: "90s",
+                itunesQuery: "De zero en heros Hercule",
+                notes: [329.63, 392.00, 440.00, 523.25, 440.00, 392.00]
+            },
+            {
+                id: "tarzan_youllbeinmyheart",
+                song: "Toujours dans mon cœur",
+                songAliases: ["toujours dans mon coeur", "dans mon coeur", "you ll be in my heart"],
+                movie: "Tarzan",
+                movieAliases: ["tarzan"],
+                artist: "Phil Collins",
+                era: "90s",
+                itunesQuery: "Phil Collins Toujours dans mon coeur Tarzan",
+                notes: [349.23, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "tarzan_two_worlds",
+                song: "Deux mondes",
+                songAliases: ["deux mondes", "two worlds"],
+                movie: "Tarzan",
+                movieAliases: ["tarzan"],
+                artist: "Phil Collins",
+                era: "90s",
+                itunesQuery: "Phil Collins Deux mondes Tarzan",
+                notes: [293.66, 329.63, 392.00, 440.00, 392.00, 329.63]
             },
             {
                 id: "coco_rememberme",
@@ -749,8 +1152,20 @@
                 movie: "Coco",
                 movieAliases: ["coco"],
                 artist: "Andrea Santamaria",
+                era: "modern",
                 itunesQuery: "Ne m oublie pas Coco Disney",
                 notes: [392.00, 329.63, 349.23, 392.00, 523.25, 493.88]
+            },
+            {
+                id: "coco_unpocoloco",
+                song: "Un poco loco",
+                songAliases: ["un poco loco", "poco loco"],
+                movie: "Coco",
+                movieAliases: ["coco"],
+                artist: "Andrea Santamaria & Ary Abittan",
+                era: "modern",
+                itunesQuery: "Un poco loco Coco",
+                notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]
             },
             {
                 id: "encanto_bruno",
@@ -759,8 +1174,119 @@
                 movie: "Encanto",
                 movieAliases: ["encanto", "encanto la fantastique famille madrigal"],
                 artist: "Casting Encanto",
+                era: "modern",
                 itunesQuery: "Ne parlons pas de Bruno Encanto",
                 notes: [261.63, 311.13, 392.00, 415.30, 392.00, 311.13]
+            },
+            {
+                id: "encanto_surface",
+                song: "Sous les apparences",
+                songAliases: ["sous les apparences", "surface pressure"],
+                movie: "Encanto",
+                movieAliases: ["encanto"],
+                artist: "Kaycie Chase",
+                era: "modern",
+                itunesQuery: "Sous les apparences Encanto",
+                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
+            },
+            {
+                id: "cinderella_bibbidi",
+                song: "Bibbidi-Bobbidi-Boo",
+                songAliases: ["bibbidi bobbidi boo", "bibidi bobidi bou"],
+                movie: "Cendrillon",
+                movieAliases: ["cendrillon", "cinderella"],
+                artist: "Marraine la Bonne Fée",
+                era: "90s",
+                itunesQuery: "Bibbidi Bobbidi Boo Cendrillon",
+                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 261.63]
+            },
+            {
+                id: "cinderella_dream",
+                song: "Tendre rêve",
+                songAliases: ["tendre reve", "a dream is a wish your heart makes"],
+                movie: "Cendrillon",
+                movieAliases: ["cendrillon", "cinderella"],
+                artist: "Paulette Rollin",
+                era: "90s",
+                itunesQuery: "Tendre reve Cendrillon",
+                notes: [329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+            },
+            {
+                id: "snowwhite_whistle",
+                song: "Sifflez en travaillant",
+                songAliases: ["sifflez en travaillant", "whistle while you work"],
+                movie: "Blanche-Neige",
+                movieAliases: ["blanche neige", "blanche neige et les sept nains", "snow white"],
+                artist: "Rachel Pignot",
+                era: "90s",
+                itunesQuery: "Sifflez en travaillant Blanche Neige",
+                notes: [392.00, 440.00, 493.88, 523.25, 493.88, 440.00]
+            },
+            {
+                id: "pinocchio_star",
+                song: "Quand on prie la bonne étoile",
+                songAliases: ["quand on prie la bonne etoile", "bonne etoile", "when you wish upon a star"],
+                movie: "Pinocchio",
+                movieAliases: ["pinocchio", "pinochio"],
+                artist: "Jiminy Cricket",
+                era: "90s",
+                itunesQuery: "Quand on prie la bonne etoile Pinocchio",
+                notes: [392.00, 659.25, 587.33, 523.25, 493.88, 440.00]
+            },
+            {
+                id: "marypoppins_supercali",
+                song: "Supercalifragilisticexpialidocious",
+                songAliases: ["supercalifragilistic", "supercalifragilisticexpialidocious"],
+                movie: "Mary Poppins",
+                movieAliases: ["mary poppins", "marie poppins"],
+                artist: "Éliane Thibault & Michel Roux",
+                era: "90s",
+                itunesQuery: "Supercalifragilisticexpialidocious Mary Poppins",
+                notes: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00]
+            },
+            {
+                id: "princessfrog_almostthere",
+                song: "Au bout du rêve",
+                songAliases: ["au bout du reve", "almost there"],
+                movie: "La Princesse et la Grenouille",
+                movieAliases: ["princesse et la grenouille", "princess and the frog"],
+                artist: "China Moses",
+                era: "modern",
+                itunesQuery: "China Moses Au bout du reve",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "brave_touchthesky",
+                song: "Vers le ciel",
+                songAliases: ["vers le ciel", "touch the sky"],
+                movie: "Rebelle",
+                movieAliases: ["rebelle", "brave"],
+                artist: "Maeva Méline",
+                era: "modern",
+                itunesQuery: "Maeva Meline Vers le ciel Rebelle",
+                notes: [293.66, 349.23, 392.00, 440.00, 523.25, 440.00]
+            },
+            {
+                id: "zootopia_tryeverything",
+                song: "Try Everything",
+                songAliases: ["try everything", "tout essayer"],
+                movie: "Zootopie",
+                movieAliases: ["zootopie", "zootopia"],
+                artist: "Shakira",
+                era: "modern",
+                itunesQuery: "Shakira Try Everything Zootopia",
+                notes: [349.23, 392.00, 440.00, 493.88, 523.25, 493.88]
+            },
+            {
+                id: "hunchback_outthere",
+                song: "Rien qu'un jour",
+                songAliases: ["rien qu un jour", "rien quun jour", "out there"],
+                movie: "Le Bossu de Notre-Dame",
+                movieAliases: ["bossu de notre dame", "hunchback of notre dame"],
+                artist: "Francis Lalanne",
+                era: "90s",
+                itunesQuery: "Rien qu un jour Le Bossu de Notre Dame",
+                notes: [261.63, 329.63, 392.00, 493.88, 523.25, 493.88]
             }
         ];
 
@@ -771,7 +1297,8 @@
         let state = {
             mode: 'solo', // 'solo' | 'multi'
             playerName: '',
-            selectedRounds: 8,
+            selectedRounds: 10,
+            selectedEra: 'all',
             soloBestScore: 0,
 
             // État multijoueur
@@ -849,6 +1376,10 @@
             });
         };
 
+        window.selectEraFilter = function(era) {
+            state.selectedEra = era;
+        };
+
         function getPlayerName() {
             const input = document.getElementById('player-name-input').value.trim();
             if (!input) {
@@ -886,6 +1417,7 @@
                 state.unsubscribeRoom();
                 state.unsubscribeRoom = null;
             }
+            p2pTransport.disconnect();
             state.roomCode = null;
             state.isHost = false;
             state.phase = 'idle';
@@ -1105,8 +1637,14 @@
         };
 
         // --- LOGIQUE DE JEU COMMUNE (SOLO & MULTIJOUEUR) ---
-        function buildShuffledPlaylist(count) {
-            const copy = [...DISNEY_SONGS];
+        function buildShuffledPlaylist(count, era = 'all') {
+            let pool = DISNEY_SONGS;
+            if (era === '90s') {
+                pool = DISNEY_SONGS.filter(s => s.era === '90s');
+            } else if (era === 'modern') {
+                pool = DISNEY_SONGS.filter(s => s.era === 'modern');
+            }
+            const copy = [...pool];
             for (let i = copy.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [copy[i], copy[j]] = [copy[j], copy[i]];
@@ -1516,7 +2054,7 @@
             state.mode = 'solo';
             state.playerName = getPlayerName();
             state.myTotalScore = 0;
-            state.playlist = buildShuffledPlaylist(state.selectedRounds);
+            state.playlist = buildShuffledPlaylist(state.selectedRounds, state.selectedEra);
 
             document.getElementById('header-room-badge').classList.add('hidden');
             document.getElementById('game-mode-tag').textContent = 'MODE SOLO';
@@ -1526,7 +2064,7 @@
             startRound(0);
         };
 
-        // --- MODE MULTIJOUEUR (FIRESTORE TEMPS RÉEL) ---
+        // --- MODE MULTIJOUEUR (HYBRIDE FIREBASE CLOUD + RELAIS P2P) ---
         function generateRoomCode() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let code = '';
@@ -1541,11 +2079,6 @@
         }
 
         window.createMultiplayerRoom = async function() {
-            if (!isDbConfigured || !db) {
-                showRetryToast("Le service multijoueur n'est pas configuré sur cet environnement.", () => window.createMultiplayerRoom());
-                return;
-            }
-
             const btn = document.getElementById('btn-create-room');
             btn.disabled = true;
 
@@ -1564,6 +2097,7 @@
                     hostId: player.uid,
                     status: 'lobby', // 'lobby' | 'playing' | 'reveal' | 'finished'
                     totalRounds: state.selectedRounds,
+                    era: state.selectedEra,
                     currentRound: 0,
                     playlistIds: [],
                     players: {
@@ -1578,24 +2112,31 @@
                     updatedAt: Date.now()
                 };
 
-                await setDoc(getRoomDocRef(code), initialRoom);
-                subscribeToRoom(code);
+                if (syncLayer === 'firebase' && db) {
+                    try {
+                        await setDoc(getRoomDocRef(code), initialRoom);
+                        subscribeToRoom(code);
+                    } catch (fbErr) {
+                        console.warn("Bascule P2P suite erreur Firestore :", fbErr.message);
+                        updateSyncBadges('p2p');
+                        await p2pTransport.createRoom(code, initialRoom, handleRoomStateUpdate);
+                    }
+                } else {
+                    updateSyncBadges('p2p');
+                    await p2pTransport.createRoom(code, initialRoom, handleRoomStateUpdate);
+                }
+
                 enterLobbyUI(code);
-                showToast(`Salle ${code} créée ! Partagez le code à vos amis.`, 'gold');
+                showToast(`Salle ${code} créée ! Partagez ce code à vos amis.`, 'gold');
             } catch (err) {
                 console.error("Échec création salle :", err);
-                showRetryToast(formatMultiplayerError(err), () => window.createMultiplayerRoom());
+                showRetryToast("Impossible d'ouvrir la salle. Vérifiez votre connexion.", () => window.createMultiplayerRoom());
             } finally {
                 btn.disabled = false;
             }
         };
 
         window.joinMultiplayerRoom = async function() {
-            if (!isDbConfigured || !db) {
-                showRetryToast("Le service multijoueur n'est pas configuré sur cet environnement.", () => window.joinMultiplayerRoom());
-                return;
-            }
-
             const codeInput = document.getElementById('join-code-input').value.trim().toUpperCase();
             if (codeInput.length !== 4) {
                 showToast("Veuillez saisir un code de salle à 4 caractères.", "error");
@@ -1607,91 +2148,67 @@
 
             try {
                 const player = await ensurePlayerIdentity();
-                const roomRef = getRoomDocRef(codeInput);
-                const snap = await getDoc(roomRef);
+                state.mode = 'multi';
+                state.playerName = getPlayerName();
+                state.roomCode = codeInput;
 
-                if (!snap.exists()) {
-                    showToast(`Aucune salle trouvée avec le code "${codeInput}".`, "error");
+                const playerData = {
+                    name: state.playerName,
+                    score: 0,
+                    foundSong: false,
+                    foundMovie: false,
+                    isHost: false
+                };
+
+                if (syncLayer === 'firebase' && db) {
+                    try {
+                        const roomRef = getRoomDocRef(codeInput);
+                        const snap = await getDoc(roomRef);
+
+                        if (!snap.exists()) {
+                            showToast(`Aucune salle trouvée avec le code "${codeInput}".`, "error");
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        const data = snap.data();
+                        state.isHost = (data.hostId === player.uid);
+                        state.myTotalScore = data.players?.[player.uid]?.score || 0;
+                        playerData.score = state.myTotalScore;
+                        playerData.isHost = state.isHost;
+
+                        await updateDoc(roomRef, {
+                            [`players.${player.uid}`]: playerData
+                        });
+
+                        subscribeToRoom(codeInput);
+                        enterLobbyUI(codeInput);
+                        showToast(`Vous avez rejoint la salle ${codeInput} !`, 'success');
+                        return;
+                    } catch (fbErr) {
+                        console.warn("Bascule P2P pour rejoindre :", fbErr.message);
+                        updateSyncBadges('p2p');
+                    }
+                }
+
+                // Mode Direct P2P (multi-appareils via relais MQTT + BroadcastChannel)
+                updateSyncBadges('p2p');
+                const joinedState = await p2pTransport.joinRoom(codeInput, player.uid, playerData, handleRoomStateUpdate);
+
+                if (!joinedState) {
+                    showToast(`Salle "${codeInput}" introuvable ou hôte hors ligne.`, "error");
                     btn.disabled = false;
                     return;
                 }
 
-                const data = snap.data();
-                state.mode = 'multi';
-                state.isHost = (data.hostId === player.uid);
-                state.playerName = getPlayerName();
-                state.roomCode = codeInput;
-                state.myTotalScore = data.players?.[player.uid]?.score || 0;
-
-                await updateDoc(roomRef, {
-                    [`players.${player.uid}`]: {
-                        name: state.playerName,
-                        score: state.myTotalScore,
-                        foundSong: false,
-                        foundMovie: false,
-                        isHost: state.isHost
-                    }
-                });
-
-                subscribeToRoom(codeInput);
+                state.isHost = (joinedState.hostId === player.uid);
+                state.myTotalScore = joinedState.players?.[player.uid]?.score || 0;
                 enterLobbyUI(codeInput);
+                handleRoomStateUpdate(joinedState);
                 showToast(`Vous avez rejoint la salle ${codeInput} !`, 'success');
             } catch (err) {
                 console.error("Échec connexion salle :", err);
-                showRetryToast(formatMultiplayerError(err), () => window.joinMultiplayerRoom());
-            } finally {
-                btn.disabled = false;
-            }
-        };
-
-        window.joinMultiplayerRoom = async function() {
-            if (!isFirebaseReady || !currentUser) {
-                showToast("Connexion multijoueur en cours, réessayez dans un instant.", "error");
-                return;
-            }
-
-            const codeInput = document.getElementById('join-code-input').value.trim().toUpperCase();
-            if (codeInput.length !== 4) {
-                showToast("Veuillez saisir un code de salle à 4 caractères.", "error");
-                return;
-            }
-
-            const btn = document.getElementById('btn-join-room');
-            btn.disabled = true;
-
-            try {
-                const roomRef = getRoomDocRef(codeInput);
-                const snap = await getDoc(roomRef);
-
-                if (!snap.exists()) {
-                    showToast(`Aucune salle trouvée avec le code "${codeInput}".`, "error");
-                    btn.disabled = false;
-                    return;
-                }
-
-                const data = snap.data();
-                state.mode = 'multi';
-                state.isHost = (data.hostId === currentUser.uid);
-                state.playerName = getPlayerName();
-                state.roomCode = codeInput;
-                state.myTotalScore = data.players?.[currentUser.uid]?.score || 0;
-
-                await updateDoc(roomRef, {
-                    [`players.${currentUser.uid}`]: {
-                        name: state.playerName,
-                        score: state.myTotalScore,
-                        foundSong: false,
-                        foundMovie: false,
-                        isHost: state.isHost
-                    }
-                });
-
-                subscribeToRoom(codeInput);
-                enterLobbyUI(codeInput);
-                showToast(`Vous avez rejoint la salle ${codeInput} !`, 'success');
-            } catch (err) {
-                console.error(err);
-                showToast("Erreur lors de la connexion à la salle.", "error");
+                showRetryToast("Erreur lors de la connexion à la salle.", () => window.joinMultiplayerRoom());
             } finally {
                 btn.disabled = false;
             }
@@ -1714,11 +2231,71 @@
             showScreen('screen-lobby');
         }
 
+        let lastKnownStatus = null;
+        let lastKnownRound = -1;
+
+        function handleRoomStateUpdate(data) {
+            if (!data) return;
+            state.roomData = data;
+            state.isHost = (currentUser && data.hostId === currentUser.uid);
+
+            if (currentUser && data.players && data.players[currentUser.uid]) {
+                state.myTotalScore = data.players[currentUser.uid].score || 0;
+            }
+
+            // Mise à jour Lobby
+            if (data.status === 'lobby') {
+                renderLobbyPlayers(data);
+                if (lastKnownStatus && lastKnownStatus !== 'lobby') {
+                    enterLobbyUI(data.code || state.roomCode);
+                }
+            }
+
+            // Passage en jeu
+            if (data.status === 'playing') {
+                document.getElementById('game-mode-tag').textContent = `SALLE ${data.code || state.roomCode}`;
+                document.getElementById('solo-best-box').classList.add('hidden');
+
+                if (data.playlistIds && data.playlistIds.length > 0) {
+                    state.playlist = data.playlistIds
+                        .map(id => DISNEY_SONGS.find(s => s.id === id))
+                        .filter(Boolean);
+                }
+
+                if (lastKnownStatus !== 'playing' || lastKnownRound !== data.currentRound) {
+                    showScreen('screen-game');
+                    startRound(data.currentRound);
+                }
+                updateLeaderboardUI();
+
+                // Si l'hôte détecte que TOUS les joueurs ont trouvé chanson + film, on révèle immédiatement
+                if (state.isHost && data.players) {
+                    const allPlayers = Object.values(data.players);
+                    if (allPlayers.length > 0 && allPlayers.every(p => p.foundSong && p.foundMovie)) {
+                        hostTriggerReveal();
+                    }
+                }
+            }
+
+            // Passage en révélation de manche
+            if (data.status === 'reveal' && lastKnownStatus !== 'reveal') {
+                revealCurrentRound();
+                updateLeaderboardUI();
+            }
+
+            // Fin de partie
+            if (data.status === 'finished' && lastKnownStatus !== 'finished') {
+                finishGame();
+            }
+
+            lastKnownStatus = data.status;
+            lastKnownRound = data.currentRound;
+        }
+
         function subscribeToRoom(code) {
             if (state.unsubscribeRoom) state.unsubscribeRoom();
-
-            let lastKnownStatus = null;
-            let lastKnownRound = -1;
+            lastKnownStatus = null;
+            lastKnownRound = -1;
 
             state.unsubscribeRoom = onSnapshot(getRoomDocRef(code), (snap) => {
                 if (!snap.exists()) {
@@ -1726,64 +2303,7 @@
                     returnToHome();
                     return;
                 }
-
-                const data = snap.data();
-                state.roomData = data;
-                state.isHost = (currentUser && data.hostId === currentUser.uid);
-
-                // Synchroniser mon score local depuis Firestore
-                if (currentUser && data.players && data.players[currentUser.uid]) {
-                    state.myTotalScore = data.players[currentUser.uid].score || 0;
-                }
-
-                // Mise à jour Lobby
-                if (data.status === 'lobby') {
-                    renderLobbyPlayers(data);
-                    if (lastKnownStatus && lastKnownStatus !== 'lobby') {
-                        enterLobbyUI(code);
-                    }
-                }
-
-                // Passage en jeu
-                if (data.status === 'playing') {
-                    document.getElementById('game-mode-tag').textContent = `SALLE ${code}`;
-                    document.getElementById('solo-best-box').classList.add('hidden');
-
-                    // Reconstruire la playlist ordonnée depuis playlistIds
-                    if (data.playlistIds && data.playlistIds.length > 0) {
-                        state.playlist = data.playlistIds
-                            .map(id => DISNEY_SONGS.find(s => s.id === id))
-                            .filter(Boolean);
-                    }
-
-                    if (lastKnownStatus !== 'playing' || lastKnownRound !== data.currentRound) {
-                        showScreen('screen-game');
-                        startRound(data.currentRound);
-                    }
-                    updateLeaderboardUI();
-
-                    // Si l'hôte détecte que TOUS les joueurs ont trouvé chanson + film, on révèle immédiatement
-                    if (state.isHost && data.players) {
-                        const allPlayers = Object.values(data.players);
-                        if (allPlayers.length > 0 && allPlayers.every(p => p.foundSong && p.foundMovie)) {
-                            hostTriggerReveal();
-                        }
-                    }
-                }
-
-                // Passage en révélation de manche
-                if (data.status === 'reveal' && lastKnownStatus !== 'reveal') {
-                    revealCurrentRound();
-                    updateLeaderboardUI();
-                }
-
-                // Fin de partie
-                if (data.status === 'finished' && lastKnownStatus !== 'finished') {
-                    finishGame();
-                }
-
-                lastKnownStatus = data.status;
-                lastKnownRound = data.currentRound;
+                handleRoomStateUpdate(snap.data());
             }, (err) => {
                 console.error("Erreur synchronisation salle :", err);
             });
@@ -1823,7 +2343,8 @@
         window.hostStartMultiplayerGame = async function() {
             if (!state.isHost || !state.roomCode) return;
             const totalRounds = state.roomData?.totalRounds || state.selectedRounds;
-            const shuffled = buildShuffledPlaylist(totalRounds);
+            const era = state.roomData?.era || state.selectedEra;
+            const shuffled = buildShuffledPlaylist(totalRounds, era);
             const playlistIds = shuffled.map(s => s.id);
 
             // Remise à zéro des scores des joueurs
@@ -1839,13 +2360,19 @@
                 }
             }
 
-            await updateDoc(getRoomDocRef(state.roomCode), {
+            const patch = {
                 status: 'playing',
                 currentRound: 0,
                 playlistIds: playlistIds,
                 players: resetPlayers,
                 updatedAt: Date.now()
-            });
+            };
+
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         };
 
         async function hostStartRound(roundIdx) {
@@ -1858,47 +2385,72 @@
                 }
             }
 
-            await updateDoc(getRoomDocRef(state.roomCode), {
+            const patch = {
                 status: 'playing',
                 currentRound: roundIdx,
                 ...resetRoundFlags,
                 updatedAt: Date.now()
-            });
+            };
+
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         }
 
         async function hostTriggerReveal() {
             if (!state.isHost || !state.roomCode || state.roomData?.status === 'reveal') return;
-            await updateDoc(getRoomDocRef(state.roomCode), {
+            const patch = {
                 status: 'reveal',
                 updatedAt: Date.now()
-            });
+            };
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         }
 
         async function hostFinishGame() {
             if (!state.isHost || !state.roomCode) return;
-            await updateDoc(getRoomDocRef(state.roomCode), {
+            const patch = {
                 status: 'finished',
                 updatedAt: Date.now()
-            });
+            };
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         }
 
         async function hostResetToLobby() {
             if (!state.isHost || !state.roomCode) return;
-            await updateDoc(getRoomDocRef(state.roomCode), {
+            const patch = {
                 status: 'lobby',
                 currentRound: 0,
                 updatedAt: Date.now()
-            });
+            };
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         }
 
         async function syncPlayerScoreToFirestore() {
             if (!state.roomCode || !currentUser) return;
             try {
-                await updateDoc(getRoomDocRef(state.roomCode), {
-                    [`players.${currentUser.uid}.score`]: state.myTotalScore,
-                    [`players.${currentUser.uid}.foundSong`]: state.foundSong,
-                    [`players.${currentUser.uid}.foundMovie`]: state.foundMovie
-                });
+                if (syncLayer === 'firebase' && db) {
+                    await updateDoc(getRoomDocRef(state.roomCode), {
+                        [`players.${currentUser.uid}.score`]: state.myTotalScore,
+                        [`players.${currentUser.uid}.foundSong`]: state.foundSong,
+                        [`players.${currentUser.uid}.foundMovie`]: state.foundMovie
+                    });
+                } else {
+                    p2pTransport.sendPlayerScore(currentUser.uid, state.myTotalScore, state.foundSong, state.foundMovie);
+                }
             } catch (e) {
                 console.error("Erreur sync score :", e);
             }
