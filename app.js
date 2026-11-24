@@ -1915,46 +1915,64 @@ if (guessAnswerForm) {
       state.players.find((p) => p.name.toLowerCase() === activePlayerName.toLowerCase()) ||
       state.players[0];
 
-    const titleOk = isTitleMatch(titleVal, track);
-    const filmOk = isFilmMatch(filmVal, track);
-    const earned = (titleOk ? 1 : 0) + (filmOk ? 1 : 0);
+    const titleMatch = isTitleMatch(titleVal, track);
+    const filmMatch = isFilmMatch(filmVal, track);
 
-    if (targetPlayer && earned > 0) {
-      targetPlayer.score += earned;
+    // Un seul point par catégorie et par joueur sur une manche.
+    // Une réponse ultérieure peut compléter la première sans doubler les points.
+    const previous = state.roundGuesses.find(
+      (g) => String(g.playerName).toLowerCase() === activePlayerName.toLowerCase()
+    );
+    const titleAlreadyAwarded = Boolean(previous && previous.titleOk);
+    const filmAlreadyAwarded = Boolean(previous && previous.filmOk);
+    const titleOk = titleMatch || titleAlreadyAwarded;
+    const filmOk = filmMatch || filmAlreadyAwarded;
+    const earned = (titleMatch && !titleAlreadyAwarded ? 1 : 0) +
+                   (filmMatch && !filmAlreadyAwarded ? 1 : 0);
+
+    if (targetPlayer && earned > 0) targetPlayer.score += earned;
+
+    if (previous) {
+      previous.titleGuess = titleVal || previous.titleGuess || "";
+      previous.filmGuess = filmVal || previous.filmGuess || "";
+      previous.titleOk = titleOk;
+      previous.filmOk = filmOk;
+      previous.pointsEarned = Number(previous.pointsEarned || 0) + earned;
+      previous.ts = Date.now();
+    } else {
+      state.roundGuesses.push({
+        playerName: activePlayerName, titleGuess: titleVal, filmGuess: filmVal,
+        titleOk, filmOk, pointsEarned: earned, ts: Date.now()
+      });
     }
 
-    state.roundGuesses.push({
-      playerName: activePlayerName,
-      titleGuess: titleVal,
-      filmGuess: filmVal,
-      titleOk,
-      filmOk,
-      pointsEarned: earned,
-      ts: Date.now()
-    });
-
-    if (earned === 2) {
+    if (titleOk && filmOk) {
       state.revealed = true;
       updateStageRevealUI(track);
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback ok";
-        guessFeedback.textContent = `🎉 Parfait ! ${activePlayerName} trouve le titre ET le Disney (+2 pts) : ${track.titre_fr} — ${track.film}.`;
+        guessFeedback.textContent = earned
+          ? `🎉 Bravo ${activePlayerName} ! +${earned} point(s). Titre et Disney trouvés : ${track.titre_fr} — ${track.film}.`
+          : `✅ Tu as déjà trouvé le titre et le Disney sur cette manche.`;
       }
-    } else if (titleOk) {
+    } else if (titleMatch && !titleAlreadyAwarded) {
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback partial";
-        guessFeedback.textContent = `🎵 Titre exact (+1 pt) pour ${activePlayerName} ! Quel est le Disney ?`;
+        guessFeedback.textContent = `🎵 Titre exact : +1 point pour ${activePlayerName} ! Il reste le Disney.`;
       }
-    } else if (filmOk) {
+    } else if (filmMatch && !filmAlreadyAwarded) {
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback partial";
-        guessFeedback.textContent = `🎬 Disney exact (+1 pt) pour ${activePlayerName} ! Quel est le titre de la chanson ?`;
+        guessFeedback.textContent = `🎬 Disney exact : +1 point pour ${activePlayerName} ! Il reste le titre.`;
       }
-    } else {
+    } else if (earned > 0) {
       if (guessFeedback) {
-        guessFeedback.className = "guess-feedback";
-        guessFeedback.textContent = `❌ Pas tout à fait pour ${activePlayerName} (+0 pt). Essaie encore ou révèle la réponse !`;
+        guessFeedback.className = "guess-feedback partial";
+        guessFeedback.textContent = `🎉 ${activePlayerName} gagne ${earned} point(s) !`;
       }
+    } else if (guessFeedback) {
+      guessFeedback.className = "guess-feedback";
+      guessFeedback.textContent = `❌ Pas de nouveau point. Vérifie le titre et le Disney, ou révèle la réponse !`;
     }
 
     if (guessTitleInput) guessTitleInput.value = "";
