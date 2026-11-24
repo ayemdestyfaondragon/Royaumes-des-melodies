@@ -1,7 +1,7 @@
 # Guide complet — Déployer et tester *Royaumes des Mélodies*
 
 ## 1. Préparer les fichiers du projet
-1. Télécharge et extrais l'archive **`royaumes-des-melodies-multi-repare.zip`** dans un dossier dédié sur ton ordinateur (par exemple `royaumes-des-melodies/`).
+1. Télécharge et extrais l'archive **`royaumes-des-melodies-rooms-fixed-v6.zip`** dans un dossier dédié sur ton ordinateur (par exemple `royaumes-des-melodies/`).
 2. Vérifie que ces 5 fichiers se trouvent bien à la racine du dossier :
    * `index.html`
    * `style.css`
@@ -48,7 +48,3 @@
 3. Si tu as besoin d'aide, copie-colle :
    * le message d'erreur exact de la console, et
    * le nom du bouton ou de l'action testée.
-
-
-## Configuration obligatoire du multi à distance
-Pour jouer entre appareils distincts, configure Firebase Realtime Database en suivant `CONFIGURATION-MULTI.md`. Sans cette étape, le mode distant ne fonctionne qu’entre onglets du même navigateur.

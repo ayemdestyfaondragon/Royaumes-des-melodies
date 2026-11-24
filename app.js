@@ -899,24 +899,9 @@ function startRoomListeners() {
     }, 1600);
   }
 
-  const pollRelay = async () => {
-    if (state.mode !== "remote" || !state.roomCode) return;
-    const remoteSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
-      applyRemotePayload(remoteSnap);
-    }
-  };
-  pollRelay();
-  relayPollTimer = setInterval(() => {
-    pollRelay();
-    if (state.mode === "remote" && state.roomCode) {
-      upsertSelfInRoom({ asHost: !roomSystem.hostId });
-      try {
-        localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(buildFullRoomSnapshot()));
-      } catch (_) {}
-      publishRoomSnapshotToRelay(buildFullRoomSnapshot());
-    }
-  }, 2500);
+  try {
+    localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(buildFullRoomSnapshot()));
+  } catch (_) {}
 }
 
 function setMode(newMode) {
@@ -1915,64 +1900,46 @@ if (guessAnswerForm) {
       state.players.find((p) => p.name.toLowerCase() === activePlayerName.toLowerCase()) ||
       state.players[0];
 
-    const titleMatch = isTitleMatch(titleVal, track);
-    const filmMatch = isFilmMatch(filmVal, track);
+    const titleOk = isTitleMatch(titleVal, track);
+    const filmOk = isFilmMatch(filmVal, track);
+    const earned = (titleOk ? 1 : 0) + (filmOk ? 1 : 0);
 
-    // Un seul point par catégorie et par joueur sur une manche.
-    // Une réponse ultérieure peut compléter la première sans doubler les points.
-    const previous = state.roundGuesses.find(
-      (g) => String(g.playerName).toLowerCase() === activePlayerName.toLowerCase()
-    );
-    const titleAlreadyAwarded = Boolean(previous && previous.titleOk);
-    const filmAlreadyAwarded = Boolean(previous && previous.filmOk);
-    const titleOk = titleMatch || titleAlreadyAwarded;
-    const filmOk = filmMatch || filmAlreadyAwarded;
-    const earned = (titleMatch && !titleAlreadyAwarded ? 1 : 0) +
-                   (filmMatch && !filmAlreadyAwarded ? 1 : 0);
-
-    if (targetPlayer && earned > 0) targetPlayer.score += earned;
-
-    if (previous) {
-      previous.titleGuess = titleVal || previous.titleGuess || "";
-      previous.filmGuess = filmVal || previous.filmGuess || "";
-      previous.titleOk = titleOk;
-      previous.filmOk = filmOk;
-      previous.pointsEarned = Number(previous.pointsEarned || 0) + earned;
-      previous.ts = Date.now();
-    } else {
-      state.roundGuesses.push({
-        playerName: activePlayerName, titleGuess: titleVal, filmGuess: filmVal,
-        titleOk, filmOk, pointsEarned: earned, ts: Date.now()
-      });
+    if (targetPlayer && earned > 0) {
+      targetPlayer.score += earned;
     }
 
-    if (titleOk && filmOk) {
+    state.roundGuesses.push({
+      playerName: activePlayerName,
+      titleGuess: titleVal,
+      filmGuess: filmVal,
+      titleOk,
+      filmOk,
+      pointsEarned: earned,
+      ts: Date.now()
+    });
+
+    if (earned === 2) {
       state.revealed = true;
       updateStageRevealUI(track);
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback ok";
-        guessFeedback.textContent = earned
-          ? `🎉 Bravo ${activePlayerName} ! +${earned} point(s). Titre et Disney trouvés : ${track.titre_fr} — ${track.film}.`
-          : `✅ Tu as déjà trouvé le titre et le Disney sur cette manche.`;
+        guessFeedback.textContent = `🎉 Parfait ! ${activePlayerName} trouve le titre ET le Disney (+2 pts) : ${track.titre_fr} — ${track.film}.`;
       }
-    } else if (titleMatch && !titleAlreadyAwarded) {
+    } else if (titleOk) {
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback partial";
-        guessFeedback.textContent = `🎵 Titre exact : +1 point pour ${activePlayerName} ! Il reste le Disney.`;
+        guessFeedback.textContent = `🎵 Titre exact (+1 pt) pour ${activePlayerName} ! Quel est le Disney ?`;
       }
-    } else if (filmMatch && !filmAlreadyAwarded) {
+    } else if (filmOk) {
       if (guessFeedback) {
         guessFeedback.className = "guess-feedback partial";
-        guessFeedback.textContent = `🎬 Disney exact : +1 point pour ${activePlayerName} ! Il reste le titre.`;
+        guessFeedback.textContent = `🎬 Disney exact (+1 pt) pour ${activePlayerName} ! Quel est le titre de la chanson ?`;
       }
-    } else if (earned > 0) {
+    } else {
       if (guessFeedback) {
-        guessFeedback.className = "guess-feedback partial";
-        guessFeedback.textContent = `🎉 ${activePlayerName} gagne ${earned} point(s) !`;
+        guessFeedback.className = "guess-feedback";
+        guessFeedback.textContent = `❌ Pas tout à fait pour ${activePlayerName} (+0 pt). Essaie encore ou révèle la réponse !`;
       }
-    } else if (guessFeedback) {
-      guessFeedback.className = "guess-feedback";
-      guessFeedback.textContent = `❌ Pas de nouveau point. Vérifie le titre et le Disney, ou révèle la réponse !`;
     }
 
     if (guessTitleInput) guessTitleInput.value = "";
