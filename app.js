@@ -235,10 +235,22 @@ function getFirebaseBase() {
   return "";
 }
 
-const RELAY_CANDIDATES = [
-  "https://ntfy.sh",
-  "https://ntfy.drey.co.za"
-];
+const RELAY_CANDIDATES = [];
+const deadRelays = new Map();
+
+function isRelayMarkedDead(baseUrl) {
+  const until = deadRelays.get(baseUrl) || 0;
+  if (!until) return false;
+  if (Date.now() > until) {
+    deadRelays.delete(baseUrl);
+    return false;
+  }
+  return true;
+}
+
+function markRelayDead(baseUrl) {
+  deadRelays.set(baseUrl, Date.now() + 120000);
+}
 
 function encodeRoomStateHash(snap) {
   try {
@@ -296,10 +308,14 @@ function decodeRoomStateHash() {
 
 function getRelayBaseUrls() {
   const custom = String(roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
+  const list = [];
   if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
-    return [custom, ...RELAY_CANDIDATES.filter((u) => u !== custom)];
+    list.push(custom);
   }
-  return RELAY_CANDIDATES;
+  for (const r of RELAY_CANDIDATES) {
+    if (!list.includes(r)) list.push(r);
+  }
+  return list.filter((u) => !isRelayMarkedDead(u));
 }
 
 function getRelayBaseUrl() {
@@ -510,10 +526,11 @@ async function publishRoomSnapshotToRelay(snapshot) {
 
   let delivered = false;
   for (const base of bases) {
+    if (isRelayMarkedDead(base)) continue;
     const url = `${base}/${encodeURIComponent(topic)}`;
     try {
       const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(() => ctrl.abort(), 2200) : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 1800) : null;
       const res = await fetch(url, {
         method: "POST",
         body: bodyPayload,
@@ -525,18 +542,22 @@ async function publishRoomSnapshotToRelay(snapshot) {
         setDiagStatus(
           "connected",
           `🟢 Connecté (${base.replace(/^https?:\/\//, "")}) • ${snapshot.roomCode}`,
-          `Room ${snapshot.roomCode} active • ${snapshot.members ? snapshot.members.length : 0} joueur(s) connecté(s).`
+          `Salon ${snapshot.roomCode} actif • ${snapshot.members ? snapshot.members.length : 0} joueur(s).`
         );
         break;
+      } else {
+        markRelayDead(base);
       }
-    } catch (_) {}
+    } catch (_) {
+      markRelayDead(base);
+    }
   }
 
-  if (!delivered) {
+  if (!delivered && !getFirebaseBase()) {
     setDiagStatus(
       "",
-      `🟡 Relais local/onglets • ${snapshot.roomCode}`,
-      `Relais distant inaccessible sur ce réseau : mode multi-onglets et local actif.`
+      `🟡 Lien + Multi-onglets • ${snapshot.roomCode}`,
+      `Relais public désactivé/injoignable : utilise "Copier le lien" pour partager l'état du salon ${snapshot.roomCode} ou ajoute une URL Firebase RTDB dans Relais.`
     );
   }
   return delivered;
@@ -551,10 +572,11 @@ async function pullRoomSnapshotFromRelay(code) {
   let newestSnap = null;
 
   for (const base of bases) {
+    if (isRelayMarkedDead(base)) continue;
     const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=60m`;
     try {
       const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(() => ctrl.abort(), 2200) : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 1800) : null;
       const res = await fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
       if (timer) clearTimeout(timer);
       if (!res.ok) continue;
