@@ -3624,6 +3624,34 @@ function stopLocalMedia() {
   if (ytBox) ytBox.innerHTML = "";
 }
 
+
+function playSyntheticFallbackCue(track, durationSec = 25) {
+  const ctx = ensureAudioContext();
+  if (!ctx) {
+    setAudioDebugText(`🎹 Mode extrait prêt pour « ${track?.title || "Disney"} » — clique n'importe où ou sur Play.`);
+    return;
+  }
+  try {
+    const now = ctx.currentTime;
+    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 440.00, 523.25];
+    notes.forEach((freq, idx) => {
+      const start = now + idx * 0.45;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.07, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.42);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.44);
+    });
+    setAudioDebugText(`🎹 Extrait musical joué (${track?.title || "Manche"}) — ajoute un lien MP3/Spotify/YouTube pour la version studio.`);
+  } catch (_) {}
+}
+
 function playAudioUrlSafely(url, startSec, volume = 0.9, sourceKey = "") {
   const audioEl = document.getElementById("audioPlayer");
   if (!audioEl || !url) {
@@ -3729,7 +3757,8 @@ function syncMediaFromRoomState(state) {
           }
         }
       } else {
-        setAudioDebugText("ℹ️ Ajoute un lien Spotify, YouTube ou audio direct sur cet extrait pour diffuser la musique.");
+        stopLocalMedia();
+        playSyntheticFallbackCue(window.__gamePool?.[roomState.roundIndex] || currentTrack, roomState.roundDuration || 25);
       }
     };
 
@@ -3839,6 +3868,9 @@ async function resolveTrackMediaInfo(track) {
   const explicitAudio = track.audioUrl ? normalizeAudioUrl(track.audioUrl) : "";
   if (explicitAudio) {
     audioUrl = explicitAudio;
+  }
+  if (track.artworkUrl && !artworkUrl) {
+    artworkUrl = String(track.artworkUrl).trim();
   }
 
   const spotifyCandidate = track.spotifyUrl || track.spotifyId || (track.source === "spotify" ? (track.itunesQuery || track.title) : "");

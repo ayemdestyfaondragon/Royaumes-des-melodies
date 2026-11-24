@@ -1,5 +1,5 @@
 # Blind Test Musical Disney — Version Complète (129 chansons)
 
 - Dossier unique contenant `index.html` et `README.md`.
-- Catalogue étendu de **129 chansons Disney, Pixar et Disney Channel** (de *Blanche-Neige* 1937 à *Vaiana 2* et *Mufasa* 2024).
-- Prise en charge Spotify (liens/URIs/IDs), audio direct, YouTube et jingles TV sans erreur console.
+- **129 chansons Disney, Pixar et Disney Channel** intégrées.
+- Diffuse automatiquement l'audio direct (`MP3`/`OGG`/`WAV`), le lecteur Spotify (`spotifyUrl` / ID / URI), YouTube (`youtubeId`), ou un extrait musical synthétisé de secours lorsque la piste n'a pas encore de lien externe.
