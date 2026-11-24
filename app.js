@@ -773,3 +773,396 @@ setMode(state.mode === "remote" ? "remote" : "local");
 renderPlayers();
 renderList();
 renderBuzzUI();
+
+
+// =========================================================
+// SYSTÈME DE ROOMS (Hôte, Joueurs, Prêt, Chat, URL & Firebase)
+// =========================================================
+const ROOM_META_KEY = "royaumes_room_system_v1";
+
+let roomSystem = {
+  clientId: "",
+  roomName: "Salon Royal Disney",
+  hostId: "",
+  firebaseBaseUrl: "",
+  members: [], // { clientId, pseudo, ready, joinedAt, isHost }
+  messages: [], // { id, sender, text, ts, system }
+  lastAction: null // { type, payload, ts }
+};
+
+try {
+  const savedRoomSys = JSON.parse(localStorage.getItem(ROOM_META_KEY) || "null");
+  if (savedRoomSys && typeof savedRoomSys === "object") {
+    roomSystem = { ...roomSystem, ...savedRoomSys };
+  }
+} catch (_) {}
+
+if (!roomSystem.clientId) {
+  roomSystem.clientId = "cli_" + Math.random().toString(36).slice(2, 10);
+}
+
+const roomRolePill = document.getElementById("roomRolePill");
+const roomConnectionBadge = document.getElementById("roomConnectionBadge");
+const toggleReadyBtn = document.getElementById("toggleReadyBtn");
+const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+const roomNameInput = document.getElementById("roomNameInput");
+const roomTitleDisplay = document.getElementById("roomTitleDisplay");
+const roomCountLabel = document.getElementById("roomCountLabel");
+const roomRosterList = document.getElementById("roomRosterList");
+const roomChatLog = document.getElementById("roomChatLog");
+const roomChatForm = document.getElementById("roomChatForm");
+const roomChatInput = document.getElementById("roomChatInput");
+const firebaseUrlInput = document.getElementById("firebaseUrlInput");
+const saveFirebaseBtn = document.getElementById("saveFirebaseBtn");
+
+function normalizeFirebaseBase(raw) {
+  const trimmed = String(raw || "").trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  if (!/^https?:\/\//i.test(trimmed)) return "";
+  return trimmed;
+}
+
+function isCurrentUserHost() {
+  if (!state.roomCode) return true;
+  if (!roomSystem.hostId) return true;
+  return roomSystem.hostId === roomSystem.clientId;
+}
+
+function currentPseudo() {
+  const typed = (remotePseudoInput && remotePseudoInput.value.trim()) || "";
+  if (typed) {
+    state.remotePseudo = typed;
+  }
+  if (!state.remotePseudo) {
+    state.remotePseudo = "Joueur_" + roomSystem.clientId.slice(-4);
+  }
+  return state.remotePseudo;
+}
+
+function appendRoomSystemMessage(text) {
+  roomSystem.messages.push({
+    id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    sender: "Système",
+    text,
+    ts: Date.now(),
+    system: true
+  });
+  if (roomSystem.messages.length > 60) {
+    roomSystem.messages = roomSystem.messages.slice(-60);
+  }
+}
+
+function upsertSelfInRoom(options = {}) {
+  if (!state.roomCode) return;
+  const pseudo = currentPseudo();
+  if (!roomSystem.hostId && options.asHost) {
+    roomSystem.hostId = roomSystem.clientId;
+  }
+  const existing = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+  if (existing) {
+    existing.pseudo = pseudo;
+    existing.isHost = roomSystem.hostId === roomSystem.clientId;
+    if (typeof options.ready === "boolean") {
+      existing.ready = options.ready;
+    }
+  } else {
+    roomSystem.members.push({
+      clientId: roomSystem.clientId,
+      pseudo,
+      ready: Boolean(options.ready),
+      joinedAt: Date.now(),
+      isHost: roomSystem.hostId === roomSystem.clientId
+    });
+  }
+  roomSystem.members.forEach((m) => {
+    m.isHost = m.clientId === roomSystem.hostId;
+  });
+  ensurePlayerForPseudo(pseudo);
+}
+
+function buildFullRoomSnapshot() {
+  return {
+    roomCode: state.roomCode,
+    roomName: roomSystem.roomName || `Room ${state.roomCode}`,
+    hostId: roomSystem.hostId || roomSystem.clientId,
+    members: roomSystem.members,
+    messages: roomSystem.messages,
+    players: state.players,
+    nextPlayerId: state.nextPlayerId,
+    roundNumber: state.roundNumber,
+    currentTrackId: state.currentTrackId,
+    revealed: state.revealed,
+    playedIds: state.playedIds,
+    buzzes: state.buzzes,
+    updatedAt: Date.now()
+  };
+}
+
+async function pushSnapshotToFirebase(snapshot) {
+  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
+  if (!base || !snapshot || !snapshot.roomCode) return;
+  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(snapshot.roomCode)}.json`;
+  try {
+    await fetch(endpoint, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot)
+    });
+  } catch (_) {}
+}
+
+async function pullSnapshotFromFirebase() {
+  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
+  if (!base || !state.roomCode) return null;
+  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(state.roomCode)}.json`;
+  try {
+    const res = await fetch(endpoint, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+function renderRoomPanel() {
+  if (!roomRolePill) return;
+  const hostMode = isCurrentUserHost();
+  roomRolePill.textContent = hostMode ? "👑 Hôte de la room" : "👤 Joueur connecté";
+  roomRolePill.className = hostMode ? "room-role-pill host" : "room-role-pill";
+
+  const fbActive = Boolean(normalizeFirebaseBase(roomSystem.firebaseBaseUrl));
+  roomConnectionBadge.textContent = fbActive
+    ? "• Synchro Firebase active"
+    : "• Synchro locale / multi-onglets";
+
+  const selfMember = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+  if (toggleReadyBtn) {
+    const isReady = Boolean(selfMember && selfMember.ready);
+    toggleReadyBtn.textContent = isReady ? "✅ Prêt !" : "⏳ Se mettre prêt";
+  }
+
+  if (roomTitleDisplay) {
+    roomTitleDisplay.textContent = state.roomCode
+      ? `${roomSystem.roomName || "Room"} (${state.roomCode})`
+      : "Aucune room active";
+  }
+  if (roomCountLabel) {
+    roomCountLabel.textContent = `${roomSystem.members.length} joueur(s)`;
+  }
+
+  if (roomRosterList) {
+    if (!roomSystem.members.length) {
+      roomRosterList.innerHTML = `<div class="sync-note">Crée ou rejoins une room pour voir les joueurs connectés.</div>`;
+    } else {
+      roomRosterList.innerHTML = roomSystem.members
+        .map((m) => {
+          const canPromote = hostMode && m.clientId !== roomSystem.clientId;
+          return `
+            <div class="roster-item">
+              <span>${escapeHtml(m.pseudo)}</span>
+              <span class="roster-badges">
+                ${m.isHost ? `<span class="mini-tag host">👑 Hôte</span>` : `<span class="mini-tag">Joueur</span>`}
+                <span class="mini-tag ${m.ready ? "ready" : "not-ready"}">${m.ready ? "Prêt" : "En attente"}</span>
+                ${canPromote ? `<button type="button" class="ghost" style="padding:0.2rem 0.45rem;font-size:0.72rem;" onclick="promoteToHost('${escapeHtml(m.clientId)}')">Passer hôte</button>` : ""}
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  if (roomChatLog) {
+    if (!roomSystem.messages.length) {
+      roomChatLog.innerHTML = `<div class="sync-note">Aucun message dans la room pour l'instant.</div>`;
+    } else {
+      roomChatLog.innerHTML = roomSystem.messages
+        .map((msg) => {
+          if (msg.system) {
+            return `<div class="room-msg system">${escapeHtml(msg.text)}</div>`;
+          }
+          return `<div class="room-msg"><strong>${escapeHtml(msg.sender)} :</strong> ${escapeHtml(msg.text)}</div>`;
+        })
+        .join("");
+      roomChatLog.scrollTop = roomChatLog.scrollHeight;
+    }
+  }
+}
+
+window.promoteToHost = function (targetClientId) {
+  if (!isCurrentUserHost()) return;
+  roomSystem.hostId = targetClientId;
+  const target = roomSystem.members.find((m) => m.clientId === targetClientId);
+  appendRoomSystemMessage(`${target ? target.pseudo : "Un joueur"} est maintenant hôte de la room.`);
+  syncRoomNow();
+};
+
+function syncRoomNow() {
+  try {
+    localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
+  } catch (_) {}
+
+  saveState();
+  renderRoomPanel();
+
+  if (state.mode === "remote" && state.roomCode) {
+    const snap = buildFullRoomSnapshot();
+    try {
+      localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(snap));
+    } catch (_) {}
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
+    }
+    pushSnapshotToFirebase(snap);
+  }
+}
+
+const origApplyRemotePayload = applyRemotePayload;
+applyRemotePayload = function (payload) {
+  if (!payload || payload.roomCode !== state.roomCode) return;
+  if (payload.roomName) roomSystem.roomName = payload.roomName;
+  if (payload.hostId) roomSystem.hostId = payload.hostId;
+  if (Array.isArray(payload.members)) roomSystem.members = payload.members;
+  if (Array.isArray(payload.messages)) roomSystem.messages = payload.messages;
+
+  origApplyRemotePayload(payload);
+  renderRoomPanel();
+};
+
+const origCreateClick = createRoomBtn.onclick;
+createRoomBtn.addEventListener("click", () => {
+  const customName = (roomNameInput && roomNameInput.value.trim()) || "";
+  roomSystem.roomName = customName || `Room ${state.roomCode}`;
+  roomSystem.hostId = roomSystem.clientId;
+  roomSystem.members = [];
+  roomSystem.messages = [];
+  upsertSelfInRoom({ asHost: true, ready: true });
+  appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
+  syncRoomNow();
+});
+
+joinRoomBtn.addEventListener("click", async () => {
+  const code = joinRoomInput.value.trim().toUpperCase();
+  if (!code) return;
+  state.roomCode = code;
+  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+  startRoomListeners();
+
+  let loaded = null;
+  try {
+    loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+  } catch (_) {}
+
+  const fbSnap = await pullSnapshotFromFirebase();
+  if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) > (loaded.updatedAt || 0))) {
+    loaded = fbSnap;
+  }
+
+  if (loaded) {
+    applyRemotePayload(loaded);
+  } else {
+    roomSystem.hostId = roomSystem.clientId;
+    roomSystem.roomName = `Room ${code}`;
+  }
+
+  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+  appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
+  syncRoomNow();
+});
+
+if (toggleReadyBtn) {
+  toggleReadyBtn.addEventListener("click", () => {
+    if (!state.roomCode) return;
+    upsertSelfInRoom();
+    const me = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+    if (me) {
+      me.ready = !me.ready;
+      appendRoomSystemMessage(`${me.pseudo} est ${me.ready ? "prêt" : "en attente"}.`);
+    }
+    syncRoomNow();
+  });
+}
+
+if (leaveRoomBtn) {
+  leaveRoomBtn.addEventListener("click", () => {
+    if (!state.roomCode) return;
+    const pseudo = currentPseudo();
+    appendRoomSystemMessage(`${pseudo} a quitté la room.`);
+    roomSystem.members = roomSystem.members.filter((m) => m.clientId !== roomSystem.clientId);
+    if (roomSystem.hostId === roomSystem.clientId && roomSystem.members.length > 0) {
+      roomSystem.hostId = roomSystem.members[0].clientId;
+      appendRoomSystemMessage(`${roomSystem.members[0].pseudo} devient le nouvel hôte.`);
+    }
+    syncRoomNow();
+    state.roomCode = "";
+    roomCodeBadge.textContent = "ROOM : ------";
+    syncStatus.textContent = "Mode Multi • Hors room";
+    saveState();
+    renderRoomPanel();
+  });
+}
+
+if (roomChatForm) {
+  roomChatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!state.roomCode) return;
+    const text = (roomChatInput && roomChatInput.value.trim()) || "";
+    if (!text) return;
+    upsertSelfInRoom();
+    roomSystem.messages.push({
+      id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      sender: currentPseudo(),
+      text,
+      ts: Date.now(),
+      system: false
+    });
+    if (roomSystem.messages.length > 60) {
+      roomSystem.messages = roomSystem.messages.slice(-60);
+    }
+    roomChatInput.value = "";
+    syncRoomNow();
+  });
+}
+
+if (saveFirebaseBtn) {
+  saveFirebaseBtn.addEventListener("click", async () => {
+    const clean = normalizeFirebaseBase(firebaseUrlInput && firebaseUrlInput.value);
+    roomSystem.firebaseBaseUrl = clean;
+    try {
+      localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
+    } catch (_) {}
+    renderRoomPanel();
+    if (clean && state.roomCode) {
+      const remoteSnap = await pullSnapshotFromFirebase();
+      if (remoteSnap && (remoteSnap.updatedAt || 0) > Date.now() - 86400000) {
+        applyRemotePayload(remoteSnap);
+      } else {
+        syncRoomNow();
+      }
+    }
+  });
+}
+
+if (roomNameInput && roomSystem.roomName) {
+  roomNameInput.value = roomSystem.roomName;
+}
+if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
+  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
+}
+
+if (state.roomCode) {
+  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+  if (normalizeFirebaseBase(roomSystem.firebaseBaseUrl)) {
+    setInterval(async () => {
+      if (state.mode === "remote" && state.roomCode) {
+        const snap = await pullSnapshotFromFirebase();
+        if (snap && snap.updatedAt) {
+          applyRemotePayload(snap);
+        }
+      }
+    }, 1500);
+  }
+}
+
+renderRoomPanel();

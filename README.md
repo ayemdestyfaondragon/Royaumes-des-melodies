@@ -1,11 +1,9 @@
-# Royaumes des Mélodies — Blind-Test Disney
+# Royaumes des Mélodies — Blind-Test Disney (avec Système de Rooms)
 
-Application web statique de blind-test Disney conçue pour GitHub Pages, avec mode **Local** et **Multi à distance**.
+Application web statique de blind-test Disney prête pour GitHub Pages, avec **Mode Local** et **Système de Rooms à distance**.
 
-## Fichiers du projet
-
-- `index.html` : structure de l'interface (sélecteur de mode, salon multi, scores, scène mystère, buzzer, catalogue)
-- `style.css` : thème sombre et mise en page responsive
-- `tracks.js` : catalogue des 151 morceaux Disney
-- `app.js` : moteur audio JSONP (Deezer + Apple Music), gestion des manches, floutage de pochette, scores et salon multi
-- `README.md` : documentation et déploiement GitHub Pages
+## Fonctionnalités du système de rooms
+- **Création & rejointure de room** : code salon unique, nom de room personnalisé et lien d'invitation (`?room=CODE`).
+- **Rôles & statuts** : identification de l'**Hôte** (avec possibilité de passer hôte), badge **Prêt / En attente** et liste des joueurs connectés.
+- **Chat de room & buzzer** : messages en direct dans la room, ordre des buzzers horodaté et synchronisation des scores.
+- **Synchronisation** : fonctionne entre onglets/fenêtres via `BroadcastChannel` + `localStorage`, et peut se connecter à une URL **Firebase Realtime Database** pour la synchro inter-appareils.

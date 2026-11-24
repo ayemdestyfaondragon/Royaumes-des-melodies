@@ -23,20 +23,61 @@
       </div>
 
       <div id="remoteBox" class="remote-box" style="display:none;">
+        <div class="room-header-bar">
+          <div class="remote-row">
+            <span class="room-code-badge" id="roomCodeBadge">ROOM : ------</span>
+            <span class="room-role-pill" id="roomRolePill">👤 Joueur</span>
+            <span class="sync-note" id="roomConnectionBadge">• Canal local / multi-onglets</span>
+          </div>
+          <div class="room-quick-actions">
+            <button type="button" class="ghost" id="toggleReadyBtn">✅ Prêt</button>
+            <button type="button" class="ghost" id="leaveRoomBtn">🚪 Quitter la room</button>
+          </div>
+        </div>
+
         <div class="remote-row">
-          <span class="room-code-badge" id="roomCodeBadge">SALON : ------</span>
-          <input type="text" id="remotePseudoInput" placeholder="Ton pseudo joueur..." />
-          <button type="button" class="gold" id="createRoomBtn">✨ Créer un salon</button>
-          <input type="text" id="joinRoomInput" placeholder="Code salon (ex: DISNEY42)..." style="max-width:190px;" />
+          <input type="text" id="remotePseudoInput" placeholder="Ton pseudo dans la room..." />
+          <input type="text" id="roomNameInput" placeholder="Nom de la room (ex: Soirée Disney)..." style="max-width:220px;" />
+          <button type="button" class="gold" id="createRoomBtn">✨ Créer une room</button>
+          <input type="text" id="joinRoomInput" placeholder="Code room..." style="max-width:150px;" />
           <button type="button" id="joinRoomBtn">🔗 Rejoindre</button>
-          <button type="button" class="ghost" id="copyInviteBtn">📋 Copier lien d'invitation</button>
+          <button type="button" class="ghost" id="copyInviteBtn">📋 Lien d'invitation</button>
         </div>
-        <div class="remote-row">
-          <span class="sync-note">
-            Astuce : en multi à distance, chacun lance l'extrait audio sur son propre appareil sans dépendre d'un partage d'écran, puis buzze en direct. Si l'hôte lance une manche, les joueurs connectés au même salon reçoivent la piste et le buzzer instantanément.
-          </span>
+
+        <div class="room-grid-layout">
+          <div class="room-card">
+            <div class="room-card-title">
+              <span id="roomTitleDisplay">Room sans nom</span>
+              <span class="sync-note" id="roomCountLabel">0 joueur(s)</span>
+            </div>
+            <div id="roomRosterList" class="roster-list"></div>
+          </div>
+
+          <div class="room-card">
+            <div class="room-card-title">
+              <span>💬 Chat de room</span>
+              <span class="sync-note">En direct</span>
+            </div>
+            <div id="roomChatLog" class="room-chat-log"></div>
+            <form id="roomChatForm" class="room-chat-form">
+              <input type="text" id="roomChatInput" placeholder="Envoyer un message à la room..." maxlength="180" />
+              <button type="submit">Envoyer</button>
+            </form>
+          </div>
         </div>
-      </div>
+
+        <div class="room-backend-box">
+          <div class="remote-row" style="justify-content:space-between;">
+            <span class="sync-note">
+              <strong>Synchro inter-appareils (optionnel) :</strong> colle l'URL d'un RTDB Firebase (ex: <code>https://ton-projet-default-rtdb.firebaseio.com</code>) pour synchroniser les rooms entre différents ordinateurs/téléphones.
+            </span>
+          </div>
+          <div class="remote-row">
+            <input type="text" id="firebaseUrlInput" placeholder="URL Firebase Realtime Database (optionnel)..." style="flex:1; min-width:240px;" />
+            <button type="button" class="ghost" id="saveFirebaseBtn">💾 Connecter base room</button>
+          </div>
+        </div>
+      </div>      </div>
     </section>
 
     <section class="panel">
