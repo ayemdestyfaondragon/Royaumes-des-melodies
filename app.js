@@ -240,6 +240,60 @@ const RELAY_CANDIDATES = [
   "https://ntfy.drey.co.za"
 ];
 
+function encodeRoomStateHash(snap) {
+  try {
+    if (!snap || !snap.roomCode) return "";
+    const slim = {
+      c: snap.roomCode,
+      n: snap.roomName || "",
+      h: snap.hostId || "",
+      p: (snap.players || []).slice(0, 12),
+      m: (snap.members || []).slice(0, 12),
+      r: snap.roundNumber || 0,
+      t: snap.currentTrackId || null,
+      rev: Boolean(snap.revealed),
+      u: snap.updatedAt || Date.now()
+    };
+    const json = JSON.stringify(slim);
+    const bytes = new TextEncoder().encode(json);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return "#s=" + encodeURIComponent(btoa(bin));
+  } catch (_) {
+    return "";
+  }
+}
+
+function decodeRoomStateHash() {
+  try {
+    const h = String(window.location.hash || "");
+    if (!h.startsWith("#s=")) return null;
+    const b64 = decodeURIComponent(h.slice(3));
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    const slim = JSON.parse(json);
+    if (!slim || !slim.c) return null;
+    return {
+      roomCode: String(slim.c).toUpperCase(),
+      roomName: slim.n || `Salon ${slim.c}`,
+      hostId: slim.h || "",
+      players: Array.isArray(slim.p) ? slim.p : [],
+      members: Array.isArray(slim.m) ? slim.m : [],
+      messages: [],
+      buzzes: [],
+      roundGuesses: [],
+      roundNumber: Number(slim.r || 0),
+      currentTrackId: slim.t || null,
+      revealed: Boolean(slim.rev),
+      updatedAt: Number(slim.u || Date.now())
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 function getRelayBaseUrls() {
   const custom = String(roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
   if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
@@ -458,10 +512,14 @@ async function publishRoomSnapshotToRelay(snapshot) {
   for (const base of bases) {
     const url = `${base}/${encodeURIComponent(topic)}`;
     try {
+      const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 2200) : null;
       const res = await fetch(url, {
         method: "POST",
-        body: bodyPayload
+        body: bodyPayload,
+        signal: ctrl ? ctrl.signal : undefined
       });
+      if (timer) clearTimeout(timer);
       if (res.ok) {
         delivered = true;
         setDiagStatus(
@@ -495,7 +553,10 @@ async function pullRoomSnapshotFromRelay(code) {
   for (const base of bases) {
     const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=60m`;
     try {
-      const res = await fetch(url, { cache: "no-store" });
+      const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 2200) : null;
+      const res = await fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
+      if (timer) clearTimeout(timer);
       if (!res.ok) continue;
       const rawText = await res.text();
       if (!rawText.trim()) continue;
@@ -975,8 +1036,10 @@ if (joinRoomBtn) {
 if (copyInviteBtn) {
   copyInviteBtn.addEventListener("click", async () => {
     if (!state.roomCode) return;
-    const baseUrl = window.location.href.split("?")[0];
-    const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}`;
+    const baseUrl = window.location.href.split("?")[0].split("#")[0];
+    const snap = buildFullRoomSnapshot();
+    const hashPart = encodeRoomStateHash(snap);
+    const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}${hashPart}`;
     try {
       await navigator.clipboard.writeText(inviteUrl);
       if (syncStatus) syncStatus.textContent = `Lien d'invitation copié (${state.roomCode}) !`;
@@ -1058,10 +1121,11 @@ if (forceSyncNowBtn) {
     }
     const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
     const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
-    const candidate =
-      netSnap && fbSnap
-        ? ((netSnap.updatedAt || 0) >= (fbSnap.updatedAt || 0) ? netSnap : fbSnap)
-        : (netSnap || fbSnap);
+    const hashSnap = decodeRoomStateHash();
+    const poolSnaps = [netSnap, fbSnap, hashSnap].filter(Boolean);
+    const candidate = poolSnaps.length
+      ? poolSnaps.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]
+      : null;
 
     if (candidate && (candidate.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
       applyRemotePayload(candidate);
