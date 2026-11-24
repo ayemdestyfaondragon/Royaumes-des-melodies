@@ -1,11 +1,13 @@
 const STORAGE_KEY = "royaumes_melodies_v6";
 const ROOM_META_KEY = "royaumes_room_system_v1";
+const DEFAULT_RELAY_BASE = "https://ntfy.sh";
 const metaCache = {};
-let loadSeq = 0;
 
+let loadSeq = 0;
 let broadcastChannel = null;
 let roomPollTimer = null;
 let firebasePollTimer = null;
+let relayPollTimer = null;
 
 let state = {
   mode: "local", // "local" | "remote"
@@ -20,7 +22,8 @@ let state = {
   currentTrackId: null,
   revealed: false,
   playedIds: [],
-  buzzes: []
+  buzzes: [],
+  roundGuesses: []
 };
 
 let roomSystem = {
@@ -35,15 +38,27 @@ let roomSystem = {
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-  if (saved && Array.isArray(saved.players) && saved.players.length) {
-    state = { ...state, ...saved };
+  if (saved && typeof saved === "object") {
+    state = {
+      ...state,
+      ...saved,
+      players: Array.isArray(saved.players) && saved.players.length ? saved.players : state.players,
+      playedIds: Array.isArray(saved.playedIds) ? saved.playedIds : [],
+      buzzes: Array.isArray(saved.buzzes) ? saved.buzzes : [],
+      roundGuesses: Array.isArray(saved.roundGuesses) ? saved.roundGuesses : []
+    };
   }
 } catch (_) {}
 
 try {
   const savedRoomSys = JSON.parse(localStorage.getItem(ROOM_META_KEY) || "null");
   if (savedRoomSys && typeof savedRoomSys === "object") {
-    roomSystem = { ...roomSystem, ...savedRoomSys };
+    roomSystem = {
+      ...roomSystem,
+      ...savedRoomSys,
+      members: Array.isArray(savedRoomSys.members) ? savedRoomSys.members : [],
+      messages: Array.isArray(savedRoomSys.messages) ? savedRoomSys.messages : []
+    };
   }
 } catch (_) {}
 
@@ -58,6 +73,7 @@ if (initialRoomParam) {
   state.roomCode = initialRoomParam;
 }
 
+// DOM Elements
 const tabLocal = document.getElementById("tabLocal");
 const tabRemote = document.getElementById("tabRemote");
 const remoteBox = document.getElementById("remoteBox");
@@ -81,6 +97,14 @@ const roomChatForm = document.getElementById("roomChatForm");
 const roomChatInput = document.getElementById("roomChatInput");
 const firebaseUrlInput = document.getElementById("firebaseUrlInput");
 const saveFirebaseBtn = document.getElementById("saveFirebaseBtn");
+const copyFirebaseRulesBtn = document.getElementById("copyFirebaseRulesBtn");
+const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
+const firebaseStatusPill = document.getElementById("firebaseStatusPill");
+const relayStatusPill = document.getElementById("relayStatusPill");
+const forceSyncNowBtn = document.getElementById("forceSyncNowBtn");
+const toggleAdvancedSyncBtn = document.getElementById("toggleAdvancedSyncBtn");
+const advancedSyncDrawer = document.getElementById("advancedSyncDrawer");
+const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
 
 const buzzPanel = document.getElementById("buzzPanel");
 const buzzBtn = document.getElementById("buzzBtn");
@@ -120,6 +144,31 @@ const countLabel = document.getElementById("countLabel");
 const playedLabel = document.getElementById("playedLabel");
 const tracksList = document.getElementById("tracksList");
 
+const tabGuessAnswer = document.getElementById("tabGuessAnswer");
+const tabRoundFeed = document.getElementById("tabRoundFeed");
+const guessFormView = document.getElementById("guessFormView");
+const roundFeedView = document.getElementById("roundFeedView");
+const guessAnswerForm = document.getElementById("guessAnswerForm");
+const guessTitleInput = document.getElementById("guessTitleInput");
+const guessFilmInput = document.getElementById("guessFilmInput");
+const guessFeedback = document.getElementById("guessFeedback");
+const roundAnswersList = document.getElementById("roundAnswersList");
+
+const RECOMMENDED_FIREBASE_RULES = JSON.stringify(
+  {
+    rules: {
+      royaumes_rooms: {
+        $roomCode: {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  },
+  null,
+  2
+);
+
 function escapeHtml(str) {
   return String(str || "")
     .replace(/&/g, "&amp;")
@@ -141,10 +190,69 @@ function roomStorageKey(code) {
   return `royaumes_room_${String(code || "").toUpperCase()}`;
 }
 
-function normalizeFirebaseBase(raw) {
-  const trimmed = String(raw || "").trim().replace(/\/+$/, "");
-  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return "";
-  return trimmed;
+function smartNormalizeFirebaseUrl(raw) {
+  let val = String(raw || "").trim();
+  if (!val) return "";
+
+  val = val.replace(/\/+$/, "");
+  val = val.replace(/\/royaumes_rooms(?:\/.*)?$/i, "");
+
+  const consoleMatch = val.match(/console\.firebase\.google\.com\/project\/([a-z0-9-]+)/i);
+  if (consoleMatch && consoleMatch[1]) {
+    return `https://${consoleMatch[1]}-default-rtdb.firebaseio.com`;
+  }
+
+  if (!/^https?:\/\//i.test(val) && !val.includes(".")) {
+    const slug = val.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (!slug) return "";
+    return `https://${slug}-default-rtdb.firebaseio.com`;
+  }
+
+  if (!/^https?:\/\//i.test(val)) {
+    val = "https://" + val;
+  }
+
+  try {
+    const parsed = new URL(val);
+    return `${parsed.protocol}//${parsed.host}`.replace(/\/+$/, "");
+  } catch (_) {
+    return "";
+  }
+}
+
+function getFirebaseBase() {
+  const norm = smartNormalizeFirebaseUrl(roomSystem.firebaseBaseUrl);
+  if (norm && norm.includes("firebaseio.com")) {
+    return norm;
+  }
+  return "";
+}
+
+function getRelayBaseUrl() {
+  const custom = String(roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
+  if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
+    return custom;
+  }
+  return DEFAULT_RELAY_BASE;
+}
+
+function getRoomTopic(code) {
+  const cleanCode = String(code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return `royaumes-melodies-room-${cleanCode}`;
+}
+
+function setDiagStatus(modeClass, badgeText, msgText) {
+  if (relayStatusPill) {
+    relayStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
+    relayStatusPill.textContent = badgeText;
+  }
+  if (firebaseStatusPill) {
+    firebaseStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
+    firebaseStatusPill.textContent = badgeText;
+  }
+  if (firebaseDiagMsg && msgText) {
+    firebaseDiagMsg.textContent = msgText;
+  }
 }
 
 function isCurrentUserHost() {
@@ -226,12 +334,13 @@ function buildFullRoomSnapshot() {
     revealed: state.revealed,
     playedIds: state.playedIds,
     buzzes: state.buzzes,
-    updatedAt: Date.now()
+    roundGuesses: state.roundGuesses || [],
+    updatedAt: roomSystem.updatedAt || Date.now()
   };
 }
 
 async function pushSnapshotToFirebase(snapshot) {
-  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
+  const base = getFirebaseBase();
   if (!base || !snapshot || !snapshot.roomCode) return;
   const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(snapshot.roomCode)}.json`;
   try {
@@ -243,14 +352,80 @@ async function pushSnapshotToFirebase(snapshot) {
   } catch (_) {}
 }
 
-async function pullSnapshotFromFirebase() {
-  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
-  if (!base || !state.roomCode) return null;
-  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(state.roomCode)}.json`;
+async function pullSnapshotFromFirebase(code = state.roomCode) {
+  const base = getFirebaseBase();
+  const cleanCode = String(code || "").trim().toUpperCase();
+  if (!base || !cleanCode) return null;
+  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(cleanCode)}.json`;
   try {
     const res = await fetch(endpoint, { cache: "no-store" });
     if (!res.ok) return null;
     return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function publishRoomSnapshotToRelay(snapshot) {
+  if (!snapshot || !snapshot.roomCode) return;
+  const base = getRelayBaseUrl();
+  const topic = getRoomTopic(snapshot.roomCode);
+  const url = `${base}/${encodeURIComponent(topic)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        __royaumesRoomSync: true,
+        snapshot
+      })
+    });
+    if (res.ok) {
+      setDiagStatus(
+        "connected",
+        `🟢 Connecté • ${snapshot.roomCode}`,
+        `Room ${snapshot.roomCode} synchronisée (${snapshot.members ? snapshot.members.length : 0} joueur(s)).`
+      );
+    }
+  } catch (_) {
+    // Keep local / BroadcastChannel working silently without blocking UI
+  }
+}
+
+async function pullRoomSnapshotFromRelay(code) {
+  const cleanCode = String(code || "").trim().toUpperCase();
+  if (!cleanCode) return null;
+  const base = getRelayBaseUrl();
+  const topic = getRoomTopic(cleanCode);
+  const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=15m`;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const rawText = await res.text();
+    if (!rawText.trim()) return null;
+
+    const lines = rawText.trim().split("\n");
+    let newestSnap = null;
+
+    for (const line of lines) {
+      try {
+        const evt = JSON.parse(line);
+        if (evt && evt.event === "message" && typeof evt.message === "string") {
+          const parsedMsg = JSON.parse(evt.message);
+          if (parsedMsg && parsedMsg.__royaumesRoomSync && parsedMsg.snapshot) {
+            const snap = parsedMsg.snapshot;
+            if (snap.roomCode === cleanCode) {
+              if (!newestSnap || (snap.updatedAt || 0) >= (newestSnap.updatedAt || 0)) {
+                newestSnap = snap;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return newestSnap;
   } catch (_) {
     return null;
   }
@@ -263,14 +438,20 @@ function saveState(options = {}) {
   } catch (_) {}
 
   if (state.mode === "remote" && state.roomCode && !options.skipBroadcast) {
+    if (!roomSystem.updatedAt) {
+      roomSystem.updatedAt = Date.now();
+    }
     const snap = buildFullRoomSnapshot();
     try {
       localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(snap));
     } catch (_) {}
     if (broadcastChannel) {
-      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
+      try {
+        broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
+      } catch (_) {}
     }
     pushSnapshotToFirebase(snap);
+    publishRoomSnapshotToRelay(snap);
   }
 }
 
@@ -280,11 +461,11 @@ function renderRoomPanel() {
   roomRolePill.textContent = hostMode ? "👑 Hôte de la room" : "👤 Joueur connecté";
   roomRolePill.className = hostMode ? "room-role-pill host" : "room-role-pill";
 
-  const fbActive = Boolean(normalizeFirebaseBase(roomSystem.firebaseBaseUrl));
+  const fbActive = Boolean(getFirebaseBase());
   if (roomConnectionBadge) {
     roomConnectionBadge.textContent = fbActive
-      ? "• Synchro Firebase active"
-      : "• Canal local / multi-onglets";
+      ? "• Synchro Firebase + Réseau"
+      : "• Synchro Réseau + Multi-onglets";
   }
 
   const selfMember = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
@@ -349,9 +530,9 @@ window.promoteToHost = function (targetClientId) {
   });
   const target = roomSystem.members.find((m) => m.clientId === targetClientId);
   appendRoomSystemMessage(`${target ? target.pseudo : "Un joueur"} est maintenant hôte de la room.`);
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderRoomPanel();
-  if (typeof renderRoundGuesses === 'function') renderRoundGuesses();
 };
 
 function renderBuzzUI() {
@@ -361,38 +542,43 @@ function renderBuzzUI() {
     return;
   }
   buzzPanel.style.display = "flex";
-  buzzBtn.disabled = !state.currentTrackId;
+  if (buzzBtn) buzzBtn.disabled = !state.currentTrackId;
 
   if (!state.buzzes.length) {
-    buzzLeaderText.textContent = "Aucun buzz pour l'instant sur cette manche.";
-    buzzFeed.innerHTML = "";
+    if (buzzLeaderText) buzzLeaderText.textContent = "Aucun buzz pour l'instant sur cette manche.";
+    if (buzzFeed) buzzFeed.innerHTML = "";
     return;
   }
 
   const first = state.buzzes[0];
-  buzzLeaderText.textContent = `🏆 Premier buzz : ${first.pseudo} (${first.label})`;
-  buzzFeed.innerHTML = state.buzzes
-    .map(
-      (b, idx) =>
-        `<span class="buzz-chip ${idx === 0 ? "first" : ""}">#${idx + 1} ${escapeHtml(b.pseudo)} • ${escapeHtml(b.label)}</span>`
-    )
-    .join("");
+  if (buzzLeaderText) buzzLeaderText.textContent = `🏆 Premier buzz : ${first.pseudo} (${first.label})`;
+  if (buzzFeed) {
+    buzzFeed.innerHTML = state.buzzes
+      .map(
+        (b, idx) =>
+          `<span class="buzz-chip ${idx === 0 ? "first" : ""}">#${idx + 1} ${escapeHtml(b.pseudo)} • ${escapeHtml(b.label)}</span>`
+      )
+      .join("");
+  }
 }
 
 function applyRemotePayload(payload) {
   if (!payload || payload.roomCode !== state.roomCode) return;
-  if ((payload.updatedAt || 0) <= (roomSystem.updatedAt || 0) && payload.updatedAt !== 0) {
-    // Allow initial sync even if timestamps match
+
+  const incomingTs = Number(payload.updatedAt || 0);
+  const currentTs = Number(roomSystem.updatedAt || 0);
+  if (incomingTs > 0 && currentTs > 0 && incomingTs < currentTs) {
+    return;
   }
 
   const trackChanged = payload.currentTrackId && payload.currentTrackId !== state.currentTrackId;
-  const revealChanged = payload.revealed !== state.revealed;
+  const revealChanged = Boolean(payload.revealed) !== Boolean(state.revealed);
 
   if (payload.roomName) roomSystem.roomName = payload.roomName;
   if (payload.hostId) roomSystem.hostId = payload.hostId;
   if (Array.isArray(payload.members)) roomSystem.members = payload.members;
   if (Array.isArray(payload.messages)) roomSystem.messages = payload.messages;
-  if (payload.updatedAt) roomSystem.updatedAt = payload.updatedAt;
+  if (incomingTs > 0) roomSystem.updatedAt = incomingTs;
 
   state.players = Array.isArray(payload.players) && payload.players.length ? payload.players : state.players;
   state.nextPlayerId = payload.nextPlayerId || state.nextPlayerId;
@@ -401,16 +587,18 @@ function applyRemotePayload(payload) {
   state.revealed = Boolean(payload.revealed);
   state.playedIds = Array.isArray(payload.playedIds) ? payload.playedIds : state.playedIds;
   state.buzzes = Array.isArray(payload.buzzes) ? payload.buzzes : [];
+  state.roundGuesses = Array.isArray(payload.roundGuesses) ? payload.roundGuesses : state.roundGuesses;
 
   saveState({ skipBroadcast: true });
   renderPlayers();
   renderList();
   renderBuzzUI();
   renderRoomPanel();
+  renderRoundGuesses();
 
   const currentTrack = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
   if (currentTrack) {
-    roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${currentTrack.id}`;
+    if (roundBadge) roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${currentTrack.id}`;
     if (trackChanged) {
       loadAndPlayTrack(currentTrack, { fromRemoteSync: true });
     } else if (revealChanged) {
@@ -419,9 +607,9 @@ function applyRemotePayload(payload) {
   }
 }
 
-function startRoomListeners() {
+function stopRoomListeners() {
   if (broadcastChannel) {
-    broadcastChannel.close();
+    try { broadcastChannel.close(); } catch (_) {}
     broadcastChannel = null;
   }
   if (roomPollTimer) {
@@ -432,16 +620,25 @@ function startRoomListeners() {
     clearInterval(firebasePollTimer);
     firebasePollTimer = null;
   }
+  if (relayPollTimer) {
+    clearInterval(relayPollTimer);
+    relayPollTimer = null;
+  }
+}
 
+function startRoomListeners() {
+  stopRoomListeners();
   if (state.mode !== "remote" || !state.roomCode) return;
 
   if ("BroadcastChannel" in window) {
-    broadcastChannel = new BroadcastChannel(`royaumes_${state.roomCode}`);
-    broadcastChannel.onmessage = (event) => {
-      if (event.data && event.data.type === "ROOM_SYNC") {
-        applyRemotePayload(event.data.payload);
-      }
-    };
+    try {
+      broadcastChannel = new BroadcastChannel(`royaumes_${state.roomCode}`);
+      broadcastChannel.onmessage = (event) => {
+        if (event.data && event.data.type === "ROOM_SYNC") {
+          applyRemotePayload(event.data.payload);
+        }
+      };
+    } catch (_) {}
   }
 
   roomPollTimer = setInterval(() => {
@@ -449,58 +646,62 @@ function startRoomListeners() {
       const raw = localStorage.getItem(roomStorageKey(state.roomCode));
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.updatedAt && parsed.updatedAt > roomSystem.updatedAt) {
+      if (parsed && (parsed.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
         applyRemotePayload(parsed);
       }
     } catch (_) {}
   }, 800);
 
-  if (normalizeFirebaseBase(roomSystem.firebaseBaseUrl)) {
+  if (getFirebaseBase()) {
     firebasePollTimer = setInterval(async () => {
       if (state.mode === "remote" && state.roomCode) {
-        const snap = await pullSnapshotFromFirebase();
-        if (snap && snap.updatedAt && snap.updatedAt > roomSystem.updatedAt) {
+        const snap = await pullSnapshotFromFirebase(state.roomCode);
+        if (snap && (snap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
           applyRemotePayload(snap);
         }
       }
     }, 1600);
   }
+
+  const pollRelay = async () => {
+    if (state.mode !== "remote" || !state.roomCode) return;
+    const remoteSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(remoteSnap);
+    }
+  };
+  pollRelay();
+  relayPollTimer = setInterval(pollRelay, 1500);
 }
 
 function setMode(newMode) {
-  state.mode = newMode;
-  if (newMode === "remote") {
+  state.mode = newMode === "remote" ? "remote" : "local";
+  if (state.mode === "remote") {
     if (!state.roomCode) {
       state.roomCode = generateRoomCode();
       roomSystem.hostId = roomSystem.clientId;
       roomSystem.roomName = (roomNameInput && roomNameInput.value.trim()) || `Room ${state.roomCode}`;
       roomSystem.members = [];
       roomSystem.messages = [];
+      roomSystem.updatedAt = Date.now();
       upsertSelfInRoom({ asHost: true, ready: true });
       appendRoomSystemMessage(`${currentPseudo()} a ouvert la room "${roomSystem.roomName}".`);
     } else {
       upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
     }
-    tabLocal.classList.remove("active");
-    tabRemote.classList.add("active");
-    remoteBox.style.display = "flex";
-    roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-    syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    if (tabLocal) tabLocal.classList.remove("active");
+    if (tabRemote) tabRemote.classList.add("active");
+    if (remoteBox) remoteBox.style.display = "flex";
+    if (roomCodeBadge) roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+    if (syncStatus) syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
     startRoomListeners();
     saveState();
   } else {
-    tabRemote.classList.remove("active");
-    tabLocal.classList.add("active");
-    remoteBox.style.display = "none";
-    syncStatus.textContent = "Mode Local actif";
-    if (roomPollTimer) {
-      clearInterval(roomPollTimer);
-      roomPollTimer = null;
-    }
-    if (firebasePollTimer) {
-      clearInterval(firebasePollTimer);
-      firebasePollTimer = null;
-    }
+    if (tabRemote) tabRemote.classList.remove("active");
+    if (tabLocal) tabLocal.classList.add("active");
+    if (remoteBox) remoteBox.style.display = "none";
+    if (syncStatus) syncStatus.textContent = "Mode Local actif";
+    stopRoomListeners();
     saveState({ skipBroadcast: true });
   }
   renderPlayers();
@@ -508,86 +709,97 @@ function setMode(newMode) {
   renderRoomPanel();
 }
 
-tabLocal.addEventListener("click", () => setMode("local"));
-tabRemote.addEventListener("click", () => setMode("remote"));
+if (tabLocal) tabLocal.addEventListener("click", () => setMode("local"));
+if (tabRemote) tabRemote.addEventListener("click", () => setMode("remote"));
 
-createRoomBtn.addEventListener("click", () => {
-  state.mode = "remote";
-  tabLocal.classList.remove("active");
-  tabRemote.classList.add("active");
-  remoteBox.style.display = "flex";
+if (createRoomBtn) {
+  createRoomBtn.addEventListener("click", () => {
+    state.mode = "remote";
+    if (tabLocal) tabLocal.classList.remove("active");
+    if (tabRemote) tabRemote.classList.add("active");
+    if (remoteBox) remoteBox.style.display = "flex";
 
-  state.roomCode = generateRoomCode();
-  const customName = (roomNameInput && roomNameInput.value.trim()) || "";
-  roomSystem.roomName = customName || `Room ${state.roomCode}`;
-  roomSystem.hostId = roomSystem.clientId;
-  roomSystem.members = [];
-  roomSystem.messages = [];
-  roomSystem.updatedAt = Date.now();
-
-  upsertSelfInRoom({ asHost: true, ready: true });
-  appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
-
-  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-  syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
-  startRoomListeners();
-  saveState();
-  renderPlayers();
-  renderBuzzUI();
-  renderRoomPanel();
-});
-
-joinRoomBtn.addEventListener("click", async () => {
-  const code = joinRoomInput.value.trim().toUpperCase();
-  if (!code) return;
-
-  state.mode = "remote";
-  tabLocal.classList.remove("active");
-  tabRemote.classList.add("active");
-  remoteBox.style.display = "flex";
-
-  state.roomCode = code;
-  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-  syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
-  startRoomListeners();
-
-  let loaded = null;
-  try {
-    loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
-  } catch (_) {}
-
-  const fbSnap = await pullSnapshotFromFirebase();
-  if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) > (loaded.updatedAt || 0))) {
-    loaded = fbSnap;
-  }
-
-  if (loaded) {
-    applyRemotePayload(loaded);
-  } else {
+    state.roomCode = generateRoomCode();
+    const customName = (roomNameInput && roomNameInput.value.trim()) || "";
+    roomSystem.roomName = customName || `Room ${state.roomCode}`;
     roomSystem.hostId = roomSystem.clientId;
-    roomSystem.roomName = `Room ${code}`;
-  }
+    roomSystem.members = [];
+    roomSystem.messages = [];
+    roomSystem.updatedAt = Date.now();
 
-  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-  appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderPlayers();
-  renderBuzzUI();
-  renderRoomPanel();
-});
+    upsertSelfInRoom({ asHost: true, ready: true });
+    appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
 
-copyInviteBtn.addEventListener("click", async () => {
-  if (!state.roomCode) return;
-  const baseUrl = window.location.href.split("?")[0];
-  const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}`;
-  try {
-    await navigator.clipboard.writeText(inviteUrl);
-    syncStatus.textContent = `Lien d'invitation copié (${state.roomCode}) !`;
-  } catch (_) {
-    syncStatus.textContent = `Code room : ${state.roomCode}`;
-  }
-});
+    if (roomCodeBadge) roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+    if (syncStatus) syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    startRoomListeners();
+    saveState();
+    renderPlayers();
+    renderBuzzUI();
+    renderRoomPanel();
+  });
+}
+
+if (joinRoomBtn) {
+  joinRoomBtn.addEventListener("click", async () => {
+    const code = ((joinRoomInput && joinRoomInput.value) || "").trim().toUpperCase();
+    if (!code) return;
+
+    state.mode = "remote";
+    if (tabLocal) tabLocal.classList.remove("active");
+    if (tabRemote) tabRemote.classList.add("active");
+    if (remoteBox) remoteBox.style.display = "flex";
+
+    state.roomCode = code;
+    if (roomCodeBadge) roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+    if (syncStatus) syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    startRoomListeners();
+
+    let loaded = null;
+    try {
+      loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+    } catch (_) {}
+
+    const fbSnap = await pullSnapshotFromFirebase(code);
+    if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+      loaded = fbSnap;
+    }
+
+    const netSnap = await pullRoomSnapshotFromRelay(code);
+    if (netSnap && (!loaded || (netSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+      loaded = netSnap;
+    }
+
+    if (loaded) {
+      applyRemotePayload(loaded);
+    } else {
+      roomSystem.hostId = roomSystem.clientId;
+      roomSystem.roomName = `Room ${code}`;
+    }
+
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+    appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+    renderBuzzUI();
+    renderRoomPanel();
+  });
+}
+
+if (copyInviteBtn) {
+  copyInviteBtn.addEventListener("click", async () => {
+    if (!state.roomCode) return;
+    const baseUrl = window.location.href.split("?")[0];
+    const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      if (syncStatus) syncStatus.textContent = `Lien d'invitation copié (${state.roomCode}) !`;
+    } catch (_) {
+      if (syncStatus) syncStatus.textContent = `Code room : ${state.roomCode}`;
+    }
+  });
+}
 
 if (toggleReadyBtn) {
   toggleReadyBtn.addEventListener("click", () => {
@@ -621,8 +833,9 @@ if (leaveRoomBtn) {
     saveState();
 
     state.roomCode = "";
-    roomCodeBadge.textContent = "ROOM : ------";
-    syncStatus.textContent = "Mode Multi • Hors room";
+    stopRoomListeners();
+    if (roomCodeBadge) roomCodeBadge.textContent = "ROOM : ------";
+    if (syncStatus) syncStatus.textContent = "Mode Multi • Hors room";
     saveState({ skipBroadcast: true });
     renderRoomPanel();
   });
@@ -645,55 +858,117 @@ if (roomChatForm) {
     if (roomSystem.messages.length > 60) {
       roomSystem.messages = roomSystem.messages.slice(-60);
     }
-    roomChatInput.value = "";
+    if (roomChatInput) roomChatInput.value = "";
     roomSystem.updatedAt = Date.now();
     saveState();
     renderRoomPanel();
   });
 }
 
+if (forceSyncNowBtn) {
+  forceSyncNowBtn.addEventListener("click", async () => {
+    if (!state.roomCode && createRoomBtn) {
+      createRoomBtn.click();
+      return;
+    }
+    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
+    const candidate =
+      netSnap && fbSnap
+        ? ((netSnap.updatedAt || 0) >= (fbSnap.updatedAt || 0) ? netSnap : fbSnap)
+        : (netSnap || fbSnap);
+
+    if (candidate && (candidate.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(candidate);
+    } else {
+      roomSystem.updatedAt = Date.now();
+      saveState();
+    }
+    setDiagStatus(
+      "connected",
+      `🟢 Synchronisé • ${state.roomCode}`,
+      `État à jour pour la room ${state.roomCode}. Code : ${state.roomCode}.`
+    );
+  });
+}
+
+if (toggleAdvancedSyncBtn && advancedSyncDrawer) {
+  toggleAdvancedSyncBtn.addEventListener("click", () => {
+    const isOpen = advancedSyncDrawer.style.display === "flex";
+    advancedSyncDrawer.style.display = isOpen ? "none" : "flex";
+  });
+}
+
 if (saveFirebaseBtn) {
   saveFirebaseBtn.addEventListener("click", async () => {
-    const clean = normalizeFirebaseBase(firebaseUrlInput && firebaseUrlInput.value);
-    roomSystem.firebaseBaseUrl = clean;
+    const raw = (firebaseUrlInput && firebaseUrlInput.value) || "";
+    const norm = smartNormalizeFirebaseUrl(raw);
+    roomSystem.firebaseBaseUrl = norm;
+    if (firebaseUrlInput && norm) firebaseUrlInput.value = norm + "/";
     saveState({ skipBroadcast: true });
     startRoomListeners();
     renderRoomPanel();
-    if (clean && state.roomCode) {
-      const remoteSnap = await pullSnapshotFromFirebase();
-      if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
-        applyRemotePayload(remoteSnap);
-      } else {
-        roomSystem.updatedAt = Date.now();
-        saveState();
-      }
+    if (state.roomCode) {
+      roomSystem.updatedAt = Date.now();
+      saveState();
+    }
+    setDiagStatus(
+      "connected",
+      "🌐 Synchro mise à jour",
+      `Cible active : ${getFirebaseBase() || getRelayBaseUrl()}`
+    );
+  });
+}
+
+if (copyFirebaseRulesBtn) {
+  copyFirebaseRulesBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(RECOMMENDED_FIREBASE_RULES);
+      setDiagStatus("connected", "📋 Règles copiées", RECOMMENDED_FIREBASE_RULES);
+    } catch (_) {
+      setDiagStatus("", "🛡️ Règles RTDB", RECOMMENDED_FIREBASE_RULES);
     }
   });
 }
 
-buzzBtn.addEventListener("click", () => {
-  if (!state.currentTrackId) return;
-  const pseudo = currentPseudo();
-  ensurePlayerForPseudo(pseudo);
+if (clearFirebaseBtn) {
+  clearFirebaseBtn.addEventListener("click", () => {
+    roomSystem.firebaseBaseUrl = "";
+    if (firebaseUrlInput) firebaseUrlInput.value = "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    renderRoomPanel();
+    setDiagStatus("connected", "🌐 Relais par défaut", `Relais actif : ${DEFAULT_RELAY_BASE}`);
+  });
+}
 
-  const now = new Date();
-  const label = `${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}.${String(Math.floor(now.getMilliseconds() / 10)).padStart(2, "0")}`;
+if (buzzBtn) {
+  buzzBtn.addEventListener("click", () => {
+    if (!state.currentTrackId) return;
+    const pseudo = currentPseudo();
+    ensurePlayerForPseudo(pseudo);
 
-  if (!state.buzzes.some((b) => b.pseudo.toLowerCase() === pseudo.toLowerCase())) {
-    state.buzzes.push({ pseudo, at: Date.now(), label });
-  }
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderPlayers();
-  renderBuzzUI();
-});
+    const now = new Date();
+    const label = `${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}.${String(Math.floor(now.getMilliseconds() / 10)).padStart(2, "0")}`;
 
-clearBuzzBtn.addEventListener("click", () => {
-  state.buzzes = [];
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderBuzzUI();
-});
+    if (!state.buzzes.some((b) => b.pseudo.toLowerCase() === pseudo.toLowerCase())) {
+      state.buzzes.push({ pseudo, at: Date.now(), label });
+    }
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+    renderBuzzUI();
+  });
+}
+
+if (clearBuzzBtn) {
+  clearBuzzBtn.addEventListener("click", () => {
+    state.buzzes = [];
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderBuzzUI();
+  });
+}
 
 function makeFallbackArtwork(track) {
   const title = encodeURIComponent(String(track.film || "Disney").slice(0, 26));
@@ -835,6 +1110,7 @@ window.removePlayer = function (playerId) {
 };
 
 function renderPlayers() {
+  if (!playersGrid) return;
   playersGrid.innerHTML = state.players
     .map(
       (p) => `
@@ -866,17 +1142,17 @@ function formatTime(sec) {
 function updateStageRevealUI(track) {
   if (!track) return;
   if (state.revealed) {
-    coverWrap.classList.remove("mystery");
-    mysteryOverlay.style.display = "none";
-    stageTitle.textContent = `${track.titre_fr} (${track.titre_en})`;
-    stageSub.textContent = `Disney : ${track.film} (${track.annee}) • ${track.type}`;
-    revealBtn.textContent = "🙈 Masquer réponse";
+    if (coverWrap) coverWrap.classList.remove("mystery");
+    if (mysteryOverlay) mysteryOverlay.style.display = "none";
+    if (stageTitle) stageTitle.textContent = `${track.titre_fr} (${track.titre_en})`;
+    if (stageSub) stageSub.textContent = `Disney : ${track.film} (${track.annee}) • ${track.type}`;
+    if (revealBtn) revealBtn.textContent = "🙈 Masquer réponse";
   } else {
-    coverWrap.classList.add("mystery");
-    mysteryOverlay.style.display = "flex";
-    stageTitle.textContent = "Manche en cours — Quel est ce morceau ?";
-    stageSub.textContent = "1 pt pour le titre • 1 pt pour le Disney";
-    revealBtn.textContent = "👁️ Révéler réponse";
+    if (coverWrap) coverWrap.classList.add("mystery");
+    if (mysteryOverlay) mysteryOverlay.style.display = "flex";
+    if (stageTitle) stageTitle.textContent = "Manche en cours — Quel est ce morceau ?";
+    if (stageSub) stageSub.textContent = "1 pt pour le titre • 1 pt pour le Disney";
+    if (revealBtn) revealBtn.textContent = "👁️ Révéler réponse";
   }
 }
 
@@ -890,8 +1166,13 @@ async function loadAndPlayTrack(track, options = {}) {
     state.currentTrackId = track.id;
     state.revealed = false;
     state.buzzes = [];
+    state.roundGuesses = [];
     if (!state.playedIds.includes(track.id)) {
       state.playedIds.push(track.id);
+    }
+    if (guessFeedback) {
+      guessFeedback.className = "guess-feedback";
+      guessFeedback.textContent = "";
     }
     roomSystem.updatedAt = Date.now();
     saveState();
@@ -899,55 +1180,63 @@ async function loadAndPlayTrack(track, options = {}) {
 
   renderList();
   renderBuzzUI();
+  renderRoundGuesses();
 
-  roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${track.id}`;
-  coverImg.src = makeFallbackArtwork(track);
+  if (roundBadge) roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${track.id}`;
+  if (coverImg) coverImg.src = makeFallbackArtwork(track);
   updateStageRevealUI(track);
 
-  audioEl.pause();
-  audioEl.removeAttribute("src");
-  audioEl.load();
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.removeAttribute("src");
+    audioEl.load();
+  }
 
-  seekBar.value = 0;
-  seekBar.disabled = true;
-  playPauseBtn.disabled = true;
-  playPauseBtn.textContent = "▶";
-  currentTimeLabel.textContent = "0:00";
-  durationLabel.textContent = "0:30";
-  fallbackBox.style.display = "none";
-  ytFallbackLink.href = track.yt_fallback;
-  sourceTag.textContent = "Recherche...";
-  audioStatus.textContent = "Recherche de l'extrait audio et de la pochette...";
+  if (seekBar) {
+    seekBar.value = 0;
+    seekBar.disabled = true;
+  }
+  if (playPauseBtn) {
+    playPauseBtn.disabled = true;
+    playPauseBtn.textContent = "▶";
+  }
+  if (currentTimeLabel) currentTimeLabel.textContent = "0:00";
+  if (durationLabel) durationLabel.textContent = "0:30";
+  if (fallbackBox) fallbackBox.style.display = "none";
+  if (ytFallbackLink) ytFallbackLink.href = track.yt_fallback || "#";
+  if (sourceTag) sourceTag.textContent = "Recherche...";
+  if (audioStatus) audioStatus.textContent = "Recherche de l'extrait audio et de la pochette...";
 
   const media = await fetchTrackMedia(track);
   if (mySeq !== loadSeq) return;
 
-  coverImg.src = media.artworkUrl;
-  sourceTag.textContent = media.source;
+  if (coverImg) coverImg.src = media.artworkUrl;
+  if (sourceTag) sourceTag.textContent = media.source;
 
   const thumbEl = document.getElementById(`thumb-${track.id}`);
   if (thumbEl) thumbEl.src = media.artworkUrl;
 
   if (!media.audioUrl) {
-    audioStatus.textContent = "Aucun extrait audio trouvé pour ce morceau.";
-    fallbackBox.style.display = "block";
+    if (audioStatus) audioStatus.textContent = "Aucun extrait audio trouvé pour ce morceau.";
+    if (fallbackBox) fallbackBox.style.display = "block";
     return;
   }
 
+  if (!audioEl) return;
   audioEl.src = media.audioUrl;
-  audioEl.volume = Number(volumeBar.value);
-  playPauseBtn.disabled = false;
-  seekBar.disabled = false;
+  audioEl.volume = volumeBar ? Number(volumeBar.value) : 0.9;
+  if (playPauseBtn) playPauseBtn.disabled = false;
+  if (seekBar) seekBar.disabled = false;
 
   try {
     await audioEl.play();
     if (mySeq !== loadSeq) return;
-    playPauseBtn.textContent = "⏸";
-    audioStatus.textContent = "Lecture en cours...";
+    if (playPauseBtn) playPauseBtn.textContent = "⏸";
+    if (audioStatus) audioStatus.textContent = "Lecture en cours...";
   } catch (_) {
     if (mySeq !== loadSeq) return;
-    playPauseBtn.textContent = "▶";
-    audioStatus.textContent = "Prêt — Appuie sur ▶ pour lancer le son.";
+    if (playPauseBtn) playPauseBtn.textContent = "▶";
+    if (audioStatus) audioStatus.textContent = "Prêt — Appuie sur ▶ pour lancer le son.";
   }
 }
 
@@ -956,79 +1245,70 @@ window.playTrackById = function (id) {
   if (track) loadAndPlayTrack(track);
 };
 
-playPauseBtn.addEventListener("click", async () => {
-  if (!audioEl.src) return;
-  if (audioEl.paused) {
-    try {
-      await audioEl.play();
-      playPauseBtn.textContent = "⏸";
-      audioStatus.textContent = "Lecture en cours...";
-    } catch (_) {
-      audioStatus.textContent = "Impossible de lire ce flux audio.";
-      fallbackBox.style.display = "block";
+if (playPauseBtn && audioEl) {
+  playPauseBtn.addEventListener("click", async () => {
+    if (!audioEl.src) return;
+    if (audioEl.paused) {
+      try {
+        await audioEl.play();
+        playPauseBtn.textContent = "⏸";
+        if (audioStatus) audioStatus.textContent = "Lecture en cours...";
+      } catch (_) {
+        if (audioStatus) audioStatus.textContent = "Impossible de lire ce flux audio.";
+        if (fallbackBox) fallbackBox.style.display = "block";
+      }
+    } else {
+      audioEl.pause();
+      playPauseBtn.textContent = "▶";
+      if (audioStatus) audioStatus.textContent = "En pause";
     }
-  } else {
-    audioEl.pause();
-    playPauseBtn.textContent = "▶";
-    audioStatus.textContent = "En pause";
-  }
-});
+  });
+}
 
-audioEl.addEventListener("error", () => {
-  playPauseBtn.textContent = "▶";
-  audioStatus.textContent = "Erreur de chargement du flux audio.";
-  fallbackBox.style.display = "block";
-});
+if (audioEl) {
+  audioEl.addEventListener("error", () => {
+    if (playPauseBtn) playPauseBtn.textContent = "▶";
+    if (audioStatus) audioStatus.textContent = "Erreur de chargement du flux audio.";
+    if (fallbackBox) fallbackBox.style.display = "block";
+  });
 
-audioEl.addEventListener("loadedmetadata", () => {
-  durationLabel.textContent = formatTime(audioEl.duration);
-});
+  audioEl.addEventListener("loadedmetadata", () => {
+    if (durationLabel) durationLabel.textContent = formatTime(audioEl.duration);
+  });
 
-audioEl.addEventListener("timeupdate", () => {
-  if (audioEl.duration) {
-    seekBar.value = (audioEl.currentTime / audioEl.duration) * 100;
-    currentTimeLabel.textContent = formatTime(audioEl.currentTime);
-    durationLabel.textContent = formatTime(audioEl.duration);
-  }
-});
+  audioEl.addEventListener("timeupdate", () => {
+    if (audioEl.duration) {
+      if (seekBar) seekBar.value = (audioEl.currentTime / audioEl.duration) * 100;
+      if (currentTimeLabel) currentTimeLabel.textContent = formatTime(audioEl.currentTime);
+      if (durationLabel) durationLabel.textContent = formatTime(audioEl.duration);
+    }
+  });
 
-audioEl.addEventListener("ended", () => {
-  playPauseBtn.textContent = "▶";
-  audioStatus.textContent = "Extrait terminé — Révèle la réponse ou relance !";
-});
+  audioEl.addEventListener("ended", () => {
+    if (playPauseBtn) playPauseBtn.textContent = "▶";
+    if (audioStatus) audioStatus.textContent = "Extrait terminé — Révèle la réponse ou relance !";
+  });
 
-seekBar.addEventListener("input", () => {
-  if (audioEl.duration) {
-    audioEl.currentTime = (seekBar.value / 100) * audioEl.duration;
-  }
-});
+  audioEl.volume = 0.9;
+}
 
-volumeBar.addEventListener("input", () => {
-  audioEl.volume = Number(volumeBar.value);
-});
-audioEl.volume = 0.9;
+if (seekBar && audioEl) {
+  seekBar.addEventListener("input", () => {
+    if (audioEl.duration) {
+      audioEl.currentTime = (seekBar.value / 100) * audioEl.duration;
+    }
+  });
+}
 
-randomRoundBtn.addEventListener("click", () => {
-  const filtered = getFilteredTracks();
-  const unplayed = filtered.filter((t) => !state.playedIds.includes(t.id));
-  const pool = unplayed.length ? unplayed : filtered;
-  if (!pool.length) return;
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
-  loadAndPlayTrack(chosen);
-});
-
-revealBtn.addEventListener("click", () => {
-  const track = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
-  if (!track) return;
-  state.revealed = !state.revealed;
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  updateStageRevealUI(track);
-});
+if (volumeBar && audioEl) {
+  volumeBar.addEventListener("input", () => {
+    audioEl.volume = Number(volumeBar.value);
+  });
+}
 
 function getFilteredTracks() {
-  const q = searchInput.value.trim().toLowerCase();
-  const t = typeFilter.value;
+  const q = (searchInput && searchInput.value ? searchInput.value : "").trim().toLowerCase();
+  const t = typeFilter ? typeFilter.value : "ALL";
   return DISNEY_TRACKS.filter((item) => {
     const okType = t === "ALL" || item.type === t;
     const okQuery =
@@ -1041,29 +1321,55 @@ function getFilteredTracks() {
   });
 }
 
-const artworkObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      const img = entry.target;
-      const id = Number(img.dataset.trackId);
-      artworkObserver.unobserve(img);
-      const track = DISNEY_TRACKS.find((t) => t.id === id);
-      if (!track) return;
-      fetchTrackMedia(track).then((media) => {
-        if (media && media.artworkUrl) {
-          img.src = media.artworkUrl;
-        }
-      });
-    });
-  },
-  { rootMargin: "150px" }
-);
+if (randomRoundBtn) {
+  randomRoundBtn.addEventListener("click", () => {
+    const filtered = getFilteredTracks();
+    const unplayed = filtered.filter((t) => !state.playedIds.includes(t.id));
+    const pool = unplayed.length ? unplayed : filtered;
+    if (!pool.length) return;
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    loadAndPlayTrack(chosen);
+  });
+}
+
+if (revealBtn) {
+  revealBtn.addEventListener("click", () => {
+    const track = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
+    if (!track) return;
+    state.revealed = !state.revealed;
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    updateStageRevealUI(track);
+  });
+}
+
+const artworkObserver =
+  "IntersectionObserver" in window
+    ? new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const img = entry.target;
+            const id = Number(img.dataset.trackId);
+            artworkObserver.unobserve(img);
+            const track = DISNEY_TRACKS.find((t) => t.id === id);
+            if (!track) return;
+            fetchTrackMedia(track).then((media) => {
+              if (media && media.artworkUrl) {
+                img.src = media.artworkUrl;
+              }
+            });
+          });
+        },
+        { rootMargin: "150px" }
+      )
+    : null;
 
 function renderList() {
+  if (!tracksList) return;
   const list = getFilteredTracks();
-  countLabel.textContent = `${list.length} morceau(x) affiché(s) sur ${DISNEY_TRACKS.length}`;
-  playedLabel.textContent = `${state.playedIds.length} / ${DISNEY_TRACKS.length} joué(s)`;
+  if (countLabel) countLabel.textContent = `${list.length} morceau(x) affiché(s) sur ${DISNEY_TRACKS.length}`;
+  if (playedLabel) playedLabel.textContent = `${state.playedIds.length} / ${DISNEY_TRACKS.length} joué(s)`;
 
   tracksList.innerHTML = list
     .map((track) => {
@@ -1096,84 +1402,55 @@ function renderList() {
     })
     .join("");
 
-  document.querySelectorAll(".thumb").forEach((img) => {
-    const id = Number(img.dataset.trackId);
-    if (!metaCache[id]) {
-      artworkObserver.observe(img);
-    }
+  if (artworkObserver) {
+    document.querySelectorAll(".thumb").forEach((img) => {
+      const id = Number(img.dataset.trackId);
+      if (!metaCache[id]) {
+        artworkObserver.observe(img);
+      }
+    });
+  }
+}
+
+if (addPlayerBtn && playerNameInput) {
+  addPlayerBtn.addEventListener("click", () => {
+    const name = playerNameInput.value.trim();
+    if (!name) return;
+    state.players.push({ id: state.nextPlayerId++, name, score: 0 });
+    playerNameInput.value = "";
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+  });
+
+  playerNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addPlayerBtn.click();
   });
 }
 
-addPlayerBtn.addEventListener("click", () => {
-  const name = playerNameInput.value.trim();
-  if (!name) return;
-  state.players.push({ id: state.nextPlayerId++, name, score: 0 });
-  playerNameInput.value = "";
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderPlayers();
-});
-
-playerNameInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") addPlayerBtn.click();
-});
-
-resetScoresBtn.addEventListener("click", () => {
-  state.players.forEach((p) => (p.score = 0));
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderPlayers();
-});
-
-resetPlayedBtn.addEventListener("click", () => {
-  state.playedIds = [];
-  state.roundNumber = 0;
-  roomSystem.updatedAt = Date.now();
-  saveState();
-  renderList();
-});
-
-searchInput.addEventListener("input", renderList);
-typeFilter.addEventListener("change", renderList);
-
-if (state.remotePseudo && remotePseudoInput) {
-  remotePseudoInput.value = state.remotePseudo;
-}
-if (roomNameInput && roomSystem.roomName) {
-  roomNameInput.value = roomSystem.roomName;
-}
-if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
-  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
-}
-if (state.roomCode && roomCodeBadge) {
-  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+if (resetScoresBtn) {
+  resetScoresBtn.addEventListener("click", () => {
+    state.players.forEach((p) => (p.score = 0));
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+  });
 }
 
-coverImg.src = makeFallbackArtwork({ film: "Royaumes des Mélodies", annee: 2026 });
-setMode(state.mode === "remote" ? "remote" : "local");
-renderPlayers();
-renderList();
-renderBuzzUI();
-renderRoomPanel();
-
-
-// =========================================================
-// ONGLET RÉPONSE (TITRE + DISNEY + POINTS + HISTORIQUE MANCHE)
-// =========================================================
-const tabGuessAnswer = document.getElementById("tabGuessAnswer");
-const tabRoundFeed = document.getElementById("tabRoundFeed");
-const guessFormView = document.getElementById("guessFormView");
-const roundFeedView = document.getElementById("roundFeedView");
-const guessAnswerForm = document.getElementById("guessAnswerForm");
-const guessTitleInput = document.getElementById("guessTitleInput");
-const guessFilmInput = document.getElementById("guessFilmInput");
-const guessFeedback = document.getElementById("guessFeedback");
-const roundAnswersList = document.getElementById("roundAnswersList");
-
-if (!Array.isArray(state.roundGuesses)) {
-  state.roundGuesses = [];
+if (resetPlayedBtn) {
+  resetPlayedBtn.addEventListener("click", () => {
+    state.playedIds = [];
+    state.roundNumber = 0;
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderList();
+  });
 }
 
+if (searchInput) searchInput.addEventListener("input", renderList);
+if (typeFilter) typeFilter.addEventListener("change", renderList);
+
+// Answer guessing & round feed
 function normalizeAnswer(str) {
   return String(str || "")
     .toLowerCase()
@@ -1199,7 +1476,9 @@ function isFilmMatch(inputVal, track) {
   const clean = normalizeAnswer(inputVal);
   if (!clean) return false;
   const film = normalizeAnswer(track.film);
-  const filmNoParen = normalizeAnswer(String(track.film || "").replace(/\([^)]*\)/g, ""));
+  const rawFilm = String(track.film || "");
+  const parenIdx = rawFilm.indexOf("(");
+  const filmNoParen = normalizeAnswer(parenIdx >= 0 ? rawFilm.slice(0, parenIdx) : rawFilm);
   return (
     clean === film ||
     clean === filmNoParen ||
@@ -1209,7 +1488,7 @@ function isFilmMatch(inputVal, track) {
 
 function renderRoundGuesses() {
   if (!roundAnswersList) return;
-  if (!state.roundGuesses.length) {
+  if (!Array.isArray(state.roundGuesses) || !state.roundGuesses.length) {
     roundAnswersList.innerHTML = `<div class="sync-note">Aucune proposition enregistrée sur cette manche pour l'instant.</div>`;
     return;
   }
@@ -1228,7 +1507,7 @@ function renderRoundGuesses() {
     .join("");
 }
 
-if (tabGuessAnswer && tabRoundFeed) {
+if (tabGuessAnswer && tabRoundFeed && guessFormView && roundFeedView) {
   tabGuessAnswer.addEventListener("click", () => {
     tabGuessAnswer.classList.add("active");
     tabRoundFeed.classList.remove("active");
@@ -1329,488 +1608,48 @@ if (guessAnswerForm) {
   });
 }
 
-const origLoadAndPlayTrackForGuesses = loadAndPlayTrack;
-loadAndPlayTrack = async function (track, options = {}) {
-  if (!options.fromRemoteSync) {
-    state.roundGuesses = [];
-    if (guessFeedback) {
-      guessFeedback.className = "guess-feedback";
-      guessFeedback.textContent = "";
-    }
-  }
-  await origLoadAndPlayTrackForGuesses(track, options);
-  renderRoundGuesses();
-};
+// Initial boot
+if (state.remotePseudo && remotePseudoInput) {
+  remotePseudoInput.value = state.remotePseudo;
+}
+if (roomNameInput && roomSystem.roomName) {
+  roomNameInput.value = roomSystem.roomName;
+}
+if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
+  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
+}
+if (state.roomCode && roomCodeBadge) {
+  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+}
 
-const origApplyRemotePayloadForGuesses = applyRemotePayload;
-applyRemotePayload = function (payload) {
-  if (payload && Array.isArray(payload.roundGuesses)) {
-    state.roundGuesses = payload.roundGuesses;
-  }
-  origApplyRemotePayloadForGuesses(payload);
-  renderRoundGuesses();
-};
+if (coverImg) {
+  coverImg.src = makeFallbackArtwork({ film: "Royaumes des Mélodies", annee: 2026 });
+}
 
-const origBuildFullRoomSnapshotForGuesses = buildFullRoomSnapshot;
-buildFullRoomSnapshot = function () {
-  const snap = origBuildFullRoomSnapshotForGuesses();
-  snap.roundGuesses = state.roundGuesses || [];
-  return snap;
-};
-
+setMode(state.mode === "remote" ? "remote" : "local");
+renderPlayers();
+renderList();
+renderBuzzUI();
+renderRoomPanel();
 renderRoundGuesses();
 
+if (state.mode === "remote" && state.roomCode) {
+  (async () => {
+    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
+    const candidate =
+      netSnap && fbSnap
+        ? ((netSnap.updatedAt || 0) >= (fbSnap.updatedAt || 0) ? netSnap : fbSnap)
+        : (netSnap || fbSnap);
 
-// =========================================================
-// SYNCHRO INTER-APPAREILS FIREBASE RTDB (URL AUTO + TEST + RÈGLES)
-// =========================================================
-const firebaseStatusPill = document.getElementById("firebaseStatusPill");
-const copyFirebaseRulesBtn = document.getElementById("copyFirebaseRulesBtn");
-const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
-const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
-
-const RECOMMENDED_FIREBASE_RULES = JSON.stringify(
-  {
-    rules: {
-      royaumes_rooms: {
-        $roomCode: {
-          ".read": true,
-          ".write": true
-        }
-      }
+    if (candidate && (candidate.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(candidate);
     }
-  },
-  null,
-  2
-);
-
-function setFirebaseStatus(mode, label, detail = "") {
-  if (firebaseStatusPill) {
-    firebaseStatusPill.className = "fb-status-pill" + (mode ? ` ${mode}` : "");
-    firebaseStatusPill.textContent = label;
-  }
-  if (firebaseDiagMsg && detail) {
-    firebaseDiagMsg.textContent = detail;
-  }
-}
-
-function smartNormalizeFirebaseUrl(raw) {
-  let val = String(raw || "").trim();
-  if (!val) return "";
-
-  // Strip trailing slashes and any /royaumes_rooms... path if user pasted a deeper URL
-  val = val.replace(/\/+$/, "");
-  val = val.replace(/\/royaumes_rooms(?:\/.*)?$/i, "");
-
-  // If user pasted a Firebase Console URL like https://console.firebase.google.com/project/my-app/database/...
-  const consoleMatch = val.match(/console\.firebase\.google\.com\/project\/([a-z0-9-]+)/i);
-  if (consoleMatch && consoleMatch[1]) {
-    return `https://${consoleMatch[1]}-default-rtdb.firebaseio.com`;
-  }
-
-  // If user typed just a project id like "mon-projet-disney"
-  if (!/^https?:\/\//i.test(val) && !val.includes(".")) {
-    const slug = val.toLowerCase().replace(/[^a-z0-9-]/g, "");
-    if (!slug) return "";
-    return `https://${slug}-default-rtdb.firebaseio.com`;
-  }
-
-  if (!/^https?:\/\//i.test(val)) {
-    val = "https://" + val;
-  }
-
-  try {
-    const parsed = new URL(val);
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/+$/, "");
-  } catch (_) {
-    return "";
-  }
-}
-
-// Override normalizeFirebaseBase used by existing sync functions
-normalizeFirebaseBase = function (raw) {
-  return smartNormalizeFirebaseUrl(raw);
-};
-
-async function testAndConnectFirebase(rawInput) {
-  const cleanUrl = smartNormalizeFirebaseUrl(rawInput);
-  if (!cleanUrl) {
-    roomSystem.firebaseBaseUrl = "";
-    saveState({ skipBroadcast: true });
-    startRoomListeners();
-    setFirebaseStatus(
-      "error",
-      "⚠ URL invalide",
-      "Colle une URL du type https://ton-projet-default-rtdb.firebaseio.com/ (ou l'ID de ton projet Firebase)."
-    );
-    renderRoomPanel();
-    return false;
-  }
-
-  roomSystem.firebaseBaseUrl = cleanUrl;
-  if (firebaseUrlInput) {
-    firebaseUrlInput.value = cleanUrl + "/";
-  }
-  saveState({ skipBroadcast: true });
-  startRoomListeners();
-
-  setFirebaseStatus("", "⏳ Test connexion...", `Test de liaison avec ${cleanUrl}...`);
-
-  const testCode = state.roomCode || "PINGTEST";
-  const endpoint = `${cleanUrl}/royaumes_rooms/${encodeURIComponent(testCode)}.json`;
-
-  try {
-    if (state.roomCode) {
-      const snap = buildFullRoomSnapshot();
-      const putRes = await fetch(endpoint, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(snap)
-      });
-      if (!putRes.ok) {
-        throw new Error(`HTTP ${putRes.status}`);
-      }
-      const remoteSnap = await pullSnapshotFromFirebase();
-      if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
-        applyRemotePayload(remoteSnap);
-      }
-    } else {
-      const getRes = await fetch(endpoint, { cache: "no-store" });
-      if (!getRes.ok) {
-        throw new Error(`HTTP ${getRes.status}`);
-      }
-    }
-
-    setFirebaseStatus(
-      "connected",
-      "🟢 Connecté",
-      `Synchronisation inter-appareils active sur ${cleanUrl} (room ${state.roomCode || "en attente"}).`
-    );
-    renderRoomPanel();
-    return true;
-  } catch (err) {
-    setFirebaseStatus(
-      "error",
-      "🔴 Accès refusé / hors ligne",
-      `Impossible d'écrire/lire sur ${cleanUrl} (${err && err.message ? err.message : "erreur réseau"}). Vérifie que la Realtime Database est créée et que les règles autorisent .read/.write sur royaumes_rooms.`
-    );
-    renderRoomPanel();
-    return false;
-  }
-}
-
-if (saveFirebaseBtn) {
-  // Replace previous listener cleanly by cloning button
-  const freshSaveBtn = saveFirebaseBtn.cloneNode(true);
-  saveFirebaseBtn.parentNode.replaceChild(freshSaveBtn, saveFirebaseBtn);
-  freshSaveBtn.addEventListener("click", async () => {
-    const val = document.getElementById("firebaseUrlInput")?.value || "";
-    await testAndConnectFirebase(val);
-  });
-}
-
-if (copyFirebaseRulesBtn) {
-  copyFirebaseRulesBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(RECOMMENDED_FIREBASE_RULES);
-      setFirebaseStatus(
-        "connected",
-        "📋 Règles copiées",
-        "Règles Firebase Realtime Database copiées dans le presse-papiers. Colle-les dans l'onglet « Règles » de ta base Firebase."
-      );
-    } catch (_) {
-      setFirebaseStatus(
-        "",
-        "🛡️ Règles recommandées",
-        RECOMMENDED_FIREBASE_RULES
-      );
-    }
-  });
-}
-
-if (clearFirebaseBtn) {
-  clearFirebaseBtn.addEventListener("click", () => {
-    roomSystem.firebaseBaseUrl = "";
-    const inputEl = document.getElementById("firebaseUrlInput");
-    if (inputEl) inputEl.value = "";
-    saveState({ skipBroadcast: true });
-    startRoomListeners();
-    setFirebaseStatus("", "⚪ Local uniquement", "Synchro Firebase désactivée (mode local / multi-onglets actif).");
-    renderRoomPanel();
-  });
-}
-
-// Initialize Firebase input & status indicator on load
-(() => {
-  const inputEl = document.getElementById("firebaseUrlInput");
-  const normalized = smartNormalizeFirebaseUrl(roomSystem.firebaseBaseUrl);
-  if (normalized) {
-    roomSystem.firebaseBaseUrl = normalized;
-    if (inputEl) inputEl.value = normalized + "/";
-    setFirebaseStatus("connected", "🟢 Configuré", `Base configurée : ${normalized}`);
-  } else {
-    setFirebaseStatus("", "⚪ Local uniquement", "Optionnel : ajoute une URL Firebase RTDB pour synchroniser PC, téléphone et amis.");
-  }
-})();
-
-
-
-
-// =========================================================
-// VRAIE SYNCHRO MULTI-APPAREILS (PC + TÉLÉPHONE + AMIS)
-// =========================================================
-const DEFAULT_RELAY_BASE = "https://ntfy.sh";
-let relayPollTimer = null;
-let lastSeenRelayMsgId = "";
-
-const relayStatusPill = document.getElementById("relayStatusPill");
-const forceSyncNowBtn = document.getElementById("forceSyncNowBtn");
-const toggleAdvancedSyncBtn = document.getElementById("toggleAdvancedSyncBtn");
-const advancedSyncDrawer = document.getElementById("advancedSyncDrawer");
-const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
-
-function getRelayBaseUrl() {
-  const custom = (roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
-  if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
-    return custom;
-  }
-  return DEFAULT_RELAY_BASE;
-}
-
-function getRoomTopic(code) {
-  const cleanCode = String(code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return `royaumes-melodies-room-${cleanCode}`;
-}
-
-function setRelayBanner(modeClass, badgeText, msgText) {
-  if (relayStatusPill) {
-    relayStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
-    relayStatusPill.textContent = badgeText;
-  }
-  if (firebaseDiagMsg && msgText) {
-    firebaseDiagMsg.textContent = msgText;
-  }
-}
-
-async function publishRoomSnapshotToRelay(snapshot) {
-  if (!snapshot || !snapshot.roomCode) return;
-  const base = getRelayBaseUrl();
-  const topic = getRoomTopic(snapshot.roomCode);
-  const url = `${base}/${encodeURIComponent(topic)}`;
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      body: JSON.stringify({
-        __royaumesRoomSync: true,
-        snapshot
-      })
-    });
-    if (res.ok) {
-      setRelayBanner(
-        "connected",
-        `🟢 Connecté • ${snapshot.roomCode}`,
-        `Room ${snapshot.roomCode} synchronisée à distance (${snapshot.members ? snapshot.members.length : 0} joueur(s)).`
-      );
-    }
-  } catch (_) {
-    setRelayBanner(
-      "",
-      "🟡 Canal local actif",
-      "Relais réseau injoignable : la synchro locale / multi-onglets reste active."
-    );
-  }
-}
-
-async function pullRoomSnapshotFromRelay(code) {
-  const cleanCode = String(code || "").trim().toUpperCase();
-  if (!cleanCode) return null;
-  const base = getRelayBaseUrl();
-  const topic = getRoomTopic(cleanCode);
-  const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=10m`;
-
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    const rawText = await res.text();
-    if (!rawText.trim()) return null;
-
-    const lines = rawText.trim().split("\n");
-    let newestSnap = null;
-
-    for (const line of lines) {
-      try {
-        const evt = JSON.parse(line);
-        if (evt && evt.event === "message" && typeof evt.message === "string") {
-          const parsedMsg = JSON.parse(evt.message);
-          if (parsedMsg && parsedMsg.__royaumesRoomSync && parsedMsg.snapshot) {
-            const snap = parsedMsg.snapshot;
-            if (snap.roomCode === cleanCode) {
-              if (!newestSnap || (snap.updatedAt || 0) >= (newestSnap.updatedAt || 0)) {
-                newestSnap = snap;
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    return newestSnap;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Hook into saveState so every room change pushes across devices as well as tabs
-const baseSaveState = saveState;
-saveState = function (options = {}) {
-  baseSaveState(options);
-  if (state.mode === "remote" && state.roomCode && !options.skipBroadcast) {
-    const snap = buildFullRoomSnapshot();
-    publishRoomSnapshotToRelay(snap);
-  }
-};
-
-// Hook into startRoomListeners to poll the shared network room topic regularly
-const baseStartRoomListeners = startRoomListeners;
-startRoomListeners = function () {
-  baseStartRoomListeners();
-  if (relayPollTimer) {
-    clearInterval(relayPollTimer);
-    relayPollTimer = null;
-  }
-  if (state.mode !== "remote" || !state.roomCode) return;
-
-  const pollNow = async () => {
-    if (state.mode !== "remote" || !state.roomCode) return;
-    const remoteSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
-      applyRemotePayload(remoteSnap);
-    }
-  };
-
-  pollNow();
-  relayPollTimer = setInterval(pollNow, 1500);
-};
-
-// Upgrade joinRoomBtn so joining from a phone/PC fetches the live room from the network relay immediately
-if (joinRoomBtn) {
-  const freshJoinBtn = joinRoomBtn.cloneNode(true);
-  joinRoomBtn.parentNode.replaceChild(freshJoinBtn, joinRoomBtn);
-  freshJoinBtn.addEventListener("click", async () => {
-    const code = (joinRoomInput?.value || "").trim().toUpperCase();
-    if (!code) return;
-
-    state.mode = "remote";
-    tabLocal.classList.remove("active");
-    tabRemote.classList.add("active");
-    remoteBox.style.display = "flex";
-
-    state.roomCode = code;
-    roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-    syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
-    startRoomListeners();
-
-    let loaded = null;
-    try {
-      loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
-    } catch (_) {}
-
-    const netSnap = await pullRoomSnapshotFromRelay(code);
-    if (netSnap && (!loaded || (netSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
-      loaded = netSnap;
-    }
-
-    if (loaded) {
-      applyRemotePayload(loaded);
-    } else {
-      roomSystem.hostId = roomSystem.clientId;
-      roomSystem.roomName = `Room ${code}`;
-    }
-
     upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-    appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
     roomSystem.updatedAt = Date.now();
     saveState();
     renderPlayers();
     renderBuzzUI();
     renderRoomPanel();
-  });
-}
-
-// Auto-join room when opened via ?room=CODE link on a phone or another PC
-(async () => {
-  if (state.mode === "remote" && state.roomCode) {
-    startRoomListeners();
-    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    if (netSnap && (netSnap.updatedAt || 0) >= (roomSystem.updatedAt || 0)) {
-      applyRemotePayload(netSnap);
-    }
-    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-    appendRoomSystemMessage(`${currentPseudo()} a rejoint via le lien d'invitation.`);
-    roomSystem.updatedAt = Date.now();
-    saveState();
-    renderPlayers();
-    renderBuzzUI();
-    renderRoomPanel();
-  }
-})();
-
-if (forceSyncNowBtn) {
-  forceSyncNowBtn.addEventListener("click", async () => {
-    if (!state.roomCode) {
-      createRoomBtn.click();
-      return;
-    }
-    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    if (netSnap && (netSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
-      applyRemotePayload(netSnap);
-    } else {
-      roomSystem.updatedAt = Date.now();
-      saveState();
-    }
-    setRelayBanner(
-      "connected",
-      `🟢 Synchronisé • ${state.roomCode}`,
-      `État à jour pour la room ${state.roomCode}. Partage le code ${state.roomCode} ou le lien d'invitation.`
-    );
-  });
-}
-
-if (toggleAdvancedSyncBtn && advancedSyncDrawer) {
-  toggleAdvancedSyncBtn.addEventListener("click", () => {
-    const isOpen = advancedSyncDrawer.style.display === "flex";
-    advancedSyncDrawer.style.display = isOpen ? "none" : "flex";
-  });
-}
-
-if (saveFirebaseBtn) {
-  const cleanSaveBtn = saveFirebaseBtn.cloneNode(true);
-  saveFirebaseBtn.parentNode.replaceChild(cleanSaveBtn, saveFirebaseBtn);
-  cleanSaveBtn.addEventListener("click", () => {
-    const raw = (document.getElementById("firebaseUrlInput")?.value || "").trim().replace(/\/+$/, "");
-    roomSystem.firebaseBaseUrl = raw && /^https?:\/\//i.test(raw) ? raw : "";
-    saveState({ skipBroadcast: true });
-    startRoomListeners();
-    setRelayBanner(
-      "connected",
-      "🌐 Relais mis à jour",
-      `Relais actif : ${getRelayBaseUrl()}`
-    );
-  });
-}
-
-if (clearFirebaseBtn) {
-  clearFirebaseBtn.addEventListener("click", () => {
-    roomSystem.firebaseBaseUrl = "";
-    const fbInput = document.getElementById("firebaseUrlInput");
-    if (fbInput) fbInput.value = "";
-    saveState({ skipBroadcast: true });
-    startRoomListeners();
-    setRelayBanner(
-      "connected",
-      "🌐 Relais réseau prêt",
-      `Relais par défaut actif (${DEFAULT_RELAY_BASE}).`
-    );
-  });
+  })();
 }
