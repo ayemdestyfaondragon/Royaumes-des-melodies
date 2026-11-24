@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disney Blind Test — Tableau des Scores & Animation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Cinzel Decorative"', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            midnight: '#070b19',
+            twilight: '#0e1730',
+            sapphire: '#162447',
+            gold: '#f5c542',
+            goldLight: '#ffe082',
+            goldDark: '#b8860b',
+          },
+          boxShadow: {
+            goldGlow: '0 0 24px rgba(245, 197, 66, 0.24)',
+            cardDark: '0 14px 35px rgba(0, 0, 0, 0.45)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* Ambiance ciel étoilé enchanté & finitions dorées */
+    body {
+      background-color: #070b19;
+      background-image:
+        radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.13) 0%, transparent 40%),
+        radial-gradient(circle at 80% 10%, rgba(245, 197, 66, 0.14) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(129, 140, 248, 0.12) 0%, transparent 50%),
+        linear-gradient(180deg, #060914 0%, #0b1226 55%, #070b19 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .starfield {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 28% 72%, rgba(255, 224, 130, 0.65), transparent),
+        radial-gradient(1.8px 1.8px at 45% 32%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1.2px 1.2px at 66% 14%, rgba(255, 224, 130, 0.8), transparent),
+        radial-gradient(1.5px 1.5px at 78% 64%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 91% 29%, rgba(186, 230, 253, 0.7), transparent),
+        radial-gradient(1.4px 1.4px at 8% 86%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1.2px 1.2px at 57% 88%, rgba(255, 224, 130, 0.6), transparent);
+      animation: twinkle 7s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.55; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes pulseScore {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.18); color: #ffe082; }
+      100% { transform: scale(1); }
+    }
+
+    .score-bump {
+      animation: pulseScore 0.35s ease-out;
+    }
+
+    /* Personnalisation discrète des barres de défilement */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(245, 197, 66, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(245, 197, 66, 0.6);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-gold/30 selection:text-goldLight">
+  <div class="starfield" aria-hidden="true"></div>
+
+  <!-- Bandeau de notification non-bloquant (remplace alert/confirm) -->
+  <div
+    id="toastBanner"
+    role="status"
+    aria-live="polite"
+    class="fixed top-4 right-4 z-50 max-w-sm transform transition-all duration-300 translate-x-[120%] opacity-0 pointer-events-none"
+  >
+    <div id="toastInner" class="flex items-start gap-3 rounded-2xl border border-gold/40 bg-twilight/95 px-4 py-3 text-sm text-slate-100 shadow-2xl backdrop-blur-md">
+      <span id="toastIcon" class="mt-0.5 text-base">✨</span>
+      <p id="toastMessage" class="leading-snug"></p>
+    </div>
+  </div>
+
+  <!-- Conteneur principal -->
+  <div class="relative z-10 mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+    <!-- En-tête principal -->
+    <header class="mb-6 flex flex-col gap-4 rounded-3xl border border-gold/25 bg-twilight/75 p-5 shadow-cardDark backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold tracking-wider text-goldLight uppercase">
+          <span>✦ Règle : +1 pt Titre · +1 pt Disney (Max 2 pts / manche)</span>
+        </div>
+        <h1 class="font-display text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-goldLight via-gold to-amber-300 sm:text-3xl lg:text-4xl">
+          Disney Blind Test
+        </h1>
+        <p class="text-xs text-slate-300 sm:text-sm">
+          Animation de soirée &amp; tableau des scores en direct — prêt pour vos playlists JSON et votre écran partagé.
+        </p>
+      </div>
+
+      <!-- Actions rapides de la barre supérieure -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button
+          id="toggleJudgeModeBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition hover:bg-gold/25 active:scale-[0.99] sm:text-sm"
+          title="Masquer ou afficher les réponses et notes côté plateau"
+        >
+          <span id="judgeModeIcon">👑</span>
+          <span id="judgeModeLabel">Mode Juge : Actif</span>
+        </button>
+
+        <button
+          id="openJsonModalBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/15 px-3.5 py-2.5 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/25 active:scale-[0.99] sm:text-sm"
+        >
+          <span>📂</span>
+          <span>Playlist JSON (<span id="playlistCountBadge">0</span>)</span>
+        </button>
+
+        <button
+          id="resetScoresBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3.5 py-2.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 active:scale-[0.99] sm:text-sm"
+        >
+          <span>🔄</span>
+          <span>Zéro scores</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Grille principale : Colonne Gauche (Manche & Audio) | Colonne Droite (Joueurs & Classement) -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <!-- COLONNE GAUCHE : Manche en cours, lecteur audio & historique -->
+      <section class="space-y-6 lg:col-span-5">
+        <!-- Carte Manche & Réponse -->
+        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b from-twilight/90 to-midnight/95 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gold/20 text-sm font-bold text-goldLight border border-gold/30">
+                #<span id="roundNumberDisplay">1</span>
+              </span>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Manche en cours</p>
+                <p id="poolStatusText" class="text-xs text-goldLight/90">Pioche : 0 / 0 joués</p>
+              </div>
+            </div>
+
+            <button
+              id="resetPoolBtn"
+              type="button"
+              class="rounded-xl border border-slate-600/60 bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
+              title="Relancer le tirage de toutes les chansons"
+            >
+              🎲 Réinitialiser la pioche
+            </button>
+          </div>
+
+          <!-- Zone d'affichage de la piste / réponse -->
+          <div id="trackStage" class="mb-5 rounded-2xl border border-slate-700/70 bg-midnight/80 p-4 sm:p-5">
+            <div class="flex items-start gap-4">
+              <!-- Visuel / Pochette stylisée sans image externe cassée -->
+              <div
+                id="coverBadge"
+                class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gradient-to-br from-sapphire via-indigo-950 to-midnight text-2xl shadow-inner sm:h-20 sm:w-20 sm:text-3xl"
+              >
+                🏰
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <p id="trackHintLabel" class="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
+                  Écoutez l'extrait...
+                </p>
+
+                <!-- Réponse masquée tant que non révélée -->
+                <div id="hiddenAnswerBox" class="mt-1.5 space-y-1">
+                  <p class="text-lg font-bold text-white sm:text-xl">Titre : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-goldLight">??? (1 pt)</span></p>
+                  <p class="text-sm font-medium text-slate-300">Disney : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-sky-300">??? (1 pt)</span></p>
+                  <p id="judgeCheatPeek" class="mt-2 rounded-xl border border-gold/25 bg-gold/10 px-2.5 py-1.5 text-xs text-goldLight">
+                    💡 <span class="font-semibold">Aperçu Juge :</span> <span id="judgePeekText">Chargement...</span>
+                  </p>
+                </div>
+
+                <!-- Réponse révélée -->
+                <div id="revealedAnswerBox" class="mt-1.5 hidden space-y-1.5">
+                  <p class="text-lg font-bold text-goldLight sm:text-xl" id="revealedTitle">—</p>
+                  <p class="text-sm font-semibold text-sky-300 sm:text-base" id="revealedMovie">—</p>
+                  <p id="revealedNotes" class="text-xs italic text-slate-300"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lecteur Audio HTML5 intégré -->
+          <div class="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/75 p-3.5">
+            <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+              <span id="audioSourceStatus" class="font-medium text-slate-300">Aucun lien audio sur cette piste</span>
+              <span id="audioTimeDisplay" class="font-mono text-slate-400">00:00 / 00:00</span>
+            </div>
+
+            <audio id="audioPlayer" preload="metadata" class="hidden"></audio>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                id="playPauseBtn"
+                type="button"
+                disabled
+                class="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-midnight transition hover:bg-goldLight disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span id="playPauseIcon">▶</span>
+                <span id="playPauseLabel">Lecture</span>
+              </button>
+
+              <!-- Barre de progression cliquable -->
+              <input
+                id="seekSlider"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                step="0.1"
+                disabled
+                aria-label="Position de lecture audio"
+                class="h-2 min-w-[110px] flex-1 cursor-pointer accent-gold disabled:cursor-not-allowed disabled:opacity-40"
+              />
+
+              <!-- Volume -->
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-slate-300" aria-hidden="true">🔊</span>
+                <input
+                  id="volumeSlider"
+                  type="range"
+                  min="0"
+                  max="1"
+                  value="0.8"
+                  step="0.05"
+                  aria-label="Volume audio"
+                  class="h-1.5 w-20 cursor-pointer accent-gold"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Boutons principaux de la manche -->
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              id="revealAnswerBtn"
+              type="button"
+              class="flex items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-gradient-to-r from-amber-500/25 to-gold/25 px-4 py-3 text-sm font-bold text-goldLight shadow-goldGlow transition hover:from-amber-500/35 hover:to-gold/35 active:scale-[0.99]"
+            >
+              <span>✨</span>
+              <span>Révéler la réponse</span>
+            </button>
+
+            <button
+              id="nextTrackBtn"
+              type="button"
+              class="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold to-amber-400 px-4 py-3 text-sm font-bold text-midnight shadow-lg transition hover:brightness-105 active:scale-[0.99]"
+            >
+              <span>⏭️</span>
+              <span>Manche suivante</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Carte Historique des manches -->
+        <div class="rounded-3xl border border-slate-700/70 bg-twilight/75 p-5 shadow-cardDark backdrop-blur-md">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="font-display text-base font-bold text-goldLight sm:text-lg">
+              📜 Historique des manches
+            </h2>
+            <span id="historyCountLabel" class="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+              0 manche
+            </span>
+          </div>
+          <div id="historyList" class="max-h-72 space-y-2.5 overflow-y-auto pr-1 text-sm">
+            <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-center text-xs text-slate-400">
+              Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la manche suivante !
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLONNE DROITE : Ajout joueurs, cartes de score & classement en direct -->
+      <section class="space-y-6 lg:col-span-7">
+        <!-- Ajout d'un joueur -->
+        <div class="rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md">
+          <form id="addPlayerForm" class="flex flex-col gap-3 sm:flex-row">
+            <label for="newPlayerInput" class="sr-only">Nom du joueur ou de l'équipe</label>
+            <input
+              id="newPlayerInput"
+              type="text"
+              maxlength="28"
+              placeholder="Ajouter un joueur ou une équipe (ex: Belle, Stitch, Équipe Étoiles...)"
+              class="flex-1 rounded-2xl border border-slate-600/70 bg-midnight/85 px-4 py-3 text-sm text-white placeholder-slate-400 outline-none transition focus:border-gold"
+            />
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-3 text-sm font-bold text-midnight transition hover:bg-goldLight active:scale-[0.99]"
+            >
+              <span>➕</span>
+              <span>Ajouter</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Cartes d'attribution rapide des points (+1 Titre / +1 Disney / +2 Combo / -1) -->
+        <div class="rounded-3xl border border-gold/25 bg-twilight/80 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="font-display text-lg font-bold text-goldLight sm:text-xl">
+                ⭐ Comptoir des Points
+              </h2>
+              <p class="text-xs text-slate-300">
+                Cliquez pour attribuer <strong class="text-goldLight">+1 Titre</strong>, <strong class="text-sky-300">+1 Disney</strong> ou <strong class="text-emerald-300">+2 Combo</strong> sur la manche active.
+              </p>
+            </div>
+            <span class="rounded-xl border border-gold/25 bg-midnight/70 px-3 py-1 text-xs font-semibold text-slate-300">
+              <span id="playersCountLabel">0</span> joueur(s)
+            </span>
+          </div>
+
+          <div id="playersGrid" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <!-- Rempli dynamiquement en JavaScript -->
+          </div>
+        </div>
+
+        <!-- Classement en direct (Leaderboard) -->
+        <div class="rounded-3xl border border-gold/30 bg-gradient-to-b from-twilight/85 to-midnight/95 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="font-display text-lg font-bold text-goldLight sm:text-xl">
+              🏆 Classement en Direct
+            </h2>
+            <span class="text-xs text-slate-400">Trié par score total</span>
+          </div>
+
+          <div id="leaderboardList" class="space-y-2.5">
+            <!-- Rempli dynamiquement en JavaScript -->
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- MODALE / PANNEAU PLAYLIST JSON (Coller, Importer .json, Exporter) -->
+  <div
+    id="jsonModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="jsonModalTitle"
+  >
+    <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-gold/40 bg-twilight p-5 shadow-2xl sm:p-6">
+      <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-700/80 pb-3">
+        <div>
+          <h2 id="jsonModalTitle" class="font-display text-lg font-bold text-goldLight sm:text-xl">
+            📂 Gestionnaire de Playlist JSON
+          </h2>
+          <p class="text-xs text-slate-300">
+            Champs attendus par piste : <code class="rounded bg-midnight px-1.5 py-0.5 text-goldLight">title</code>, <code class="rounded bg-midnight px-1.5 py-0.5 text-sky-300">disney</code> (ou <code class="text-sky-300">movie</code>), et optionnellement <code class="text-emerald-300">audioUrl</code> (ou <code class="text-emerald-300">previewUrl</code>) + <code class="text-slate-300">notes</code>.
+          </p>
+        </div>
+        <button
+          id="closeJsonModalBtn"
+          type="button"
+          aria-label="Fermer la fenêtre JSON"
+          class="rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm font-bold text-slate-200 transition hover:bg-slate-700"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Barre d'import fichier & export -->
+      <div class="mb-4 flex flex-wrap items-center gap-2.5">
+        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3.5 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/25">
+          <span>📥 Importer un fichier .json</span>
+          <input id="jsonFileInput" type="file" accept=".json,application/json" class="hidden" />
+        </label>
+
+        <button
+          id="exportJsonBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2 text-xs font-semibold text-goldLight transition hover:bg-gold/25"
+        >
+          <span>📤 Exporter / Télécharger .json</span>
+        </button>
+
+        <button
+          id="loadDefaultJsonBtn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/75 px-3.5 py-2 text-xs font-semibold text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
+        >
+          <span>✨ Liste Disney par défaut</span>
+        </button>
+      </div>
+
+      <!-- Zone d'édition / collage JSON -->
+      <div class="mb-3">
+        <label for="jsonTextarea" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+          Contenu JSON (tableau de pistes)
+        </label>
+        <textarea
+          id="jsonTextarea"
+          rows="12"
+          spellcheck="false"
+          class="w-full rounded-2xl border border-slate-600/80 bg-midnight p-3.5 font-mono text-xs leading-relaxed text-slate-100 outline-none focus:border-gold"
+        ></textarea>
+      </div>
+
+      <!-- Message de validation JSON -->
+      <div id="jsonValidationBox" class="mb-4 hidden rounded-2xl border px-3.5 py-2.5 text-xs"></div>
+
+      <div class="flex flex-wrap justify-end gap-2.5">
+        <button
+          id="cancelJsonModalBtn"
+          type="button"
+          class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+        >
+          Annuler
+        </button>
+        <button
+          id="applyJsonBtn"
+          type="button"
+          class="rounded-xl bg-gold px-5 py-2.5 text-xs font-bold text-midnight transition hover:bg-goldLight"
+        >
+          ✓ Appliquer et sauvegarder la playlist
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * DISNEY BLIND TEST — LOGIQUE PRINCIPALE (SINGLE FILE / GITHUB PAGES READY)
+     * Règles de score :
+     *   - +1 pt pour le Titre de la chanson ("Titre")
+     *   - +1 pt pour le film / source Disney ("Disney")
+     *   - Maximum +2 pts par manche et par joueur
+     * =========================================================================
+     */
+
+    const STORAGE_KEYS = {
+      STATE: 'disney_blind_test_state_v1',
+    };
+
+    // Playlist d'exemple intégrée (sans dépendance externe cassée ; audioUrl optionnel)
+    const DEFAULT_PLAYLIST = [
+      {
+        id: 'track-1',
+        title: 'L’Histoire de la vie',
+        disney: 'Le Roi Lion',
+        emoji: '🦁',
+        audioUrl: '',
+        notes: 'Ouverture mythique sur les plaines de la Terre des Lions (1994).'
+      },
+      {
+        id: 'track-2',
+        title: 'Ce rêve bleu',
+        disney: 'Aladdin',
+        emoji: '🧞‍♂️',
+        audioUrl: '',
+        notes: 'Duo sur le tapis volant au-dessus d’Agrabah.'
+      },
+      {
+        id: 'track-3',
+        title: 'Libérée, délivrée',
+        disney: 'La Reine des neiges',
+        emoji: '❄️',
+        audioUrl: '',
+        notes: 'L’ascension d’Elsa vers son palais de glace.'
+      },
+      {
+        id: 'track-4',
+        title: 'Sous l’océan',
+        disney: 'La Petite Sirène',
+        emoji: '🧜‍♀️',
+        audioUrl: '',
+        notes: 'Sébastien tente de convaincre Ariel de rester sous l’eau.'
+      },
+      {
+        id: 'track-5',
+        title: 'Un peu d’amour, un brin de miel',
+        disney: 'Les Aventures de Winnie l’Ourson',
+        emoji: '🍯',
+        audioUrl: '',
+        notes: 'Douceur et pot de miel dans la Forêt des Rêves Bleus.'
+      },
+      {
+        id: 'track-6',
+        title: 'Je voudrais déjà être roi',
+        disney: 'Le Roi Lion',
+        emoji: '👑',
+        audioUrl: '',
+        notes: 'Simba et Zazu en pleine répétition royale.'
+      },
+      {
+        id: 'track-7',
+        title: 'Ne parlons pas de Bruno',
+        disney: 'Encanto',
+        emoji: '🦋',
+        audioUrl: '',
+        notes: 'La chanson chorale de la famille Madrigal.'
+      },
+      {
+        id: 'track-8',
+        title: 'Tout le monde veut devenir un cat',
+        disney: 'Les Aristochats',
+        emoji: '🐱',
+        audioUrl: '',
+        notes: 'Le swing endiablé de Scat Cat et ses amis à Paris.'
+      },
+      {
+        id: 'track-9',
+        title: 'Tellement d’amour',
+        disney: 'Raiponce',
+        emoji: ' lanternes'.trim(),
+        audioUrl: '',
+        notes: 'L’envol des lanternes célestes au fil de l’eau.'
+      },
+      {
+        id: 'track-10',
+        title: 'Le Bleu Lumière',
+        disney: 'Vaiana, la légende du bout du monde',
+        emoji: '🌊',
+        audioUrl: '',
+        notes: 'L’appel de l’océan vers l’horizon.'
+      }
+    ];
+
+    const DEFAULT_PLAYERS = [
+      { id: 'p-1', name: 'Joueur 1', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
+      { id: 'p-2', name: 'Joueur 2', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
+    ];
+
+    // État global de l'application
+    let state = {
+      playlist: cloneData(DEFAULT_PLAYLIST),
+      players: cloneData(DEFAULT_PLAYERS),
+      currentTrackId: null,
+      playedTrackIds: [],
+      roundNumber: 1,
+      answerRevealed: false,
+      judgeMode: true, // Mode Juge / Maître du jeu activé par défaut
+      history: [],
+    };
+
+    // Références DOM
+    const dom = {
+      toastBanner: document.getElementById('toastBanner'),
+      toastInner: document.getElementById('toastInner'),
+      toastIcon: document.getElementById('toastIcon'),
+      toastMessage: document.getElementById('toastMessage'),
+
+      toggleJudgeModeBtn: document.getElementById('toggleJudgeModeBtn'),
+      judgeModeIcon: document.getElementById('judgeModeIcon'),
+      judgeModeLabel: document.getElementById('judgeModeLabel'),
+      openJsonModalBtn: document.getElementById('openJsonModalBtn'),
+      playlistCountBadge: document.getElementById('playlistCountBadge'),
+      resetScoresBtn: document.getElementById('resetScoresBtn'),
+
+      roundNumberDisplay: document.getElementById('roundNumberDisplay'),
+      poolStatusText: document.getElementById('poolStatusText'),
+      resetPoolBtn: document.getElementById('resetPoolBtn'),
+
+      coverBadge: document.getElementById('coverBadge'),
+      trackHintLabel: document.getElementById('trackHintLabel'),
+      hiddenAnswerBox: document.getElementById('hiddenAnswerBox'),
+      judgeCheatPeek: document.getElementById('judgeCheatPeek'),
+      judgePeekText: document.getElementById('judgePeekText'),
+      revealedAnswerBox: document.getElementById('revealedAnswerBox'),
+      revealedTitle: document.getElementById('revealedTitle'),
+      revealedMovie: document.getElementById('revealedMovie'),
+      revealedNotes: document.getElementById('revealedNotes'),
+
+      audioPlayer: document.getElementById('audioPlayer'),
+      audioSourceStatus: document.getElementById('audioSourceStatus'),
+      audioTimeDisplay: document.getElementById('audioTimeDisplay'),
+      playPauseBtn: document.getElementById('playPauseBtn'),
+      playPauseIcon: document.getElementById('playPauseIcon'),
+      playPauseLabel: document.getElementById('playPauseLabel'),
+      seekSlider: document.getElementById('seekSlider'),
+      volumeSlider: document.getElementById('volumeSlider'),
+
+      revealAnswerBtn: document.getElementById('revealAnswerBtn'),
+      nextTrackBtn: document.getElementById('nextTrackBtn'),
+
+      historyCountLabel: document.getElementById('historyCountLabel'),
+      historyList: document.getElementById('historyList'),
+
+      addPlayerForm: document.getElementById('addPlayerForm'),
+      newPlayerInput: document.getElementById('newPlayerInput'),
+      playersCountLabel: document.getElementById('playersCountLabel'),
+      playersGrid: document.getElementById('playersGrid'),
+      leaderboardList: document.getElementById('leaderboardList'),
+
+      jsonModal: document.getElementById('jsonModal'),
+      closeJsonModalBtn: document.getElementById('closeJsonModalBtn'),
+      cancelJsonModalBtn: document.getElementById('cancelJsonModalBtn'),
+      jsonFileInput: document.getElementById('jsonFileInput'),
+      exportJsonBtn: document.getElementById('exportJsonBtn'),
+      loadDefaultJsonBtn: document.getElementById('loadDefaultJsonBtn'),
+      jsonTextarea: document.getElementById('jsonTextarea'),
+      jsonValidationBox: document.getElementById('jsonValidationBox'),
+      applyJsonBtn: document.getElementById('applyJsonBtn'),
+    };
+
+    let toastTimeoutId = null;
+
+    /**
+     * Copie profonde sécurisée via JSON
+     */
+    function cloneData(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    /**
+     * Affiche un message toast non-bloquant en haut à droite
+     */
+    function showToast(message, type = 'info') {
+      if (toastTimeoutId) clearTimeout(toastTimeoutId);
+
+      const styles = {
+        info: { icon: '✨', border: 'border-gold/45', text: 'text-slate-100' },
+        success: { icon: '🌟', border: 'border-emerald-400/50', text: 'text-emerald-100' },
+        error: { icon: '⚠️', border: 'border-rose-400/60', text: 'text-rose-100' },
+      };
+      const cfg = styles[type] || styles.info;
+
+      dom.toastInner.className = `flex items-start gap-3 rounded-2xl border ${cfg.border} bg-twilight/95 px-4 py-3 text-sm ${cfg.text} shadow-2xl backdrop-blur-md`;
+      dom.toastIcon.textContent = cfg.icon;
+      dom.toastMessage.textContent = message;
+
+      dom.toastBanner.classList.remove('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      dom.toastBanner.classList.add('translate-x-0', 'opacity-100');
+
+      toastTimeoutId = setTimeout(() => {
+        dom.toastBanner.classList.remove('translate-x-0', 'opacity-100');
+        dom.toastBanner.classList.add('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      }, 3200);
+    }
+
+    /**
+     * Sauvegarde l'état complet dans localStorage avec gestion d'erreur
+     */
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
+      } catch (err) {
+        console.error('Erreur sauvegarde localStorage :', err);
+        showToast('Impossible de sauvegarder dans le stockage local.', 'error');
+      }
+    }
+
+    /**
+     * Normalise et valide un tableau de pistes JSON
+     * Accepte plusieurs noms de champs courants (title/titre, disney/movie/film, audioUrl/previewUrl/audio)
+     */
+    function parseAndNormalizePlaylist(rawInput) {
+      let parsed = rawInput;
+      if (typeof rawInput === 'string') {
+        parsed = JSON.parse(rawInput);
+      }
+
+      // Permet aussi un objet englobant { playlist: [...] } ou { tracks: [...] }
+      if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.playlist)) parsed = parsed.playlist;
+        else if (Array.isArray(parsed.tracks)) parsed = parsed.tracks;
+        else if (Array.isArray(parsed.items)) parsed = parsed.items;
+      }
+
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Le JSON doit contenir un tableau non vide de pistes (ex: [{"title": "...", "disney": "..."}]).');
+      }
+
+      const normalized = parsed.map((item, idx) => {
+        if (!item || typeof item !== 'object') {
+          throw new Error(`Élément #${idx + 1} invalide : un objet est attendu.`);
+        }
+
+        const title = String(item.title ?? item.titre ?? item.song ?? item.name ?? '').trim();
+        const disney = String(item.disney ?? item.movie ?? item.film ?? item.source ?? item.show ?? '').trim();
+        const audioUrl = String(item.audioUrl ?? item.previewUrl ?? item.audio ?? item.url ?? '').trim();
+        const notes = String(item.notes ?? item.note ?? item.info ?? '').trim();
+        const emoji = String(item.emoji ?? '🎵').trim() || '🎵';
+
+        if (!title || !disney) {
+          throw new Error(`Piste #${idx + 1} incomplète : "title" et "disney" sont requis.`);
+        }
+
+        // Vérifie si l'URL audio est une URL HTTP(S) ou chemin relatif valide
+        let safeAudioUrl = '';
+        if (audioUrl) {
+          const isHttp = /^https?:\/\//i.test(audioUrl);
+          const isRelative = /^(\.\/|\.\.\/|\/|[\w.-]+\/)/.test(audioUrl);
+          if (isHttp || isRelative) {
+            safeAudioUrl = audioUrl;
+          } else {
+            throw new Error(`Piste "${title}" : URL audio invalide ("${audioUrl}").`);
+          }
+        }
+
+        return {
+          id: String(item.id || `track-${idx + 1}-${title.slice(0, 8)}`),
+          title,
+          disney,
+          audioUrl: safeAudioUrl,
+          notes,
+          emoji,
+        };
+      });
+
+      return normalized;
+    }
+
+    /**
+     * Charge l'état depuis localStorage ou initialise avec les valeurs par défaut
+     */
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.STATE);
+        if (!raw) {
+          ensureCurrentTrack();
+          return;
+        }
+
+        const saved = JSON.parse(raw);
+        if (saved && typeof saved === 'object') {
+          try {
+            state.playlist = parseAndNormalizePlaylist(saved.playlist);
+          } catch {
+            state.playlist = cloneData(DEFAULT_PLAYLIST);
+          }
+
+          if (Array.isArray(saved.players) && saved.players.length > 0) {
+            state.players = saved.players.map((p, i) => ({
+              id: String(p.id || `p-${i + 1}`),
+              name: String(p.name || `Joueur ${i + 1}`).trim() || `Joueur ${i + 1}`,
+              score: Number.isFinite(Number(p.score)) ? Number(p.score) : 0,
+              titlePoints: Number.isFinite(Number(p.titlePoints)) ? Number(p.titlePoints) : 0,
+              disneyPoints: Number.isFinite(Number(p.disneyPoints)) ? Number(p.disneyPoints) : 0,
+              roundEarned: Number.isFinite(Number(p.roundEarned)) ? Number(p.roundEarned) : 0,
+            }));
+          }
+
+          state.playedTrackIds = Array.isArray(saved.playedTrackIds) ? saved.playedTrackIds.map(String) : [];
+          state.currentTrackId = saved.currentTrackId ? String(saved.currentTrackId) : null;
+          state.roundNumber = Number.isFinite(Number(saved.roundNumber)) && Number(saved.roundNumber) >= 1
+            ? Number(saved.roundNumber)
+            : 1;
+          state.answerRevealed = Boolean(saved.answerRevealed);
+          state.judgeMode = typeof saved.judgeMode === 'boolean' ? saved.judgeMode : true;
+          state.history = Array.isArray(saved.history) ? saved.history : [];
+        }
+      } catch (err) {
+        console.warn('Chargement état par défaut suite à erreur :', err);
+        state.playlist = cloneData(DEFAULT_PLAYLIST);
+        state.players = cloneData(DEFAULT_PLAYERS);
+      }
+
+      ensureCurrentTrack();
+    }
+
+    /**
+     * S'assure qu'une piste active valide est sélectionnée
+     */
+    function ensureCurrentTrack() {
+      if (!state.playlist.length) {
+        state.currentTrackId = null;
+        return;
+      }
+
+      const exists = state.playlist.some((t) => t.id === state.currentTrackId);
+      if (!exists) {
+        const unplayed = state.playlist.filter((t) => !state.playedTrackIds.includes(t.id));
+        const candidatePool = unplayed.length > 0 ? unplayed : state.playlist;
+        const randomTrack = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+        state.currentTrackId = randomTrack.id;
+        if (!state.playedTrackIds.includes(randomTrack.id)) {
+          state.playedTrackIds.push(randomTrack.id);
+        }
+      }
+    }
+
+    /**
+     * Retourne l'objet piste actuellement actif
+     */
+    function getCurrentTrack() {
+      return state.playlist.find((t) => t.id === state.currentTrackId) || state.playlist[0] || null;
+    }
+
+    /**
+     * Passe à la manche suivante en évitant les doublons dans la session en cours
+     */
+    function nextRound() {
+      if (!state.playlist.length) {
+        showToast('Ajoutez d’abord des chansons dans la playlist JSON.', 'error');
+        return;
+      }
+
+      // Enregistre la manche précédente dans l'historique si des points ont été marqués ou si révélée
+      const prevTrack = getCurrentTrack();
+      if (prevTrack) {
+        const scorers = state.players
+          .filter((p) => p.roundEarned !== 0)
+          .map((p) => ({ name: p.name, earned: p.roundEarned }));
+
+        if (scorers.length > 0 || state.answerRevealed) {
+          state.history.unshift({
+            round: state.roundNumber,
+            title: prevTrack.title,
+            disney: prevTrack.disney,
+            scorers,
+            timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          });
+          if (state.history.length > 40) state.history.pop();
+        }
+      }
+
+      // Réinitialise les gains ponctuels de la manche pour chaque joueur
+      state.players.forEach((p) => {
+        p.roundEarned = 0;
+      });
+
+      // Pioche parmi les morceaux non encore joués
+      const unplayed = state.playlist.filter((t) => !state.playedTrackIds.includes(t.id));
+
+      if (unplayed.length === 0) {
+        showToast('Toutes les chansons de la playlist ont été jouées ! Relancez la pioche si besoin.', 'info');
+        saveState();
+        renderAll();
+        return;
+      }
+
+      const nextTrack = unplayed[Math.floor(Math.random() * unplayed.length)];
+      state.currentTrackId = nextTrack.id;
+      state.playedTrackIds.push(nextTrack.id);
+      state.roundNumber += 1;
+      state.answerRevealed = false;
+
+      stopAudio();
+      loadCurrentTrackAudio(nextTrack);
+      saveState();
+      renderAll();
+      showToast(`Manche #${state.roundNumber} prête !`, 'info');
+    }
+
+    /**
+     * Réinitialise la pioche des chansons jouées dans la session
+     */
+    function resetPool() {
+      if (!state.playlist.length) return;
+      state.playedTrackIds = [];
+      const current = getCurrentTrack();
+      if (current) {
+        state.playedTrackIds.push(current.id);
+      }
+      saveState();
+      renderTrackStage();
+      showToast('Pioche réinitialisée : toutes les pistes sont de nouveau disponibles.', 'success');
+    }
+
+    /**
+     * Attribue des points à un joueur avec garde-fou maximum de +2 pts par manche
+     * type: 'title' (+1), 'disney' (+1), 'combo' (+2), 'minus' (-1)
+     */
+    function adjustPlayerScore(playerId, type) {
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player) return;
+
+      const currentRoundEarned = Number(player.roundEarned || 0);
+
+      if (type === 'title') {
+        if (currentRoundEarned + 1 > 2) {
+          showToast(`${player.name} a déjà atteint le maximum de +2 pts sur cette manche.`, 'info');
+          return;
+        }
+        player.score += 1;
+        player.titlePoints += 1;
+        player.roundEarned = currentRoundEarned + 1;
+        showToast(`+1 Titre pour ${player.name} !`, 'success');
+      } else if (type === 'disney') {
+        if (currentRoundEarned + 1 > 2) {
+          showToast(`${player.name} a déjà atteint le maximum de +2 pts sur cette manche.`, 'info');
+          return;
+        }
+        player.score += 1;
+        player.disneyPoints += 1;
+        player.roundEarned = currentRoundEarned + 1;
+        showToast(`+1 Disney pour ${player.name} !`, 'success');
+      } else if (type === 'combo') {
+        const allowedAdd = Math.max(0, 2 - currentRoundEarned);
+        if (allowedAdd === 0) {
+          showToast(`${player.name} a déjà ses +2 pts de manche.`, 'info');
+          return;
+        }
+        player.score += allowedAdd;
+        player.roundEarned = currentRoundEarned + allowedAdd;
+        if (allowedAdd === 2) {
+          player.titlePoints += 1;
+          player.disneyPoints += 1;
+          showToast(`+2 Combo (Titre + Disney) pour ${player.name} !`, 'success');
+        } else {
+          showToast(`+${allowedAdd} pt ajouté pour ${player.name} (plafond +2/manche).`, 'success');
+        }
+      } else if (type === 'minus') {
+        player.score -= 1;
+        player.roundEarned = Math.max(-2, currentRoundEarned - 1);
+        showToast(`-1 point pour ${player.name}.`, 'info');
+      }
+
+      saveState();
+      renderPlayersAndLeaderboard(playerId);
+    }
+
+    /**
+     * Ajoute un nouveau joueur
+     */
+    function addPlayer(name) {
+      const cleanName = String(name || '').trim();
+      if (!cleanName) {
+        showToast('Entrez un nom de joueur ou d’équipe.', 'error');
+        return;
+      }
+
+      state.players.push({
+        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: cleanName,
+        score: 0,
+        titlePoints: 0,
+        disneyPoints: 0,
+        roundEarned: 0,
+      });
+
+      saveState();
+      renderPlayersAndLeaderboard();
+      showToast(`${cleanName} rejoint la partie !`, 'success');
+    }
+
+    /**
+     * Renomme un joueur existant
+     */
+    function renamePlayer(playerId, newName) {
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player) return;
+      const cleanName = String(newName || '').trim();
+      if (!cleanName) {
+        renderPlayersAndLeaderboard();
+        return;
+      }
+      player.name = cleanName;
+      saveState();
+      renderPlayersAndLeaderboard();
+    }
+
+    /**
+     * Supprime un joueur
+     */
+    function removePlayer(playerId) {
+      if (state.players.length <= 1) {
+        showToast('Il faut garder au moins 1 joueur ou équipe.', 'error');
+        return;
+      }
+      const target = state.players.find((p) => p.id === playerId);
+      state.players = state.players.filter((p) => p.id !== playerId);
+      saveState();
+      renderPlayersAndLeaderboard();
+      if (target) showToast(`${target.name} a été retiré.`, 'info');
+    }
+
+    /**
+     * Remet tous les scores et l'historique à zéro
+     */
+    function resetAllScores() {
+      state.players.forEach((p) => {
+        p.score = 0;
+        p.titlePoints = 0;
+        p.disneyPoints = 0;
+        p.roundEarned = 0;
+      });
+      state.history = [];
+      state.roundNumber = 1;
+      saveState();
+      renderAll();
+      showToast('Tous les scores et l’historique ont été remis à zéro.', 'success');
+    }
+
+    /**
+     * =========================================================================
+     * GESTION AUDIO HTML5 (<audio>)
+     * =========================================================================
+     */
+    function stopAudio() {
+      try {
+        dom.audioPlayer.pause();
+        dom.audioPlayer.currentTime = 0;
+      } catch {
+        // Ignore si non chargé
+      }
+      updatePlayPauseUI(false);
+    }
+
+    function loadCurrentTrackAudio(track) {
+      stopAudio();
+      dom.seekSlider.value = 0;
+      dom.audioTimeDisplay.textContent = '00:00 / 00:00';
+
+      if (track && track.audioUrl) {
+        dom.audioPlayer.src = track.audioUrl;
+        dom.audioPlayer.load();
+        dom.playPauseBtn.disabled = false;
+        dom.seekSlider.disabled = false;
+        dom.audioSourceStatus.textContent = 'Extrait audio prêt';
+        dom.audioSourceStatus.className = 'font-medium text-emerald-300';
+      } else {
+        dom.audioPlayer.removeAttribute('src');
+        dom.playPauseBtn.disabled = true;
+        dom.seekSlider.disabled = true;
+        dom.audioSourceStatus.textContent = 'Pas d’URL audio — diffusez votre source ou ajoutez audioUrl en JSON';
+        dom.audioSourceStatus.className = 'font-medium text-slate-400';
+      }
+    }
+
+    function updatePlayPauseUI(isPlaying) {
+      dom.playPauseIcon.textContent = isPlaying ? '⏸' : '▶';
+      dom.playPauseLabel.textContent = isPlaying ? 'Pause' : 'Lecture';
+    }
+
+    function formatTime(sec) {
+      if (!Number.isFinite(sec) || sec < 0) return '00:00';
+      const mins = Math.floor(sec / 60);
+      const rem = Math.floor(sec % 60);
+      return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+    }
+
+    /**
+     * =========================================================================
+     * RENDU INTERFACE
+     * =========================================================================
+     */
+    function renderJudgeModeButton() {
+      if (state.judgeMode) {
+        dom.judgeModeIcon.textContent = '👑';
+        dom.judgeModeLabel.textContent = 'Mode Juge : Actif';
+        dom.toggleJudgeModeBtn.className =
+          'inline-flex items-center gap-2 rounded-xl border border-gold/50 bg-gold/20 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition hover:bg-gold/30 sm:text-sm';
+      } else {
+        dom.judgeModeIcon.textContent = '👀';
+        dom.judgeModeLabel.textContent = 'Écran Joueurs : Masqué';
+        dom.toggleJudgeModeBtn.className =
+          'inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3.5 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-gold/40 sm:text-sm';
+      }
+    }
+
+    function renderTrackStage() {
+      const track = getCurrentTrack();
+      dom.playlistCountBadge.textContent = String(state.playlist.length);
+      dom.roundNumberDisplay.textContent = String(state.roundNumber);
+
+      const playedCount = state.playedTrackIds.length;
+      dom.poolStatusText.textContent = `Pioche : ${playedCount} / ${state.playlist.length} joués`;
+
+      if (!track) {
+        dom.coverBadge.textContent = '🎶';
+        dom.trackHintLabel.textContent = 'Aucune piste disponible';
+        dom.hiddenAnswerBox.classList.remove('hidden');
+        dom.revealedAnswerBox.classList.add('hidden');
+        dom.judgeCheatPeek.classList.add('hidden');
+        return;
+      }
+
+      if (state.answerRevealed) {
+        dom.coverBadge.textContent = track.emoji || '✨';
+        dom.trackHintLabel.textContent = 'Réponse révélée';
+        dom.hiddenAnswerBox.classList.add('hidden');
+        dom.revealedAnswerBox.classList.remove('hidden');
+        dom.revealedTitle.textContent = `🎵 ${track.title}`;
+        dom.revealedMovie.textContent = `🎬 ${track.disney}`;
+        dom.revealedNotes.textContent = track.notes ? `💬 ${track.notes}` : '';
+        dom.revealAnswerBtn.innerHTML = '<span>✓</span><span>Réponse affichée</span>';
+      } else {
+        dom.coverBadge.textContent = state.judgeMode ? (track.emoji || '🏰') : '🏰';
+        dom.trackHintLabel.textContent = state.judgeMode
+          ? 'Mode Juge : réponse visible uniquement pour vous'
+          : 'Écoutez et trouvez le Titre (1 pt) & le Disney (1 pt)';
+        dom.hiddenAnswerBox.classList.remove('hidden');
+        dom.revealedAnswerBox.classList.add('hidden');
+        dom.revealAnswerBtn.innerHTML = '<span>✨</span><span>Révéler la réponse</span>';
+
+        if (state.judgeMode) {
+          dom.judgeCheatPeek.classList.remove('hidden');
+          dom.judgePeekText.textContent = `${track.title} — ${track.disney}`;
+        } else {
+          dom.judgeCheatPeek.classList.add('hidden');
+        }
+      }
+    }
+
+    function renderPlayersAndLeaderboard(bumpedPlayerId = null) {
+      dom.playersCountLabel.textContent = String(state.players.length);
+      dom.playersGrid.innerHTML = '';
+
+      state.players.forEach((player) => {
+        const roundEarned = Number(player.roundEarned || 0);
+        const card = document.createElement('div');
+        card.className =
+          'flex flex-col justify-between rounded-2xl border border-slate-700/80 bg-midnight/80 p-4 transition hover:border-gold/40';
+
+        const bumpClass = player.id === bumpedPlayerId ? 'score-bump' : '';
+
+        card.innerHTML = `
+          <div>
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <input
+                type="text"
+                value="${escapeHtml(player.name)}"
+                aria-label="Nom du joueur"
+                maxlength="28"
+                data-rename-id="${escapeHtml(player.id)}"
+                class="player-name-input min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-base font-bold text-white outline-none transition hover:border-slate-700 focus:border-gold focus:bg-slate-900"
+              />
+              <button
+                type="button"
+                data-remove-id="${escapeHtml(player.id)}"
+                title="Supprimer ce joueur"
+                aria-label="Supprimer ${escapeHtml(player.name)}"
+                class="remove-player-btn rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-300"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="mb-3 flex items-baseline justify-between rounded-xl border border-gold/20 bg-twilight/70 px-3 py-2">
+              <div>
+                <span class="text-xs text-slate-400">Score total</span>
+                <div class="text-[11px] text-slate-400">
+                  Titre: <span class="text-goldLight font-semibold">${player.titlePoints}</span> · Disney: <span class="text-sky-300 font-semibold">${player.disneyPoints}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="${bumpClass} font-display text-2xl font-bold text-goldLight">${player.score}</span>
+                <span class="block text-[11px] font-semibold ${roundEarned > 0 ? 'text-emerald-300' : 'text-slate-400'}">
+                  Manche : ${roundEarned > 0 ? `+${roundEarned}` : roundEarned}/2 pt
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              data-score-id="${escapeHtml(player.id)}"
+              data-score-type="title"
+              class="score-btn rounded-xl border border-gold/40 bg-gold/15 px-2.5 py-2 text-xs font-bold text-goldLight transition hover:bg-gold/25 active:scale-[0.98]"
+            >
+              +1 Titre
+            </button>
+            <button
+              type="button"
+              data-score-id="${escapeHtml(player.id)}"
+              data-score-type="disney"
+              class="score-btn rounded-xl border border-sky-400/40 bg-sky-500/15 px-2.5 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25 active:scale-[0.98]"
+            >
+              +1 Disney
+            </button>
+            <button
+              type="button"
+              data-score-id="${escapeHtml(player.id)}"
+              data-score-type="combo"
+              class="score-btn rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/25 active:scale-[0.98]"
+            >
+              +2 Combo
+            </button>
+            <button
+              type="button"
+              data-score-id="${escapeHtml(player.id)}"
+              data-score-type="minus"
+              class="score-btn rounded-xl border border-rose-400/35 bg-rose-500/10 px-2.5 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-500/20 active:scale-[0.98]"
+            >
+              -1 pt
+            </button>
+          </div>
+        `;
+
+        dom.playersGrid.appendChild(card);
+      });
+
+      // Classement trié par score décroissant
+      const sorted = [...state.players].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (b.titlePoints + b.disneyPoints) - (a.titlePoints + a.disneyPoints);
+      });
+
+      dom.leaderboardList.innerHTML = '';
+      const medals = ['🥇', '🥈', '🥉'];
+
+      sorted.forEach((p, idx) => {
+        const rankBadge = medals[idx] || `<span class="text-xs font-bold text-slate-400">#${idx + 1}</span>`;
+        const row = document.createElement('div');
+        const isTop = idx === 0 && p.score > 0;
+
+        row.className = `flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
+          isTop
+            ? 'border-gold/50 bg-gradient-to-r from-gold/15 via-amber-500/10 to-transparent'
+            : 'border-slate-700/70 bg-midnight/75'
+        }`;
+
+        row.innerHTML = `
+          <div class="flex min-w-0 items-center gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-800/90 text-base">
+              ${rankBadge}
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-bold text-white">${escapeHtml(p.name)}</p>
+              <p class="text-[11px] text-slate-400">${p.titlePoints} Titre(s) · ${p.disneyPoints} Disney</p>
+            </div>
+          </div>
+          <div class="font-display text-xl font-bold text-goldLight">${p.score} <span class="font-sans text-xs font-normal text-slate-400">pts</span></div>
+        `;
+        dom.leaderboardList.appendChild(row);
+      });
+
+      attachDynamicPlayerEvents();
+    }
+
+    function renderHistory() {
+      dom.historyCountLabel.textContent = `${state.history.length} manche${state.history.length > 1 ? 's' : ''}`;
+      dom.historyList.innerHTML = '';
+
+      if (!state.history.length) {
+        dom.historyList.innerHTML = `
+          <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-center text-xs text-slate-400">
+            Aucune manche enregistrée pour le moment. Attribuez des points ou passez à la manche suivante !
+          </p>
+        `;
+        return;
+      }
+
+      state.history.forEach((entry) => {
+        const scorersText =
+          entry.scorers && entry.scorers.length > 0
+            ? entry.scorers.map((s) => `${escapeHtml(s.name)} (${s.earned > 0 ? '+' + s.earned : s.earned})`).join(', ')
+            : 'Aucun point attribué';
+
+        const item = document.createElement('div');
+        item.className = 'rounded-2xl border border-slate-700/70 bg-midnight/80 px-3.5 py-2.5';
+        item.innerHTML = `
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="font-bold text-goldLight">Manche #${entry.round}</span>
+            <span class="text-slate-400">${escapeHtml(entry.timestamp || '')}</span>
+          </div>
+          <p class="mt-0.5 text-xs font-semibold text-white">
+            ${escapeHtml(entry.title)} <span class="text-sky-300">— ${escapeHtml(entry.disney)}</span>
+          </p>
+          <p class="mt-1 text-[11px] text-slate-300">${scorersText}</p>
+        `;
+        dom.historyList.appendChild(item);
+      });
+    }
+
+    function renderAll() {
+      renderJudgeModeButton();
+      renderTrackStage();
+      renderPlayersAndLeaderboard();
+      renderHistory();
+    }
+
+    /**
+     * Échappe les caractères HTML pour éviter toute injection XSS dans les noms/titres
+     */
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Attache les gestionnaires d'événements sur les cartes joueurs générées dynamiquement
+     */
+    function attachDynamicPlayerEvents() {
+      document.querySelectorAll('.score-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-score-id');
+          const type = btn.getAttribute('data-score-type');
+          adjustPlayerScore(id, type);
+        });
+      });
+
+      document.querySelectorAll('.remove-player-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-remove-id');
+          removePlayer(id);
+        });
+      });
+
+      document.querySelectorAll('.player-name-input').forEach((input) => {
+        input.addEventListener('change', () => {
+          const id = input.getAttribute('data-rename-id');
+          renamePlayer(id, input.value);
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+          }
+        });
+      });
+    }
+
+    /**
+     * =========================================================================
+     * MODALE PLAYLIST JSON (OUVERTURE, IMPORT, EXPORT, VALIDATION)
+     * =========================================================================
+     */
+    function openJsonModal() {
+      dom.jsonTextarea.value = JSON.stringify(state.playlist, null, 2);
+      dom.jsonValidationBox.classList.add('hidden');
+      dom.jsonModal.classList.remove('hidden');
+      dom.jsonModal.classList.add('flex');
+    }
+
+    function closeJsonModal() {
+      dom.jsonModal.classList.add('hidden');
+      dom.jsonModal.classList.remove('flex');
+    }
+
+    function showJsonValidation(message, isError) {
+      dom.jsonValidationBox.classList.remove('hidden');
+      dom.jsonValidationBox.className = isError
+        ? 'mb-4 rounded-2xl border border-rose-400/50 bg-rose-500/15 px-3.5 py-2.5 text-xs text-rose-200'
+        : 'mb-4 rounded-2xl border border-emerald-400/50 bg-emerald-500/15 px-3.5 py-2.5 text-xs text-emerald-200';
+      dom.jsonValidationBox.textContent = message;
+    }
+
+    function applyJsonPlaylist() {
+      try {
+        const normalized = parseAndNormalizePlaylist(dom.jsonTextarea.value);
+        state.playlist = normalized;
+        state.playedTrackIds = [];
+        state.currentTrackId = null;
+        state.answerRevealed = false;
+        ensureCurrentTrack();
+        saveState();
+        loadCurrentTrackAudio(getCurrentTrack());
+        renderAll();
+        showJsonValidation(`${normalized.length} piste(s) Disney validée(s) et enregistrée(s).`, false);
+        setTimeout(() => {
+          closeJsonModal();
+          showToast(`Playlist mise à jour (${normalized.length} chansons).`, 'success');
+        }, 450);
+      } catch (err) {
+        showJsonValidation(err.message || 'JSON invalide.', true);
+      }
+    }
+
+    function exportPlaylistJson() {
+      try {
+        const content = JSON.stringify(state.playlist, null, 2);
+        const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'disney-blind-test-playlist.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Fichier JSON téléchargé.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur lors de l’export JSON.', 'error');
+      }
+    }
+
+    /**
+     * =========================================================================
+     * INITIALISATION & ÉCOUTEURS D'ÉVÉNEMENTS GLOBAUX
+     * =========================================================================
+     */
+    function bindGlobalEvents() {
+      dom.toggleJudgeModeBtn.addEventListener('click', () => {
+        state.judgeMode = !state.judgeMode;
+        saveState();
+        renderJudgeModeButton();
+        renderTrackStage();
+      });
+
+      dom.resetScoresBtn.addEventListener('click', resetAllScores);
+      dom.resetPoolBtn.addEventListener('click', resetPool);
+
+      dom.revealAnswerBtn.addEventListener('click', () => {
+        state.answerRevealed = !state.answerRevealed;
+        saveState();
+        renderTrackStage();
+      });
+
+      dom.nextTrackBtn.addEventListener('click', nextRound);
+
+      dom.addPlayerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addPlayer(dom.newPlayerInput.value);
+        dom.newPlayerInput.value = '';
+        dom.newPlayerInput.focus();
+      });
+
+      // Contrôles Audio
+      dom.playPauseBtn.addEventListener('click', () => {
+        if (!dom.audioPlayer.src) return;
+        if (dom.audioPlayer.paused) {
+          dom.audioPlayer.play().catch(() => {
+            showToast('Impossible de lancer la lecture audio (vérifiez l’URL ou les droits du fichier).', 'error');
+          });
+        } else {
+          dom.audioPlayer.pause();
+        }
+      });
+
+      dom.audioPlayer.addEventListener('play', () => updatePlayPauseUI(true));
+      dom.audioPlayer.addEventListener('pause', () => updatePlayPauseUI(false));
+      dom.audioPlayer.addEventListener('ended', () => updatePlayPauseUI(false));
+
+      dom.audioPlayer.addEventListener('loadedmetadata', () => {
+        dom.seekSlider.max = dom.audioPlayer.duration || 100;
+        dom.audioTimeDisplay.textContent = `00:00 / ${formatTime(dom.audioPlayer.duration)}`;
+      });
+
+      dom.audioPlayer.addEventListener('timeupdate', () => {
+        if (!dom.seekSlider.matches(':active')) {
+          dom.seekSlider.value = dom.audioPlayer.currentTime || 0;
+        }
+        dom.audioTimeDisplay.textContent = `${formatTime(dom.audioPlayer.currentTime)} / ${formatTime(dom.audioPlayer.duration)}`;
+      });
+
+      dom.seekSlider.addEventListener('input', () => {
+        if (dom.audioPlayer.src) {
+          dom.audioPlayer.currentTime = Number(dom.seekSlider.value);
+        }
+      });
+
+      dom.volumeSlider.addEventListener('input', () => {
+        dom.audioPlayer.volume = Number(dom.volumeSlider.value);
+      });
+      dom.audioPlayer.volume = Number(dom.volumeSlider.value);
+
+      // Modale JSON
+      dom.openJsonModalBtn.addEventListener('click', openJsonModal);
+      dom.closeJsonModalBtn.addEventListener('click', closeJsonModal);
+      dom.cancelJsonModalBtn.addEventListener('click', closeJsonModal);
+      dom.applyJsonBtn.addEventListener('click', applyJsonPlaylist);
+      dom.exportJsonBtn.addEventListener('click', exportPlaylistJson);
+
+      dom.loadDefaultJsonBtn.addEventListener('click', () => {
+        dom.jsonTextarea.value = JSON.stringify(DEFAULT_PLAYLIST, null, 2);
+        showJsonValidation('Liste Disney par défaut chargée dans l’éditeur (cliquez sur "Appliquer" pour valider).', false);
+      });
+
+      dom.jsonFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const text = String(reader.result || '');
+            parseAndNormalizePlaylist(text);
+            dom.jsonTextarea.value = JSON.stringify(JSON.parse(text), null, 2);
+            showJsonValidation(`Fichier "${file.name}" chargé et prêt à être appliqué.`, false);
+          } catch (err) {
+            showJsonValidation(`Fichier "${file.name}" : ${err.message}`, true);
+          }
+        };
+        reader.onerror = () => {
+          showJsonValidation('Erreur de lecture du fichier sélectionné.', true);
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      dom.jsonModal.addEventListener('click', (e) => {
+        if (e.target === dom.jsonModal) closeJsonModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !dom.jsonModal.classList.contains('hidden')) {
+          closeJsonModal();
+        }
+      });
+    }
+
+    // Démarrage de l'application
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      bindGlobalEvents();
+      loadCurrentTrackAudio(getCurrentTrack());
+      renderAll();
+    });
+  </script>
+</body>
+</html>
