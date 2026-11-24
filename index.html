@@ -67,15 +67,19 @@
         </div>
 
         <div class="room-backend-box">
-          <div class="remote-row" style="justify-content:space-between;">
+          <div class="room-backend-header">
             <span class="sync-note">
-              <strong>Synchro inter-appareils (optionnel) :</strong> colle l'URL d'un RTDB Firebase (ex: <code>https://ton-projet-default-rtdb.firebaseio.com</code>) pour synchroniser les rooms entre différents ordinateurs/téléphones.
+              <strong>Synchro inter-appareils (Firebase RTDB) :</strong> colle l'URL de ta base Firebase (ex: <code>https://ton-projet-default-rtdb.firebaseio.com/</code>) ou l'ID du projet pour jouer entre PC, mobile et amis à distance.
             </span>
+            <span class="fb-status-pill" id="firebaseStatusPill">⚪ Local uniquement</span>
           </div>
           <div class="remote-row">
-            <input type="text" id="firebaseUrlInput" placeholder="URL Firebase Realtime Database (optionnel)..." style="flex:1; min-width:240px;" />
-            <button type="button" class="ghost" id="saveFirebaseBtn">💾 Connecter base room</button>
+            <input type="text" id="firebaseUrlInput" placeholder="https://ton-projet-default-rtdb.firebaseio.com/ ou ID projet..." style="flex:1; min-width:240px;" />
+            <button type="button" class="ghost" id="saveFirebaseBtn">💾 Connecter &amp; tester</button>
+            <button type="button" class="ghost" id="copyFirebaseRulesBtn">🛡️ Règles Firebase</button>
+            <button type="button" class="ghost" id="clearFirebaseBtn">✖ Déconnecter</button>
           </div>
+          <div id="firebaseDiagMsg" class="sync-note" aria-live="polite"></div>
         </div>
       </div>      </div>
     </section>

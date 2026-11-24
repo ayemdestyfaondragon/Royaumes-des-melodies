@@ -1358,3 +1358,196 @@ buildFullRoomSnapshot = function () {
 };
 
 renderRoundGuesses();
+
+
+// =========================================================
+// SYNCHRO INTER-APPAREILS FIREBASE RTDB (URL AUTO + TEST + RÈGLES)
+// =========================================================
+const firebaseStatusPill = document.getElementById("firebaseStatusPill");
+const copyFirebaseRulesBtn = document.getElementById("copyFirebaseRulesBtn");
+const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
+const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
+
+const RECOMMENDED_FIREBASE_RULES = JSON.stringify(
+  {
+    rules: {
+      royaumes_rooms: {
+        $roomCode: {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  },
+  null,
+  2
+);
+
+function setFirebaseStatus(mode, label, detail = "") {
+  if (firebaseStatusPill) {
+    firebaseStatusPill.className = "fb-status-pill" + (mode ? ` ${mode}` : "");
+    firebaseStatusPill.textContent = label;
+  }
+  if (firebaseDiagMsg && detail) {
+    firebaseDiagMsg.textContent = detail;
+  }
+}
+
+function smartNormalizeFirebaseUrl(raw) {
+  let val = String(raw || "").trim();
+  if (!val) return "";
+
+  // Strip trailing slashes and any /royaumes_rooms... path if user pasted a deeper URL
+  val = val.replace(/\/+$/, "");
+  val = val.replace(/\/royaumes_rooms(?:\/.*)?$/i, "");
+
+  // If user pasted a Firebase Console URL like https://console.firebase.google.com/project/my-app/database/...
+  const consoleMatch = val.match(/console\.firebase\.google\.com\/project\/([a-z0-9-]+)/i);
+  if (consoleMatch && consoleMatch[1]) {
+    return `https://${consoleMatch[1]}-default-rtdb.firebaseio.com`;
+  }
+
+  // If user typed just a project id like "mon-projet-disney"
+  if (!/^https?:\/\//i.test(val) && !val.includes(".")) {
+    const slug = val.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (!slug) return "";
+    return `https://${slug}-default-rtdb.firebaseio.com`;
+  }
+
+  if (!/^https?:\/\//i.test(val)) {
+    val = "https://" + val;
+  }
+
+  try {
+    const parsed = new URL(val);
+    return `${parsed.protocol}//${parsed.host}`.replace(/\/+$/, "");
+  } catch (_) {
+    return "";
+  }
+}
+
+// Override normalizeFirebaseBase used by existing sync functions
+normalizeFirebaseBase = function (raw) {
+  return smartNormalizeFirebaseUrl(raw);
+};
+
+async function testAndConnectFirebase(rawInput) {
+  const cleanUrl = smartNormalizeFirebaseUrl(rawInput);
+  if (!cleanUrl) {
+    roomSystem.firebaseBaseUrl = "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    setFirebaseStatus(
+      "error",
+      "⚠ URL invalide",
+      "Colle une URL du type https://ton-projet-default-rtdb.firebaseio.com/ (ou l'ID de ton projet Firebase)."
+    );
+    renderRoomPanel();
+    return false;
+  }
+
+  roomSystem.firebaseBaseUrl = cleanUrl;
+  if (firebaseUrlInput) {
+    firebaseUrlInput.value = cleanUrl + "/";
+  }
+  saveState({ skipBroadcast: true });
+  startRoomListeners();
+
+  setFirebaseStatus("", "⏳ Test connexion...", `Test de liaison avec ${cleanUrl}...`);
+
+  const testCode = state.roomCode || "PINGTEST";
+  const endpoint = `${cleanUrl}/royaumes_rooms/${encodeURIComponent(testCode)}.json`;
+
+  try {
+    if (state.roomCode) {
+      const snap = buildFullRoomSnapshot();
+      const putRes = await fetch(endpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snap)
+      });
+      if (!putRes.ok) {
+        throw new Error(`HTTP ${putRes.status}`);
+      }
+      const remoteSnap = await pullSnapshotFromFirebase();
+      if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+        applyRemotePayload(remoteSnap);
+      }
+    } else {
+      const getRes = await fetch(endpoint, { cache: "no-store" });
+      if (!getRes.ok) {
+        throw new Error(`HTTP ${getRes.status}`);
+      }
+    }
+
+    setFirebaseStatus(
+      "connected",
+      "🟢 Connecté",
+      `Synchronisation inter-appareils active sur ${cleanUrl} (room ${state.roomCode || "en attente"}).`
+    );
+    renderRoomPanel();
+    return true;
+  } catch (err) {
+    setFirebaseStatus(
+      "error",
+      "🔴 Accès refusé / hors ligne",
+      `Impossible d'écrire/lire sur ${cleanUrl} (${err && err.message ? err.message : "erreur réseau"}). Vérifie que la Realtime Database est créée et que les règles autorisent .read/.write sur royaumes_rooms.`
+    );
+    renderRoomPanel();
+    return false;
+  }
+}
+
+if (saveFirebaseBtn) {
+  // Replace previous listener cleanly by cloning button
+  const freshSaveBtn = saveFirebaseBtn.cloneNode(true);
+  saveFirebaseBtn.parentNode.replaceChild(freshSaveBtn, saveFirebaseBtn);
+  freshSaveBtn.addEventListener("click", async () => {
+    const val = document.getElementById("firebaseUrlInput")?.value || "";
+    await testAndConnectFirebase(val);
+  });
+}
+
+if (copyFirebaseRulesBtn) {
+  copyFirebaseRulesBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(RECOMMENDED_FIREBASE_RULES);
+      setFirebaseStatus(
+        "connected",
+        "📋 Règles copiées",
+        "Règles Firebase Realtime Database copiées dans le presse-papiers. Colle-les dans l'onglet « Règles » de ta base Firebase."
+      );
+    } catch (_) {
+      setFirebaseStatus(
+        "",
+        "🛡️ Règles recommandées",
+        RECOMMENDED_FIREBASE_RULES
+      );
+    }
+  });
+}
+
+if (clearFirebaseBtn) {
+  clearFirebaseBtn.addEventListener("click", () => {
+    roomSystem.firebaseBaseUrl = "";
+    const inputEl = document.getElementById("firebaseUrlInput");
+    if (inputEl) inputEl.value = "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    setFirebaseStatus("", "⚪ Local uniquement", "Synchro Firebase désactivée (mode local / multi-onglets actif).");
+    renderRoomPanel();
+  });
+}
+
+// Initialize Firebase input & status indicator on load
+(() => {
+  const inputEl = document.getElementById("firebaseUrlInput");
+  const normalized = smartNormalizeFirebaseUrl(roomSystem.firebaseBaseUrl);
+  if (normalized) {
+    roomSystem.firebaseBaseUrl = normalized;
+    if (inputEl) inputEl.value = normalized + "/";
+    setFirebaseStatus("connected", "🟢 Configuré", `Base configurée : ${normalized}`);
+  } else {
+    setFirebaseStatus("", "⚪ Local uniquement", "Optionnel : ajoute une URL Firebase RTDB pour synchroniser PC, téléphone et amis.");
+  }
+})();

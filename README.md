@@ -9,3 +9,5 @@ Application web statique de blind-test Disney prête pour GitHub Pages, avec **M
 - **Synchronisation** : fonctionne entre onglets/fenêtres via `BroadcastChannel` + `localStorage`, et peut se connecter à une URL **Firebase Realtime Database** pour la synchro inter-appareils.
 
 - **Onglet Réponse** : saisie du titre (FR/EN) et du film/série Disney avec attribution automatique des points (+1 Titre, +1 Disney, +2 Les deux) et historique des propositions de la manche.
+
+- **Synchro inter-appareils Firebase** : normalisation automatique de l'URL RTDB, test de connexion en direct, bouton de copie des règles conseillées et synchronisation des salons, buzzers, scores et propositions entre appareils.

@@ -909,3 +909,38 @@ button.ghost:hover {
   font-size: 0.83rem;
   flex-wrap: wrap;
 }
+
+
+/* Synchro inter-appareils Firebase améliorée */
+.room-backend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.fb-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.fb-status-pill.connected {
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--ok);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.fb-status-pill.error {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
