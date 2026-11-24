@@ -1,5 +1,5 @@
-# Blind Test Musical Disney — Version v15 Tout-en-Un (Spotify)
+# Blind Test Musical Disney — Version Complète (129 chansons)
 
-- Fichier unique `index.html` regroupant les styles, la playlist Disney intégrée et le code complet.
-- Prise en charge des liens / IDs / URIs Spotify (`open.spotify.com/track/...` ou `spotify:track:...`) via lecteur intégré sans dépendance à iTunes.
-- Conserve le support des pistes audio directes (`MP3`/`OGG`/`WAV`), YouTube et jingles Web Audio après geste utilisateur.
+- Dossier unique contenant `index.html` et `README.md`.
+- Catalogue étendu de **129 chansons Disney, Pixar et Disney Channel** (de *Blanche-Neige* 1937 à *Vaiana 2* et *Mufasa* 2024).
+- Prise en charge Spotify (liens/URIs/IDs), audio direct, YouTube et jingles TV sans erreur console.
