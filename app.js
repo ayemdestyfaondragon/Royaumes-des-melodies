@@ -811,14 +811,22 @@ function setMode(newMode) {
     if (!state.roomCode) {
       state.roomCode = generateRoomCode();
       roomSystem.hostId = roomSystem.clientId;
-      roomSystem.roomName = (roomNameInput && roomNameInput.value.trim()) || `Room ${state.roomCode}`;
+      roomSystem.roomName = (roomNameInput && roomNameInput.value.trim()) || `Salon ${state.roomCode}`;
       roomSystem.members = [];
       roomSystem.messages = [];
       roomSystem.updatedAt = Date.now();
       upsertSelfInRoom({ asHost: true, ready: true });
-      appendRoomSystemMessage(`${currentPseudo()} a ouvert la room "${roomSystem.roomName}".`);
+      appendRoomSystemMessage(`${currentPseudo()} a ouvert le salon ${state.roomCode}.`);
     } else {
-      upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+      upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: true });
+    }
+    try {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("room", state.roomCode);
+      window.history.replaceState({}, "", nextUrl.toString());
+    } catch (_) {}
+    if (joinRoomInput && !joinRoomInput.value) {
+      joinRoomInput.value = state.roomCode;
     }
     if (tabLocal) tabLocal.classList.remove("active");
     if (tabRemote) tabRemote.classList.add("active");
@@ -1738,6 +1746,212 @@ if (guessAnswerForm) {
     renderRoundGuesses();
   });
 }
+
+
+if (remotePseudoInput) {
+  remotePseudoInput.addEventListener("input", () => {
+    state.remotePseudo = remotePseudoInput.value.trim();
+    if (state.mode === "remote" && state.roomCode) {
+      upsertSelfInRoom();
+      roomSystem.updatedAt = Date.now();
+      saveState();
+      renderPlayers();
+      renderRoomPanel();
+    }
+  });
+}
+
+
+// Multi-tier Variable Auto Mode
+const AUTO_PRESETS = {
+  chill:   { label: "Niveau 1 • Doux",     listenSec: 22, revealSec: 6, breakSec: 4, speedMult: 0.85 },
+  classic: { label: "Niveau 2 • Classique", listenSec: 16, revealSec: 5, breakSec: 3, speedMult: 1.0 },
+  blitz:   { label: "Niveau 3 • Blitz",     listenSec: 10, revealSec: 4, breakSec: 2, speedMult: 1.35 },
+  custom:  { label: "Niveau Variable",      listenSec: 16, revealSec: 5, breakSec: 3, speedMult: 1.0 }
+};
+
+let autoConfig = {
+  enabled: false,
+  preset: "classic",
+  listenSec: 16,
+  revealSec: 5,
+  breakSec: 3,
+  speedMult: 1.0,
+  phase: "idle", // "idle" | "listening" | "revealed" | "break"
+  remainingSec: 0
+};
+
+let autoTickTimer = null;
+
+const toggleAutoModeBtn = document.getElementById("toggleAutoModeBtn");
+const autoModeStatus = document.getElementById("autoModeStatus");
+const autoListenSec = document.getElementById("autoListenSec");
+const autoRevealSec = document.getElementById("autoRevealSec");
+const autoBreakSec = document.getElementById("autoBreakSec");
+const autoSpeedMult = document.getElementById("autoSpeedMult");
+const autoSkipPhaseBtn = document.getElementById("autoSkipPhaseBtn");
+const autoPresetButtons = document.querySelectorAll("[data-auto-preset]");
+
+function readAutoInputsIntoConfig() {
+  const l = Math.max(4, Math.min(90, Number(autoListenSec && autoListenSec.value) || 16));
+  const r = Math.max(2, Math.min(45, Number(autoRevealSec && autoRevealSec.value) || 5));
+  const b = Math.max(1, Math.min(30, Number(autoBreakSec && autoBreakSec.value) || 3));
+  const m = Math.max(0.5, Math.min(2.5, Number(autoSpeedMult && autoSpeedMult.value) || 1.0));
+  autoConfig.listenSec = l;
+  autoConfig.revealSec = r;
+  autoConfig.breakSec = b;
+  autoConfig.speedMult = m;
+  if (autoListenSec) autoListenSec.value = String(l);
+  if (autoRevealSec) autoRevealSec.value = String(r);
+  if (autoBreakSec) autoBreakSec.value = String(b);
+}
+
+function applyAutoPreset(presetKey) {
+  const p = AUTO_PRESETS[presetKey] || AUTO_PRESETS.classic;
+  autoConfig.preset = presetKey;
+  if (presetKey !== "custom") {
+    autoConfig.listenSec = p.listenSec;
+    autoConfig.revealSec = p.revealSec;
+    autoConfig.breakSec = p.breakSec;
+    autoConfig.speedMult = p.speedMult;
+    if (autoListenSec) autoListenSec.value = String(p.listenSec);
+    if (autoRevealSec) autoRevealSec.value = String(p.revealSec);
+    if (autoBreakSec) autoBreakSec.value = String(p.breakSec);
+    if (autoSpeedMult) autoSpeedMult.value = String(p.speedMult);
+  }
+  autoPresetButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.autoPreset === presetKey);
+  });
+  renderAutoStatus();
+}
+
+function scaledSeconds(baseSec) {
+  return Math.max(1, Math.round(baseSec / Math.max(0.5, autoConfig.speedMult || 1)));
+}
+
+function renderAutoStatus() {
+  if (!autoModeStatus) return;
+  const presetLabel = (AUTO_PRESETS[autoConfig.preset] && AUTO_PRESETS[autoConfig.preset].label) || "Niveau Variable";
+  if (!autoConfig.enabled) {
+    autoModeStatus.textContent = `Mode Auto : Arrêté (${presetLabel})`;
+    if (toggleAutoModeBtn) toggleAutoModeBtn.textContent = "🤖 Lancer Mode Auto";
+    return;
+  }
+  if (toggleAutoModeBtn) toggleAutoModeBtn.textContent = "⏹️ Arrêter Mode Auto";
+  const phaseText =
+    autoConfig.phase === "listening"
+      ? "🎧 Écoute en cours"
+      : autoConfig.phase === "revealed"
+        ? "👁️ Réponse révélée"
+        : autoConfig.phase === "break"
+          ? "⏳ Préparation manche suivante"
+          : "🤖 Actif";
+  autoModeStatus.textContent = `${phaseText} • ${presetLabel} • ${autoConfig.remainingSec}s`;
+}
+
+function stopAutoMode() {
+  autoConfig.enabled = false;
+  autoConfig.phase = "idle";
+  autoConfig.remainingSec = 0;
+  if (autoTickTimer) {
+    clearInterval(autoTickTimer);
+    autoTickTimer = null;
+  }
+  renderAutoStatus();
+}
+
+function enterAutoPhase(phaseName) {
+  readAutoInputsIntoConfig();
+  autoConfig.phase = phaseName;
+
+  if (phaseName === "listening") {
+    autoConfig.remainingSec = scaledSeconds(autoConfig.listenSec);
+    const filtered = getFilteredTracks();
+    const unplayed = filtered.filter((t) => !state.playedIds.includes(t.id));
+    const pool = unplayed.length ? unplayed : filtered;
+    if (pool.length) {
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      loadAndPlayTrack(chosen);
+    }
+  } else if (phaseName === "revealed") {
+    autoConfig.remainingSec = scaledSeconds(autoConfig.revealSec);
+    const track = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
+    if (track && !state.revealed) {
+      state.revealed = true;
+      roomSystem.updatedAt = Date.now();
+      saveState();
+      updateStageRevealUI(track);
+    }
+  } else if (phaseName === "break") {
+    autoConfig.remainingSec = scaledSeconds(autoConfig.breakSec);
+    if (audioEl && !audioEl.paused) {
+      audioEl.pause();
+      if (playPauseBtn) playPauseBtn.textContent = "▶";
+    }
+  }
+  renderAutoStatus();
+}
+
+function stepAutoMode() {
+  if (!autoConfig.enabled) return;
+  if (autoConfig.remainingSec > 1) {
+    autoConfig.remainingSec -= 1;
+    renderAutoStatus();
+    return;
+  }
+  if (autoConfig.phase === "listening") {
+    enterAutoPhase("revealed");
+  } else if (autoConfig.phase === "revealed") {
+    enterAutoPhase("break");
+  } else {
+    enterAutoPhase("listening");
+  }
+}
+
+function startAutoMode() {
+  stopAutoMode();
+  readAutoInputsIntoConfig();
+  autoConfig.enabled = true;
+  if (autoTickTimer) clearInterval(autoTickTimer);
+  autoTickTimer = setInterval(stepAutoMode, 1000);
+  enterAutoPhase("listening");
+}
+
+if (toggleAutoModeBtn) {
+  toggleAutoModeBtn.addEventListener("click", () => {
+    if (autoConfig.enabled) {
+      stopAutoMode();
+    } else {
+      startAutoMode();
+    }
+  });
+}
+
+autoPresetButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    applyAutoPreset(btn.dataset.autoPreset);
+  });
+});
+
+[autoListenSec, autoRevealSec, autoBreakSec, autoSpeedMult].forEach((el) => {
+  if (!el) return;
+  el.addEventListener("change", () => {
+    applyAutoPreset("custom");
+  });
+});
+
+if (autoSkipPhaseBtn) {
+  autoSkipPhaseBtn.addEventListener("click", () => {
+    if (!autoConfig.enabled) {
+      startAutoMode();
+      return;
+    }
+    autoConfig.remainingSec = 1;
+    stepAutoMode();
+  });
+}
+
+renderAutoStatus();
 
 // Initial boot
 if (state.remotePseudo && remotePseudoInput) {
