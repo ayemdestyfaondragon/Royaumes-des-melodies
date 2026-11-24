@@ -65,6 +65,13 @@ try {
 if (!roomSystem.clientId) {
   roomSystem.clientId = "cli_" + Math.random().toString(36).slice(2, 10);
 }
+if (state.roomCode && roomSystem.roomCode && roomSystem.roomCode !== state.roomCode) {
+  roomSystem.members = [];
+  roomSystem.messages = [];
+  roomSystem.hostId = "";
+  roomSystem.updatedAt = 0;
+}
+roomSystem.roomCode = state.roomCode || "";
 
 const urlParams = new URLSearchParams(window.location.search);
 const initialRoomParam = (urlParams.get("room") || "").trim().toUpperCase();
@@ -853,76 +860,115 @@ if (tabRemote) tabRemote.addEventListener("click", () => setMode("remote"));
 
 if (createRoomBtn) {
   createRoomBtn.addEventListener("click", () => {
+    stopRoomListeners();
     state.mode = "remote";
     if (tabLocal) tabLocal.classList.remove("active");
     if (tabRemote) tabRemote.classList.add("active");
     if (remoteBox) remoteBox.style.display = "flex";
 
-    state.roomCode = generateRoomCode();
+    const newCode = generateRoomCode();
+    state.roomCode = newCode;
+    state.buzzes = [];
+    state.roundGuesses = [];
+    state.roundNumber = 0;
+    state.currentTrackId = null;
+    state.revealed = false;
+
     const customName = (roomNameInput && roomNameInput.value.trim()) || "";
-    roomSystem.roomName = customName || `Room ${state.roomCode}`;
+    roomSystem.roomCode = newCode;
+    roomSystem.roomName = customName || `Salon ${newCode}`;
     roomSystem.hostId = roomSystem.clientId;
     roomSystem.members = [];
     roomSystem.messages = [];
     roomSystem.updatedAt = Date.now();
 
-    upsertSelfInRoom({ asHost: true, ready: true });
-    appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
+    try {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("room", newCode);
+      window.history.replaceState({}, "", nextUrl.toString());
+    } catch (_) {}
+    if (joinRoomInput) joinRoomInput.value = newCode;
 
-    if (roomCodeBadge) roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-    if (syncStatus) syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    upsertSelfInRoom({ asHost: true, ready: true });
+    appendRoomSystemMessage(`${currentPseudo()} a créé le salon ${newCode}.`);
+
+    if (roomCodeBadge) roomCodeBadge.textContent = `SALON : ${newCode}`;
+    if (syncStatus) syncStatus.textContent = `Mode Multi • Salon ${newCode}`;
     startRoomListeners();
     saveState();
     renderPlayers();
     renderBuzzUI();
     renderRoomPanel();
+    renderRoundGuesses();
   });
 }
 
 if (joinRoomBtn) {
   joinRoomBtn.addEventListener("click", async () => {
-    const code = ((joinRoomInput && joinRoomInput.value) || "").trim().toUpperCase();
+    const code = ((joinRoomInput && joinRoomInput.value) || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!code) return;
 
+    stopRoomListeners();
     state.mode = "remote";
     if (tabLocal) tabLocal.classList.remove("active");
     if (tabRemote) tabRemote.classList.add("active");
     if (remoteBox) remoteBox.style.display = "flex";
 
+    // Wipe previous room roster/messages/buzzes so old players never leak into another room
     state.roomCode = code;
-    if (roomCodeBadge) roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
-    if (syncStatus) syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    state.buzzes = [];
+    state.roundGuesses = [];
+    roomSystem.roomCode = code;
+    roomSystem.members = [];
+    roomSystem.messages = [];
+    roomSystem.hostId = "";
+    roomSystem.roomName = `Salon ${code}`;
+    roomSystem.updatedAt = 0;
+
+    try {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("room", code);
+      window.history.replaceState({}, "", nextUrl.toString());
+    } catch (_) {}
+
+    if (roomCodeBadge) roomCodeBadge.textContent = `SALON : ${code}`;
+    if (syncStatus) syncStatus.textContent = `Mode Multi • Salon ${code}`;
     startRoomListeners();
 
     let loaded = null;
     try {
-      loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+      const localRaw = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+      if (localRaw && localRaw.roomCode === code) loaded = localRaw;
     } catch (_) {}
 
     const fbSnap = await pullSnapshotFromFirebase(code);
-    if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+    if (fbSnap && fbSnap.roomCode === code && (!loaded || (fbSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
       loaded = fbSnap;
     }
 
     const netSnap = await pullRoomSnapshotFromRelay(code);
-    if (netSnap && (!loaded || (netSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+    if (netSnap && netSnap.roomCode === code && (!loaded || (netSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
       loaded = netSnap;
     }
 
-    if (loaded) {
+    if (loaded && loaded.roomCode === code) {
+      if (loaded.hostId) {
+        roomSystem.hostId = loaded.hostId;
+      }
       applyRemotePayload(loaded);
     } else {
       roomSystem.hostId = roomSystem.clientId;
-      roomSystem.roomName = `Room ${code}`;
+      roomSystem.roomName = `Salon ${code}`;
     }
 
-    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-    appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
-    roomSystem.updatedAt = Date.now();
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: true });
+    appendRoomSystemMessage(`${currentPseudo()} a rejoint le salon ${code}.`);
+    roomSystem.updatedAt = Math.max(Date.now(), Number((loaded && loaded.updatedAt) || 0) + 1);
     saveState();
     renderPlayers();
     renderBuzzUI();
     renderRoomPanel();
+    renderRoundGuesses();
   });
 }
 
