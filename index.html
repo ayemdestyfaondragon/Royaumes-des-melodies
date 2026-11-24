@@ -497,40 +497,108 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- INITIALISATION FIREBASE (POUR LE MULTIJOUEUR TEMPS RÉEL) ---
+        // --- INITIALISATION RÉSILIENTE & IDENTIFIANT JOUEUR IMMÉDIAT ---
         let app = null;
         let auth = null;
         let db = null;
-        let currentUser = null;
-        let isFirebaseReady = false;
+        let isDbConfigured = false;
+        let authPromise = null;
+
+        // Identifiant joueur immédiat en mémoire (évite tout blocage si l'auth anonyme est lente/désactivée)
+        const fallbackPlayerId = 'player_' + (typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+            : Math.random().toString(36).substring(2, 14));
+        let currentUser = { uid: fallbackPlayerId };
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'disney-blindtest-app';
 
-        async function initFirebase() {
+        function initFirebase() {
             try {
                 if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const firebaseConfig = typeof __firebase_config === 'string'
+                        ? JSON.parse(__firebase_config)
+                        : __firebase_config;
+
                     app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
                     db = getFirestore(app);
+                    isDbConfigured = true;
 
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
-                        currentUser = cred.user;
-                    } else {
-                        const cred = await signInAnonymously(auth);
-                        currentUser = cred.user;
-                    }
-                    isFirebaseReady = true;
+                    // Authentification en arrière-plan (avec délai max de 2,5s pour ne jamais bloquer)
+                    authPromise = (async () => {
+                        try {
+                            const authTask = (typeof __initial_auth_token !== 'undefined' && __initial_auth_token)
+                                ? signInWithCustomToken(auth, __initial_auth_token)
+                                : signInAnonymously(auth);
+
+                            const timeoutTask = new Promise((_, reject) =>
+                                setTimeout(() => reject(new Error('Délai authentification dépassé')), 2500)
+                            );
+
+                            const cred = await Promise.race([authTask, timeoutTask]);
+                            if (cred && cred.user && cred.user.uid) {
+                                currentUser = { uid: cred.user.uid };
+                            }
+                        } catch (authErr) {
+                            console.warn("Authentification anonyme ignorée (utilisation de l'ID local) :", authErr.message);
+                        }
+                    })();
                 }
             } catch (err) {
-                console.warn("Mode multijoueur distant indisponible :", err);
-                isFirebaseReady = false;
+                console.error("Erreur de configuration multijoueur :", err);
+                isDbConfigured = false;
             }
         }
         initFirebase();
+
+        async function ensurePlayerIdentity() {
+            if (authPromise) {
+                await authPromise;
+            }
+            if (!currentUser || !currentUser.uid) {
+                currentUser = { uid: fallbackPlayerId };
+            }
+            return currentUser;
+        }
+
+        function formatMultiplayerError(err) {
+            const code = err?.code || '';
+            const msg = err?.message || 'Erreur inconnue';
+            if (code === 'permission-denied') {
+                return "Accès refusé par le serveur (permissions insuffisantes). Vérifiez la configuration de sécurité.";
+            }
+            if (code === 'unavailable' || msg.toLowerCase().includes('offline')) {
+                return "Serveur multijoueur inaccessible. Vérifiez votre connexion Internet.";
+            }
+            return `Erreur multijoueur (${code || 'réseau'}) : ${msg}`;
+        }
+
+        function showRetryToast(message, retryCallback) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "pointer-events-auto border bg-rose-950/95 border-rose-400 text-rose-100 px-4 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2.5 text-sm font-semibold animate-pop";
+            toast.innerHTML = `
+                <div class="flex items-start gap-2.5">
+                    <i class="fa-solid fa-circle-exclamation text-rose-400 text-base mt-0.5 shrink-0"></i>
+                    <span class="leading-snug">${escapeHtml(message)}</span>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="retry-btn px-3 py-1 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-extrabold text-xs transition cursor-pointer">
+                        <i class="fa-solid fa-rotate-right mr-1"></i>Réessayer
+                    </button>
+                </div>
+            `;
+            toast.querySelector('.retry-btn').addEventListener('click', () => {
+                toast.remove();
+                if (typeof retryCallback === 'function') retryCallback();
+            });
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 8000);
+        }
 
         // --- CATALOGUE DES CHANSONS DISNEY (FRANÇAIS) ---
         const DISNEY_SONGS = [
@@ -1473,8 +1541,8 @@
         }
 
         window.createMultiplayerRoom = async function() {
-            if (!isFirebaseReady || !currentUser) {
-                showToast("Connexion multijoueur en cours d'initialisation, réessayez dans 2 secondes.", "error");
+            if (!isDbConfigured || !db) {
+                showRetryToast("Le service multijoueur n'est pas configuré sur cet environnement.", () => window.createMultiplayerRoom());
                 return;
             }
 
@@ -1482,6 +1550,7 @@
             btn.disabled = true;
 
             try {
+                const player = await ensurePlayerIdentity();
                 state.mode = 'multi';
                 state.isHost = true;
                 state.playerName = getPlayerName();
@@ -1492,13 +1561,13 @@
 
                 const initialRoom = {
                     code: code,
-                    hostId: currentUser.uid,
+                    hostId: player.uid,
                     status: 'lobby', // 'lobby' | 'playing' | 'reveal' | 'finished'
                     totalRounds: state.selectedRounds,
                     currentRound: 0,
                     playlistIds: [],
                     players: {
-                        [currentUser.uid]: {
+                        [player.uid]: {
                             name: state.playerName,
                             score: 0,
                             foundSong: false,
@@ -1514,8 +1583,62 @@
                 enterLobbyUI(code);
                 showToast(`Salle ${code} créée ! Partagez le code à vos amis.`, 'gold');
             } catch (err) {
-                console.error(err);
-                showToast("Impossible de créer la salle. Vérifiez votre connexion.", "error");
+                console.error("Échec création salle :", err);
+                showRetryToast(formatMultiplayerError(err), () => window.createMultiplayerRoom());
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.joinMultiplayerRoom = async function() {
+            if (!isDbConfigured || !db) {
+                showRetryToast("Le service multijoueur n'est pas configuré sur cet environnement.", () => window.joinMultiplayerRoom());
+                return;
+            }
+
+            const codeInput = document.getElementById('join-code-input').value.trim().toUpperCase();
+            if (codeInput.length !== 4) {
+                showToast("Veuillez saisir un code de salle à 4 caractères.", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btn-join-room');
+            btn.disabled = true;
+
+            try {
+                const player = await ensurePlayerIdentity();
+                const roomRef = getRoomDocRef(codeInput);
+                const snap = await getDoc(roomRef);
+
+                if (!snap.exists()) {
+                    showToast(`Aucune salle trouvée avec le code "${codeInput}".`, "error");
+                    btn.disabled = false;
+                    return;
+                }
+
+                const data = snap.data();
+                state.mode = 'multi';
+                state.isHost = (data.hostId === player.uid);
+                state.playerName = getPlayerName();
+                state.roomCode = codeInput;
+                state.myTotalScore = data.players?.[player.uid]?.score || 0;
+
+                await updateDoc(roomRef, {
+                    [`players.${player.uid}`]: {
+                        name: state.playerName,
+                        score: state.myTotalScore,
+                        foundSong: false,
+                        foundMovie: false,
+                        isHost: state.isHost
+                    }
+                });
+
+                subscribeToRoom(codeInput);
+                enterLobbyUI(codeInput);
+                showToast(`Vous avez rejoint la salle ${codeInput} !`, 'success');
+            } catch (err) {
+                console.error("Échec connexion salle :", err);
+                showRetryToast(formatMultiplayerError(err), () => window.joinMultiplayerRoom());
             } finally {
                 btn.disabled = false;
             }
