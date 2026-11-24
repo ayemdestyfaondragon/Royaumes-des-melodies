@@ -66,6 +66,20 @@
           </div>
         </div>
 
+                <div class="room-backend-box" id="p2pBox">
+          <div class="remote-row" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+            <span class="sync-note" id="p2pStatusText">🔗 Liaison directe (P2P sans Firebase) : Prêt</span>
+            <div class="remote-row" style="gap:0.4rem;">
+              <button type="button" class="gold" id="p2pCreateOfferBtn">📡 1. Créer code P2P</button>
+              <button type="button" class="ghost" id="p2pCopySignalBtn">📋 Copier le code</button>
+            </div>
+          </div>
+          <div class="remote-row" style="margin-top:0.45rem; flex-wrap:wrap; gap:0.4rem;">
+            <input type="text" id="p2pSignalInput" placeholder="Colle ici le code P2P reçu..." style="flex:1; min-width:220px;" />
+            <button type="button" id="p2pAcceptSignalBtn">🤝 2. Connecter / Valider</button>
+          </div>
+        </div>
+
         <div class="room-backend-box">
           <div class="remote-row" style="justify-content:space-between;">
             <span class="sync-note" id="firebaseDiagMsg">Partage le lien du salon (avec #s=...) ou configure une URL Firebase RTDB dans Relais pour la synchro en direct.</span>

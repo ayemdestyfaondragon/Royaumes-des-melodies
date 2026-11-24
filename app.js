@@ -490,15 +490,36 @@ function buildFullRoomSnapshot() {
 
 async function pushSnapshotToFirebase(snapshot) {
   const base = getFirebaseBase();
-  if (!base || !snapshot || !snapshot.roomCode) return;
+  if (!base || !snapshot || !snapshot.roomCode) return false;
   const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(snapshot.roomCode)}.json`;
   try {
-    await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(snapshot)
     });
-  } catch (_) {}
+    if (res.ok) {
+      setDiagStatus(
+        "connected",
+        `🟢 Firebase temps réel • ${snapshot.roomCode}`,
+        `Salon ${snapshot.roomCode} synchronisé en direct via Firebase.`
+      );
+      return true;
+    }
+    setDiagStatus(
+      "",
+      `🔴 Firebase refusé (${res.status})`,
+      `Vérifie les règles de sécurité Firebase RTDB (lecture/écriture autorisées sur royaumes_rooms).`
+    );
+    return false;
+  } catch (_) {
+    setDiagStatus(
+      "",
+      `🔴 Firebase inaccessible`,
+      `Vérifie l'URL Firebase RTDB (${base}) et ta connexion internet.`
+    );
+    return false;
+  }
 }
 
 async function pullSnapshotFromFirebase(code = state.roomCode) {
@@ -556,8 +577,8 @@ async function publishRoomSnapshotToRelay(snapshot) {
   if (!delivered && !getFirebaseBase()) {
     setDiagStatus(
       "",
-      `🟡 Lien + Multi-onglets • ${snapshot.roomCode}`,
-      `Relais public désactivé/injoignable : utilise "Copier le lien" pour partager l'état du salon ${snapshot.roomCode} ou ajoute une URL Firebase RTDB dans Relais.`
+      `⚠️ Mode local/onglets • ${snapshot.roomCode}`,
+      `Aucun serveur temps réel configuré : deux appareils distants ne se verront pas en direct tant qu'une URL Firebase RTDB n'est pas ajoutée dans ⚙️ Relais.`
     );
   }
   return delivered;
@@ -632,6 +653,9 @@ function saveState(options = {}) {
       try {
         broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
       } catch (_) {}
+    }
+    if (typeof sendP2pSnapshot === "function") {
+      sendP2pSnapshot(snap);
     }
     pushSnapshotToFirebase(snap);
     publishRoomSnapshotToRelay(snap);
@@ -2148,6 +2172,153 @@ if (autoSkipPhaseBtn) {
 }
 
 renderAutoStatus();
+
+
+// Zero-Firebase WebRTC Peer-to-Peer Direct Sync
+let pc = null;
+let dataChannel = null;
+let p2pPendingSignal = "";
+
+const p2pStatusText = document.getElementById("p2pStatusText");
+const p2pCreateOfferBtn = document.getElementById("p2pCreateOfferBtn");
+const p2pCopySignalBtn = document.getElementById("p2pCopySignalBtn");
+const p2pSignalInput = document.getElementById("p2pSignalInput");
+const p2pAcceptSignalBtn = document.getElementById("p2pAcceptSignalBtn");
+
+function setP2pStatus(text, isConnected = false) {
+  if (p2pStatusText) p2pStatusText.textContent = text;
+  if (isConnected && state.roomCode) {
+    setDiagStatus(
+      "connected",
+      `🟢 Connecté en direct (P2P) • ${state.roomCode}`,
+      `Liaison directe active sans Firebase avec ton partenaire dans le salon ${state.roomCode}.`
+    );
+  }
+}
+
+function sendP2pSnapshot(snap) {
+  if (!dataChannel || dataChannel.readyState !== "open" || !snap) return;
+  try {
+    dataChannel.send(JSON.stringify({ type: "ROOM_SYNC", payload: snap }));
+  } catch (_) {}
+}
+
+function attachDataChannel(ch) {
+  dataChannel = ch;
+  dataChannel.onopen = () => {
+    setP2pStatus("🟢 Connecté en direct (P2P actif sans Firebase)", true);
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: true });
+    roomSystem.updatedAt = Date.now();
+    const snap = buildFullRoomSnapshot();
+    sendP2pSnapshot(snap);
+    renderRoomPanel();
+    renderPlayers();
+  };
+  dataChannel.onclose = () => {
+    setP2pStatus("🟡 Liaison P2P fermée (reconnexion possible)", false);
+  };
+  dataChannel.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg && msg.type === "ROOM_SYNC" && msg.payload) {
+        applyRemotePayload(msg.payload);
+      }
+    } catch (_) {}
+  };
+}
+
+function createPeerConnection() {
+  if (pc) {
+    try { pc.close(); } catch (_) {}
+    pc = null;
+  }
+  const config = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  };
+  const conn = new RTCPeerConnection(config);
+  conn.onicecandidate = (e) => {
+    if (!e.candidate && conn.localDescription) {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(conn.localDescription))));
+      p2pPendingSignal = encoded;
+      if (p2pSignalInput) p2pSignalInput.value = encoded;
+      setP2pStatus("✅ Code P2P prêt : clique sur 'Copier le code' et envoie-le.");
+    }
+  };
+  conn.ondatachannel = (e) => {
+    attachDataChannel(e.channel);
+  };
+  pc = conn;
+  return conn;
+}
+
+if (p2pCreateOfferBtn) {
+  p2pCreateOfferBtn.addEventListener("click", async () => {
+    if (!state.roomCode) {
+      state.mode = "remote";
+      state.roomCode = generateRoomCode();
+      roomSystem.roomCode = state.roomCode;
+      roomSystem.hostId = roomSystem.clientId;
+      upsertSelfInRoom({ asHost: true, ready: true });
+      if (roomCodeBadge) roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+      saveState({ skipBroadcast: true });
+      renderRoomPanel();
+    }
+    const conn = createPeerConnection();
+    const ch = conn.createDataChannel("royaumes_sync");
+    attachDataChannel(ch);
+    setP2pStatus("⏳ Génération du code d'invitation P2P...");
+    const offer = await conn.createOffer();
+    await conn.setLocalDescription(offer);
+  });
+}
+
+if (p2pCopySignalBtn) {
+  p2pCopySignalBtn.addEventListener("click", async () => {
+    const val = (p2pSignalInput && p2pSignalInput.value.trim()) || p2pPendingSignal;
+    if (!val) return;
+    try {
+      await navigator.clipboard.writeText(val);
+      setP2pStatus("📋 Code P2P copié ! Envoie-le à ton copain.");
+    } catch (_) {
+      setP2pStatus("📋 Code prêt dans le champ texte, copie-le manuellement.");
+    }
+  });
+}
+
+if (p2pAcceptSignalBtn) {
+  p2pAcceptSignalBtn.addEventListener("click", async () => {
+    const raw = ((p2pSignalInput && p2pSignalInput.value) || "").trim();
+    if (!raw) return;
+    let desc = null;
+    try {
+      desc = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    } catch (_) {
+      setP2pStatus("❌ Code P2P invalide. Vérifie le copier-coller.");
+      return;
+    }
+
+    if (!state.roomCode) {
+      state.mode = "remote";
+      state.roomCode = generateRoomCode();
+      roomSystem.roomCode = state.roomCode;
+      upsertSelfInRoom({ asHost: false, ready: true });
+      if (roomCodeBadge) roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+    }
+
+    if (desc.type === "offer") {
+      const conn = createPeerConnection();
+      setP2pStatus("⏳ Création du code de réponse P2P...");
+      await conn.setRemoteDescription(desc);
+      const answer = await conn.createAnswer();
+      await conn.setLocalDescription(answer);
+    } else if (desc.type === "answer" && pc) {
+      setP2pStatus("⏳ Finalisation de la liaison directe P2P...");
+      await pc.setRemoteDescription(desc);
+    } else {
+      setP2pStatus("❌ Type de code P2P non reconnu.");
+    }
+  });
+}
 
 // Initial boot
 if (state.remotePseudo && remotePseudoInput) {
