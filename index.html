@@ -13,6 +13,32 @@
       <p class="subtitle">Blind-Test Disney — <strong>1 pt</strong> pour le titre • <strong>1 pt</strong> pour le Disney</p>
     </header>
 
+    <section class="panel" id="modePanel">
+      <div class="mode-bar">
+        <div class="mode-tabs" role="tablist">
+          <button type="button" class="mode-tab active" id="tabLocal">🏠 Local / Même écran</button>
+          <button type="button" class="mode-tab" id="tabRemote">🌐 Multi à distance (Salon)</button>
+        </div>
+        <span class="sync-note" id="syncStatus">Mode Local actif</span>
+      </div>
+
+      <div id="remoteBox" class="remote-box" style="display:none;">
+        <div class="remote-row">
+          <span class="room-code-badge" id="roomCodeBadge">SALON : ------</span>
+          <input type="text" id="remotePseudoInput" placeholder="Ton pseudo joueur..." />
+          <button type="button" class="gold" id="createRoomBtn">✨ Créer un salon</button>
+          <input type="text" id="joinRoomInput" placeholder="Code salon (ex: DISNEY42)..." style="max-width:190px;" />
+          <button type="button" id="joinRoomBtn">🔗 Rejoindre</button>
+          <button type="button" class="ghost" id="copyInviteBtn">📋 Copier lien d'invitation</button>
+        </div>
+        <div class="remote-row">
+          <span class="sync-note">
+            Astuce : en multi à distance, chacun lance l'extrait audio sur son propre appareil sans dépendre d'un partage d'écran, puis buzze en direct. Si l'hôte lance une manche, les joueurs connectés au même salon reçoivent la piste et le buzzer instantanément.
+          </span>
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="score-bar">
         <input type="text" id="playerNameInput" placeholder="Nom du joueur ou de l'équipe..." />
@@ -71,6 +97,18 @@
             <a id="ytFallbackLink" href="#" target="_blank" rel="noopener noreferrer">
               ↗ Ouvrir ce morceau sur YouTube
             </a>
+          </div>
+
+          <div id="buzzPanel" class="buzz-panel" style="display:none;">
+            <div class="buzz-top">
+              <div>
+                <strong style="color:var(--gold-light);">🔔 Buzzer à distance</strong>
+                <div class="sync-note" id="buzzLeaderText">En attente d'un buzz sur cette manche...</div>
+              </div>
+              <button type="button" class="buzz-btn" id="buzzBtn" disabled>🔔 BUZZER !</button>
+              <button type="button" class="ghost" id="clearBuzzBtn">Réinitialiser buzz</button>
+            </div>
+            <div id="buzzFeed" class="buzz-feed"></div>
           </div>
         </div>
       </div>

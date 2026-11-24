@@ -1,8 +1,15 @@
-const STORAGE_KEY = "royaumes_melodies_v5";
+const STORAGE_KEY = "royaumes_melodies_v6";
 const metaCache = {};
 let loadSeq = 0;
 
+// Canal temps réel multi-onglets (même navigateur) + état partagé par code de salon
+let broadcastChannel = null;
+let roomPollTimer = null;
+
 let state = {
+  mode: "local", // "local" | "remote"
+  roomCode: "",
+  remotePseudo: "",
   players: [
     { id: 1, name: "Joueur 1", score: 0 },
     { id: 2, name: "Joueur 2", score: 0 }
@@ -11,7 +18,8 @@ let state = {
   roundNumber: 0,
   currentTrackId: null,
   revealed: false,
-  playedIds: []
+  playedIds: [],
+  buzzes: [] // { pseudo, at, label }
 };
 
 try {
@@ -21,11 +29,61 @@ try {
   }
 } catch (_) {}
 
+// Lecture éventuelle d'un code salon dans l'URL (?room=XXXX)
+const urlParams = new URLSearchParams(window.location.search);
+const initialRoomParam = (urlParams.get("room") || "").trim().toUpperCase();
+if (initialRoomParam) {
+  state.mode = "remote";
+  state.roomCode = initialRoomParam;
+}
+
+function roomStorageKey(code) {
+  return `royaumes_room_${String(code || "").toUpperCase()}`;
+}
+
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (_) {}
+
+  if (state.mode === "remote" && state.roomCode) {
+    const payload = {
+      roomCode: state.roomCode,
+      players: state.players,
+      nextPlayerId: state.nextPlayerId,
+      roundNumber: state.roundNumber,
+      currentTrackId: state.currentTrackId,
+      revealed: state.revealed,
+      playedIds: state.playedIds,
+      buzzes: state.buzzes,
+      updatedAt: Date.now()
+    };
+    try {
+      localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(payload));
+    } catch (_) {}
+
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload });
+    }
+  }
 }
+
+const tabLocal = document.getElementById("tabLocal");
+const tabRemote = document.getElementById("tabRemote");
+const remoteBox = document.getElementById("remoteBox");
+const syncStatus = document.getElementById("syncStatus");
+const roomCodeBadge = document.getElementById("roomCodeBadge");
+const remotePseudoInput = document.getElementById("remotePseudoInput");
+const createRoomBtn = document.getElementById("createRoomBtn");
+const joinRoomInput = document.getElementById("joinRoomInput");
+const joinRoomBtn = document.getElementById("joinRoomBtn");
+const copyInviteBtn = document.getElementById("copyInviteBtn");
+
+const buzzPanel = document.getElementById("buzzPanel");
+const buzzBtn = document.getElementById("buzzBtn");
+const clearBuzzBtn = document.getElementById("clearBuzzBtn");
+const buzzLeaderText = document.getElementById("buzzLeaderText");
+const buzzFeed = document.getElementById("buzzFeed");
 
 const playerNameInput = document.getElementById("playerNameInput");
 const addPlayerBtn = document.getElementById("addPlayerBtn");
@@ -67,6 +125,208 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+function generateRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+function ensurePlayerForPseudo(pseudo) {
+  const clean = String(pseudo || "").trim();
+  if (!clean) return;
+  const exists = state.players.some((p) => p.name.toLowerCase() === clean.toLowerCase());
+  if (!exists) {
+    state.players.push({ id: state.nextPlayerId++, name: clean, score: 0 });
+  }
+}
+
+function renderBuzzUI() {
+  if (state.mode !== "remote") {
+    buzzPanel.style.display = "none";
+    return;
+  }
+  buzzPanel.style.display = "flex";
+  buzzBtn.disabled = !state.currentTrackId;
+
+  if (!state.buzzes.length) {
+    buzzLeaderText.textContent = "Aucun buzz pour l'instant sur cette manche.";
+    buzzFeed.innerHTML = "";
+    return;
+  }
+
+  const first = state.buzzes[0];
+  buzzLeaderText.textContent = `🏆 Premier buzz : ${first.pseudo} (${first.label})`;
+  buzzFeed.innerHTML = state.buzzes
+    .map(
+      (b, idx) =>
+        `<span class="buzz-chip ${idx === 0 ? "first" : ""}">#${idx + 1} ${escapeHtml(b.pseudo)} • ${escapeHtml(b.label)}</span>`
+    )
+    .join("");
+}
+
+function applyRemotePayload(payload) {
+  if (!payload || payload.roomCode !== state.roomCode) return;
+  const trackChanged = payload.currentTrackId && payload.currentTrackId !== state.currentTrackId;
+  const revealChanged = payload.revealed !== state.revealed;
+
+  state.players = Array.isArray(payload.players) && payload.players.length ? payload.players : state.players;
+  state.nextPlayerId = payload.nextPlayerId || state.nextPlayerId;
+  state.roundNumber = payload.roundNumber ?? state.roundNumber;
+  state.currentTrackId = payload.currentTrackId ?? state.currentTrackId;
+  state.revealed = Boolean(payload.revealed);
+  state.playedIds = Array.isArray(payload.playedIds) ? payload.playedIds : state.playedIds;
+  state.buzzes = Array.isArray(payload.buzzes) ? payload.buzzes : [];
+
+  renderPlayers();
+  renderList();
+  renderBuzzUI();
+
+  const currentTrack = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
+  if (currentTrack) {
+    roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${currentTrack.id}`;
+    if (trackChanged) {
+      loadAndPlayTrack(currentTrack, { fromRemoteSync: true });
+    } else if (revealChanged) {
+      updateStageRevealUI(currentTrack);
+    }
+  }
+}
+
+function startRoomListeners() {
+  if (broadcastChannel) {
+    broadcastChannel.close();
+    broadcastChannel = null;
+  }
+  if (roomPollTimer) {
+    clearInterval(roomPollTimer);
+    roomPollTimer = null;
+  }
+
+  if (state.mode !== "remote" || !state.roomCode) return;
+
+  if ("BroadcastChannel" in window) {
+    broadcastChannel = new BroadcastChannel(`royaumes_${state.roomCode}`);
+    broadcastChannel.onmessage = (event) => {
+      if (event.data && event.data.type === "ROOM_SYNC") {
+        applyRemotePayload(event.data.payload);
+      }
+    };
+  }
+
+  roomPollTimer = setInterval(() => {
+    try {
+      const raw = localStorage.getItem(roomStorageKey(state.roomCode));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.updatedAt) {
+        applyRemotePayload(parsed);
+      }
+    } catch (_) {}
+  }, 800);
+}
+
+function setMode(newMode) {
+  state.mode = newMode;
+  if (newMode === "remote") {
+    if (!state.roomCode) {
+      state.roomCode = generateRoomCode();
+    }
+    tabLocal.classList.remove("active");
+    tabRemote.classList.add("active");
+    remoteBox.style.display = "flex";
+    syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+    roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+    startRoomListeners();
+  } else {
+    tabRemote.classList.remove("active");
+    tabLocal.classList.add("active");
+    remoteBox.style.display = "none";
+    syncStatus.textContent = "Mode Local actif";
+    if (roomPollTimer) clearInterval(roomPollTimer);
+  }
+  renderBuzzUI();
+  saveState();
+}
+
+tabLocal.addEventListener("click", () => setMode("local"));
+tabRemote.addEventListener("click", () => setMode("remote"));
+
+createRoomBtn.addEventListener("click", () => {
+  state.roomCode = generateRoomCode();
+  const pseudo = remotePseudoInput.value.trim();
+  if (pseudo) {
+    state.remotePseudo = pseudo;
+    ensurePlayerForPseudo(pseudo);
+  }
+  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+  startRoomListeners();
+  saveState();
+  renderPlayers();
+  renderBuzzUI();
+});
+
+joinRoomBtn.addEventListener("click", () => {
+  const code = joinRoomInput.value.trim().toUpperCase();
+  if (!code) return;
+  state.roomCode = code;
+  const pseudo = remotePseudoInput.value.trim() || "Joueur distant";
+  state.remotePseudo = pseudo;
+  ensurePlayerForPseudo(pseudo);
+  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+  startRoomListeners();
+
+  try {
+    const existing = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+    if (existing) {
+      applyRemotePayload(existing);
+    }
+  } catch (_) {}
+
+  saveState();
+  renderPlayers();
+  renderBuzzUI();
+});
+
+copyInviteBtn.addEventListener("click", async () => {
+  if (!state.roomCode) return;
+  const baseUrl = window.location.href.split("?")[0];
+  const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}`;
+  try {
+    await navigator.clipboard.writeText(inviteUrl);
+    syncStatus.textContent = `Lien copié pour le salon ${state.roomCode} !`;
+  } catch (_) {
+    syncStatus.textContent = `Code salon : ${state.roomCode}`;
+  }
+});
+
+buzzBtn.addEventListener("click", () => {
+  if (!state.currentTrackId) return;
+  const pseudo = remotePseudoInput.value.trim() || state.remotePseudo || "Joueur distant";
+  state.remotePseudo = pseudo;
+  ensurePlayerForPseudo(pseudo);
+
+  const now = new Date();
+  const label = `${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}.${String(Math.floor(now.getMilliseconds() / 10)).padStart(2, "0")}`;
+
+  if (!state.buzzes.some((b) => b.pseudo.toLowerCase() === pseudo.toLowerCase())) {
+    state.buzzes.push({ pseudo, at: Date.now(), label });
+  }
+  saveState();
+  renderPlayers();
+  renderBuzzUI();
+});
+
+clearBuzzBtn.addEventListener("click", () => {
+  state.buzzes = [];
+  saveState();
+  renderBuzzUI();
+});
+
 function makeFallbackArtwork(track) {
   const title = encodeURIComponent(track.film.slice(0, 26));
   const year = encodeURIComponent(String(track.annee));
@@ -87,7 +347,6 @@ function makeFallbackArtwork(track) {
   return "data:image/svg+xml;utf8," + svg;
 }
 
-// Requête JSONP universelle (contourne 100% des blocages CORS)
 function jsonpRequest(url, callbackParam = "callback", timeoutMs = 4500) {
   return new Promise((resolve) => {
     const cbName = "__jsonp_cb_" + Math.random().toString(36).slice(2);
@@ -123,7 +382,6 @@ function jsonpRequest(url, callbackParam = "callback", timeoutMs = 4500) {
   });
 }
 
-// Source 1 : iTunes FR / US via JSONP
 async function searchItunesJsonp(query, country = "FR") {
   const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&country=${country}&media=music&entity=song&limit=5`;
   const data = await jsonpRequest(url, "callback");
@@ -140,7 +398,6 @@ async function searchItunesJsonp(query, country = "FR") {
   return null;
 }
 
-// Source 2 : Deezer via JSONP
 async function searchDeezerJsonp(query) {
   const url = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=5&output=jsonp`;
   const data = await jsonpRequest(url, "callback");
@@ -253,18 +510,24 @@ function updateStageRevealUI(track) {
   }
 }
 
-async function loadAndPlayTrack(track) {
+async function loadAndPlayTrack(track, options = {}) {
   if (!track) return;
   const mySeq = ++loadSeq;
+  const fromRemoteSync = Boolean(options.fromRemoteSync);
 
-  state.roundNumber += 1;
-  state.currentTrackId = track.id;
-  state.revealed = false;
-  if (!state.playedIds.includes(track.id)) {
-    state.playedIds.push(track.id);
+  if (!fromRemoteSync) {
+    state.roundNumber += 1;
+    state.currentTrackId = track.id;
+    state.revealed = false;
+    state.buzzes = [];
+    if (!state.playedIds.includes(track.id)) {
+      state.playedIds.push(track.id);
+    }
+    saveState();
   }
-  saveState();
+
   renderList();
+  renderBuzzUI();
 
   roundBadge.textContent = `Manche #${state.roundNumber} • Piste #${track.id}`;
   coverImg.src = makeFallbackArtwork(track);
@@ -498,6 +761,15 @@ resetPlayedBtn.addEventListener("click", () => {
 searchInput.addEventListener("input", renderList);
 typeFilter.addEventListener("change", renderList);
 
+if (state.remotePseudo) {
+  remotePseudoInput.value = state.remotePseudo;
+}
+if (state.roomCode) {
+  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+}
+
 coverImg.src = makeFallbackArtwork({ film: "Royaumes des Mélodies", annee: 2026 });
+setMode(state.mode === "remote" ? "remote" : "local");
 renderPlayers();
 renderList();
+renderBuzzUI();
