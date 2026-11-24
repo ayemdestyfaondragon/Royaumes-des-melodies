@@ -1197,16 +1197,80 @@ async function searchDeezerJsonp(query) {
   return null;
 }
 
+function scoreCandidateMatch(candidate, track) {
+  if (!candidate) return -1;
+  const hay = normalizeAnswer(`${candidate.trackName || ""} ${candidate.title || ""} ${candidate.artistName || ""} ${(candidate.artist && candidate.artist.name) || ""} ${candidate.collectionName || ""} ${(candidate.album && candidate.album.title) || ""}`);
+  const tFr = normalizeAnswer(track.titre_fr);
+  const tEn = normalizeAnswer(track.titre_en);
+  const rawFilm = String(track.film || "");
+  const filmClean = normalizeAnswer(rawFilm.includes("(") ? rawFilm.slice(0, rawFilm.indexOf("(")) : rawFilm);
+
+  let score = 0;
+  if (tFr && hay.includes(tFr)) score += 5;
+  if (tEn && hay.includes(tEn)) score += 5;
+  if (filmClean && hay.includes(filmClean)) score += 4;
+  if (hay.includes("disney")) score += 2;
+  if (track.type === "Instrumental" && (hay.includes("score") || hay.includes("suite") || hay.includes("theme") || hay.includes("instrumental"))) {
+    score += 2;
+  }
+  return score;
+}
+
+async function searchItunesJsonp(query, country = "FR", track = null) {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&country=${country}&media=music&entity=song&limit=8`;
+  const data = await jsonpRequest(url, "callback");
+  if (data && Array.isArray(data.results) && data.results.length > 0) {
+    const withAudio = data.results.filter((r) => r.previewUrl);
+    if (!withAudio.length) return null;
+    const best = track
+      ? [...withAudio].sort((a, b) => scoreCandidateMatch(b, track) - scoreCandidateMatch(a, track))[0]
+      : withAudio[0];
+    if (best && best.previewUrl) {
+      return {
+        audioUrl: best.previewUrl,
+        artworkUrl: best.artworkUrl100 ? best.artworkUrl100.replace("100x100bb", "500x500bb") : "",
+        source: `Apple Music (${country}) • ${best.trackName || ""}`.trim()
+      };
+    }
+  }
+  return null;
+}
+
+async function searchDeezerJsonp(query, track = null) {
+  const url = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=8&output=jsonp`;
+  const data = await jsonpRequest(url, "callback");
+  if (data && Array.isArray(data.data) && data.data.length > 0) {
+    const withAudio = data.data.filter((r) => r.preview);
+    if (!withAudio.length) return null;
+    const best = track
+      ? [...withAudio].sort((a, b) => scoreCandidateMatch(b, track) - scoreCandidateMatch(a, track))[0]
+      : withAudio[0];
+    if (best && best.preview) {
+      const cover = (best.album && (best.album.cover_big || best.album.cover_medium)) || "";
+      return {
+        audioUrl: best.preview,
+        artworkUrl: cover,
+        source: `Deezer • ${best.title || ""}`.trim()
+      };
+    }
+  }
+  return null;
+}
+
 async function fetchTrackMedia(track) {
   if (metaCache[track.id] && metaCache[track.id].audioUrl) {
     return metaCache[track.id];
   }
 
+  const rawFilm = String(track.film || "");
+  const filmClean = rawFilm.includes("(") ? rawFilm.slice(0, rawFilm.indexOf("(")).trim() : rawFilm.trim();
+
   const attempts = [
-    () => searchDeezerJsonp(`${track.titre_fr} ${track.film}`),
-    () => searchItunesJsonp(`${track.titre_fr} ${track.film}`, "FR"),
-    () => searchDeezerJsonp(`${track.titre_en} Disney`),
-    () => searchItunesJsonp(`${track.titre_en} ${track.film}`, "US")
+    () => searchItunesJsonp(`${track.titre_fr} ${filmClean} Disney`, "FR", track),
+    () => searchDeezerJsonp(`${track.titre_fr} ${filmClean}`, track),
+    () => searchItunesJsonp(`${track.titre_en} ${filmClean} Disney`, "US", track),
+    () => searchDeezerJsonp(`${track.titre_en} ${filmClean}`, track),
+    () => searchItunesJsonp(`${track.titre_fr}`, "FR", track)
   ];
 
   for (const run of attempts) {
@@ -1980,6 +2044,7 @@ renderRoundGuesses();
 
 if (state.mode === "remote" && state.roomCode) {
   (async () => {
+    roomSystem.updatedAt = 0;
     const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
     const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
     const candidate =
@@ -1987,11 +2052,14 @@ if (state.mode === "remote" && state.roomCode) {
         ? ((netSnap.updatedAt || 0) >= (fbSnap.updatedAt || 0) ? netSnap : fbSnap)
         : (netSnap || fbSnap);
 
-    if (candidate && (candidate.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+    if (candidate) {
+      if (candidate.hostId && candidate.hostId !== roomSystem.clientId) {
+        roomSystem.hostId = candidate.hostId;
+      }
       applyRemotePayload(candidate);
     }
-    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-    roomSystem.updatedAt = Date.now();
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: true });
+    roomSystem.updatedAt = Math.max(Date.now(), Number((candidate && candidate.updatedAt) || 0) + 1);
     saveState();
     renderPlayers();
     renderBuzzUI();
