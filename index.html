@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Disney Blind Test — Tableau des Scores & Animation</title>
+  <title>Disney Blind Test — Tableau des Scores &amp; Animation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -78,7 +78,6 @@
       animation: pulseScore 0.35s ease-out;
     }
 
-    /* Personnalisation discrète des barres de défilement */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -98,7 +97,7 @@
 <body class="font-sans antialiased selection:bg-gold/30 selection:text-goldLight">
   <div class="starfield" aria-hidden="true"></div>
 
-  <!-- Bandeau de notification non-bloquant (remplace alert/confirm) -->
+  <!-- Bandeau de notification non-bloquant -->
   <div
     id="toastBanner"
     role="status"
@@ -116,14 +115,14 @@
     <!-- En-tête principal -->
     <header class="mb-6 flex flex-col gap-4 rounded-3xl border border-gold/25 bg-twilight/75 p-5 shadow-cardDark backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold tracking-wider text-goldLight uppercase">
+        <div class="inline-flex flex-wrap items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold tracking-wider text-goldLight uppercase">
           <span>✦ Règle : +1 pt Titre · +1 pt Disney (Max 2 pts / manche)</span>
         </div>
         <h1 class="font-display text-2xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-goldLight via-gold to-amber-300 sm:text-3xl lg:text-4xl">
           Disney Blind Test
         </h1>
         <p class="text-xs text-slate-300 sm:text-sm">
-          Animation de soirée &amp; tableau des scores en direct — prêt pour vos playlists JSON et votre écran partagé.
+          Animation de soirée &amp; tableau des scores en direct — catalogue complet de 151 pistes Disney inclus.
         </p>
       </div>
 
@@ -133,7 +132,7 @@
           id="toggleJudgeModeBtn"
           type="button"
           class="inline-flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3.5 py-2.5 text-xs font-semibold text-goldLight transition hover:bg-gold/25 active:scale-[0.99] sm:text-sm"
-          title="Masquer ou afficher les réponses et notes côté plateau"
+          title="Afficher ou masquer l'aperçu réponse côté animateur"
         >
           <span id="judgeModeIcon">👑</span>
           <span id="judgeModeLabel">Mode Juge : Actif</span>
@@ -145,7 +144,18 @@
           class="inline-flex items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/15 px-3.5 py-2.5 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/25 active:scale-[0.99] sm:text-sm"
         >
           <span>📂</span>
-          <span>Playlist JSON (<span id="playlistCountBadge">0</span>)</span>
+          <span>Playlist / JSON (<span id="playlistCountBadge">151</span>)</span>
+        </button>
+
+        <button
+          id="undoActionBtn"
+          type="button"
+          disabled
+          class="inline-flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+          title="Annuler la dernière attribution de points ou action"
+        >
+          <span>↩️</span>
+          <span>Annuler</span>
         </button>
 
         <button
@@ -159,20 +169,92 @@
       </div>
     </header>
 
-    <!-- Grille principale : Colonne Gauche (Manche & Audio) | Colonne Droite (Joueurs & Classement) -->
+    <!-- Barre de filtres & mode de tirage -->
+    <section aria-label="Filtres de playlist" class="mb-6 rounded-3xl border border-slate-700/70 bg-twilight/70 p-4 shadow-cardDark backdrop-blur-md">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
+        <div>
+          <label for="filterDecade" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Décennie
+          </label>
+          <select
+            id="filterDecade"
+            class="w-full rounded-xl border border-slate-600/70 bg-midnight/90 px-3 py-2.5 text-xs font-medium text-white outline-none transition focus:border-gold sm:text-sm"
+          >
+            <option value="ALL">Toutes les décennies</option>
+            <option value="1930s">Années 1930</option>
+            <option value="1940s">Années 1940</option>
+            <option value="1950s">Années 1950</option>
+            <option value="1960s">Années 1960</option>
+            <option value="1970s">Années 1970</option>
+            <option value="1980s">Années 1980</option>
+            <option value="1990s">Années 1990</option>
+            <option value="2000s">Années 2000</option>
+            <option value="2010s">Années 2010</option>
+            <option value="2020s">Années 2020+</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="filterType" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Type de morceau
+          </label>
+          <select
+            id="filterType"
+            class="w-full rounded-xl border border-slate-600/70 bg-midnight/90 px-3 py-2.5 text-xs font-medium text-white outline-none transition focus:border-gold sm:text-sm"
+          >
+            <option value="ALL">Tous les types</option>
+            <option value="Chanson">Chanson</option>
+            <option value="Instrumental">Instrumental</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="filterFilm" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Film / Univers Disney
+          </label>
+          <select
+            id="filterFilm"
+            class="w-full rounded-xl border border-slate-600/70 bg-midnight/90 px-3 py-2.5 text-xs font-medium text-white outline-none transition focus:border-gold sm:text-sm"
+          >
+            <option value="ALL">Tous les films / séries</option>
+          </select>
+        </div>
+
+        <div>
+          <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Mode de tirage
+          </span>
+          <button
+            id="toggleShuffleBtn"
+            type="button"
+            class="flex w-full items-center justify-center gap-2 rounded-xl border border-gold/40 bg-gold/15 px-3 py-2.5 text-xs font-bold text-goldLight transition hover:bg-gold/25 sm:text-sm"
+          >
+            <span id="shuffleIcon">🔀</span>
+            <span id="shuffleLabel">Aléatoire : Activé</span>
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between rounded-xl border border-slate-700/70 bg-midnight/75 px-3.5 py-2.5 text-xs">
+          <span class="text-slate-400">Pistes filtrées :</span>
+          <span id="filteredCountBadge" class="font-bold text-goldLight">151</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grille principale : Colonne Gauche (Manche, Minuteur & YouTube) | Colonne Droite (Joueurs & Classement) -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-      <!-- COLONNE GAUCHE : Manche en cours, lecteur audio & historique -->
+      <!-- COLONNE GAUCHE : Manche en cours, minuteur, lien YouTube & historique -->
       <section class="space-y-6 lg:col-span-5">
         <!-- Carte Manche & Réponse -->
         <div class="rounded-3xl border border-gold/30 bg-gradient-to-b from-twilight/90 to-midnight/95 p-5 shadow-cardDark backdrop-blur-md sm:p-6">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
               <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gold/20 text-sm font-bold text-goldLight border border-gold/30">
                 #<span id="roundNumberDisplay">1</span>
               </span>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Manche en cours</p>
-                <p id="poolStatusText" class="text-xs text-goldLight/90">Pioche : 0 / 0 joués</p>
+                <p id="poolStatusText" class="text-xs text-goldLight/90">Pioche : 0 / 151 joués</p>
               </div>
             </div>
 
@@ -180,16 +262,54 @@
               id="resetPoolBtn"
               type="button"
               class="rounded-xl border border-slate-600/60 bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
-              title="Relancer le tirage de toutes les chansons"
+              title="Relancer le tirage de toutes les chansons filtrées"
             >
               🎲 Réinitialiser la pioche
             </button>
           </div>
 
+          <!-- Minuteur optionnel de manche -->
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-700/70 bg-slate-900/75 px-3.5 py-2.5">
+            <div class="flex items-center gap-2.5">
+              <span class="text-base" aria-hidden="true">⏱️</span>
+              <div>
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Chrono manche</span>
+                <p id="timerDisplay" class="font-mono text-lg font-bold text-goldLight">00:30</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button
+                id="timerStartPauseBtn"
+                type="button"
+                class="rounded-xl border border-gold/40 bg-gold/15 px-3 py-1.5 text-xs font-bold text-goldLight transition hover:bg-gold/25"
+              >
+                ▶ Start
+              </button>
+              <button
+                id="timerResetBtn"
+                type="button"
+                class="rounded-xl border border-slate-600/70 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+              >
+                Reset
+              </button>
+              <select
+                id="timerDurationSelect"
+                aria-label="Durée du chronomètre"
+                class="rounded-xl border border-slate-600/70 bg-midnight px-2 py-1.5 text-xs font-semibold text-slate-200 outline-none focus:border-gold"
+              >
+                <option value="15">15s</option>
+                <option value="20">20s</option>
+                <option value="30" selected>30s</option>
+                <option value="45">45s</option>
+                <option value="60">60s</option>
+              </select>
+            </div>
+          </div>
+
           <!-- Zone d'affichage de la piste / réponse -->
           <div id="trackStage" class="mb-5 rounded-2xl border border-slate-700/70 bg-midnight/80 p-4 sm:p-5">
             <div class="flex items-start gap-4">
-              <!-- Visuel / Pochette stylisée sans image externe cassée -->
               <div
                 id="coverBadge"
                 class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gradient-to-br from-sapphire via-indigo-950 to-midnight text-2xl shadow-inner sm:h-20 sm:w-20 sm:text-3xl"
@@ -198,12 +318,17 @@
               </div>
 
               <div class="min-w-0 flex-1">
-                <p id="trackHintLabel" class="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
-                  Écoutez l'extrait...
-                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p id="trackHintLabel" class="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
+                    Écoutez l'extrait...
+                  </p>
+                  <span id="trackMetaPill" class="rounded-full border border-slate-700 bg-slate-800/90 px-2 py-0.5 text-[11px] font-medium text-slate-300">
+                    —
+                  </span>
+                </div>
 
                 <!-- Réponse masquée tant que non révélée -->
-                <div id="hiddenAnswerBox" class="mt-1.5 space-y-1">
+                <div id="hiddenAnswerBox" class="mt-2 space-y-1">
                   <p class="text-lg font-bold text-white sm:text-xl">Titre : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-goldLight">??? (1 pt)</span></p>
                   <p class="text-sm font-medium text-slate-300">Disney : <span class="rounded-lg bg-slate-800 px-2 py-0.5 text-sky-300">??? (1 pt)</span></p>
                   <p id="judgeCheatPeek" class="mt-2 rounded-xl border border-gold/25 bg-gold/10 px-2.5 py-1.5 text-xs text-goldLight">
@@ -212,62 +337,28 @@
                 </div>
 
                 <!-- Réponse révélée -->
-                <div id="revealedAnswerBox" class="mt-1.5 hidden space-y-1.5">
+                <div id="revealedAnswerBox" class="mt-2 hidden space-y-1.5">
                   <p class="text-lg font-bold text-goldLight sm:text-xl" id="revealedTitle">—</p>
+                  <p class="text-xs font-medium text-amber-200/85" id="revealedTitleEn"></p>
                   <p class="text-sm font-semibold text-sky-300 sm:text-base" id="revealedMovie">—</p>
-                  <p id="revealedNotes" class="text-xs italic text-slate-300"></p>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Lecteur Audio HTML5 intégré -->
-          <div class="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/75 p-3.5">
-            <div class="mb-2 flex items-center justify-between gap-2 text-xs">
-              <span id="audioSourceStatus" class="font-medium text-slate-300">Aucun lien audio sur cette piste</span>
-              <span id="audioTimeDisplay" class="font-mono text-slate-400">00:00 / 00:00</span>
-            </div>
-
-            <audio id="audioPlayer" preload="metadata" class="hidden"></audio>
-
-            <div class="flex flex-wrap items-center gap-3">
-              <button
-                id="playPauseBtn"
-                type="button"
-                disabled
-                class="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-midnight transition hover:bg-goldLight disabled:cursor-not-allowed disabled:opacity-40"
+            <!-- Lien rapide YouTube (yt_fallback) -->
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+              <span class="text-xs text-slate-400">Diffusion audio externe :</span>
+              <a
+                id="ytFallbackLink"
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-600/20 px-3.5 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-600/35"
               >
-                <span id="playPauseIcon">▶</span>
-                <span id="playPauseLabel">Lecture</span>
-              </button>
-
-              <!-- Barre de progression cliquable -->
-              <input
-                id="seekSlider"
-                type="range"
-                min="0"
-                max="100"
-                value="0"
-                step="0.1"
-                disabled
-                aria-label="Position de lecture audio"
-                class="h-2 min-w-[110px] flex-1 cursor-pointer accent-gold disabled:cursor-not-allowed disabled:opacity-40"
-              />
-
-              <!-- Volume -->
-              <div class="flex items-center gap-1.5">
-                <span class="text-xs text-slate-300" aria-hidden="true">🔊</span>
-                <input
-                  id="volumeSlider"
-                  type="range"
-                  min="0"
-                  max="1"
-                  value="0.8"
-                  step="0.05"
-                  aria-label="Volume audio"
-                  class="h-1.5 w-20 cursor-pointer accent-gold"
-                />
-              </div>
+                <span>▶️</span>
+                <span>Ouvrir sur YouTube</span>
+                <span aria-hidden="true">↗</span>
+              </a>
             </div>
           </div>
 
@@ -342,7 +433,7 @@
                 ⭐ Comptoir des Points
               </h2>
               <p class="text-xs text-slate-300">
-                Cliquez pour attribuer <strong class="text-goldLight">+1 Titre</strong>, <strong class="text-sky-300">+1 Disney</strong> ou <strong class="text-emerald-300">+2 Combo</strong> sur la manche active.
+                Cliquez pour attribuer <strong class="text-goldLight">+1 Titre</strong>, <strong class="text-sky-300">+1 Disney</strong> ou <strong class="text-emerald-300">+2 Combo</strong> (max +2 pts / manche).
               </p>
             </div>
             <span class="rounded-xl border border-gold/25 bg-midnight/70 px-3 py-1 text-xs font-semibold text-slate-300">
@@ -372,7 +463,7 @@
     </div>
   </div>
 
-  <!-- MODALE / PANNEAU PLAYLIST JSON (Coller, Importer .json, Exporter) -->
+  <!-- MODALE PLAYLIST / JSON / AJOUT DE PISTE -->
   <div
     id="jsonModal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
@@ -380,24 +471,75 @@
     aria-modal="true"
     aria-labelledby="jsonModalTitle"
   >
-    <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-gold/40 bg-twilight p-5 shadow-2xl sm:p-6">
+    <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-gold/40 bg-twilight p-5 shadow-2xl sm:p-6">
       <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-700/80 pb-3">
         <div>
           <h2 id="jsonModalTitle" class="font-display text-lg font-bold text-goldLight sm:text-xl">
-            📂 Gestionnaire de Playlist JSON
+            📂 Playlist Disney, Ajout &amp; Import/Export JSON
           </h2>
           <p class="text-xs text-slate-300">
-            Champs attendus par piste : <code class="rounded bg-midnight px-1.5 py-0.5 text-goldLight">title</code>, <code class="rounded bg-midnight px-1.5 py-0.5 text-sky-300">disney</code> (ou <code class="text-sky-300">movie</code>), et optionnellement <code class="text-emerald-300">audioUrl</code> (ou <code class="text-emerald-300">previewUrl</code>) + <code class="text-slate-300">notes</code>.
+            Structure prise en charge : <code class="text-goldLight">id</code>, <code class="text-sky-300">film</code>, <code class="text-amber-200">annee</code>, <code class="text-goldLight">titre_fr</code>, <code class="text-slate-200">titre_en</code>, <code class="text-emerald-300">type</code>, <code class="text-rose-200">yt_fallback</code>.
           </p>
         </div>
         <button
           id="closeJsonModalBtn"
           type="button"
-          aria-label="Fermer la fenêtre JSON"
+          aria-label="Fermer la fenêtre de playlist"
           class="rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-sm font-bold text-slate-200 transition hover:bg-slate-700"
         >
           ✕
         </button>
+      </div>
+
+      <!-- Formulaire d'ajout rapide d'une piste personnalisée -->
+      <div class="mb-5 rounded-2xl border border-gold/25 bg-midnight/75 p-4">
+        <h3 class="mb-3 text-xs font-bold uppercase tracking-wider text-goldLight">
+          ➕ Ajouter une piste personnalisée à la playlist
+        </h3>
+        <form id="addCustomTrackForm" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <input
+            id="customTitreFr"
+            type="text"
+            required
+            placeholder="Titre FR (ex: Libérée, délivrée)"
+            class="rounded-xl border border-slate-600/70 bg-twilight px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-gold"
+          />
+          <input
+            id="customFilm"
+            type="text"
+            required
+            placeholder="Film / Série Disney (ex: La Reine des neiges)"
+            class="rounded-xl border border-slate-600/70 bg-twilight px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-gold"
+          />
+          <input
+            id="customAnnee"
+            type="number"
+            min="1900"
+            max="2100"
+            placeholder="Année (ex: 2013)"
+            class="rounded-xl border border-slate-600/70 bg-twilight px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-gold"
+          />
+          <input
+            id="customTitreEn"
+            type="text"
+            placeholder="Titre EN (optionnel)"
+            class="rounded-xl border border-slate-600/70 bg-twilight px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-gold"
+          />
+          <select
+            id="customType"
+            aria-label="Type de piste"
+            class="rounded-xl border border-slate-600/70 bg-twilight px-3 py-2 text-xs text-white outline-none focus:border-gold"
+          >
+            <option value="Chanson">Chanson</option>
+            <option value="Instrumental">Instrumental</option>
+          </select>
+          <button
+            type="submit"
+            class="rounded-xl bg-emerald-400/90 px-3 py-2 text-xs font-bold text-midnight transition hover:bg-emerald-300"
+          >
+            + Ajouter la piste
+          </button>
+        </form>
       </div>
 
       <!-- Barre d'import fichier & export -->
@@ -420,18 +562,18 @@
           type="button"
           class="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/75 px-3.5 py-2 text-xs font-semibold text-slate-200 transition hover:border-gold/40 hover:text-goldLight"
         >
-          <span>✨ Liste Disney par défaut</span>
+          <span>✨ Restaurer les 151 pistes Disney</span>
         </button>
       </div>
 
       <!-- Zone d'édition / collage JSON -->
       <div class="mb-3">
         <label for="jsonTextarea" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-          Contenu JSON (tableau de pistes)
+          Contenu JSON de la playlist (modifiable directement)
         </label>
         <textarea
           id="jsonTextarea"
-          rows="12"
+          rows="11"
           spellcheck="false"
           class="w-full rounded-2xl border border-slate-600/80 bg-midnight p-3.5 font-mono text-xs leading-relaxed text-slate-100 outline-none focus:border-gold"
         ></textarea>
@@ -462,120 +604,1470 @@
   <script>
     /**
      * =========================================================================
-     * DISNEY BLIND TEST — LOGIQUE PRINCIPALE (SINGLE FILE / GITHUB PAGES READY)
-     * Règles de score :
-     *   - +1 pt pour le Titre de la chanson ("Titre")
-     *   - +1 pt pour le film / source Disney ("Disney")
+     * DISNEY BLIND TEST — CATALOGUE COMPLET (151 PISTES) & MOTEUR D'ANIMATION
+     * Règles :
+     *   - +1 pt pour le Titre ("Titre")
+     *   - +1 pt pour le Disney / film ("Disney")
      *   - Maximum +2 pts par manche et par joueur
      * =========================================================================
      */
 
-    const STORAGE_KEYS = {
-      STATE: 'disney_blind_test_state_v1',
-    };
+    const STORAGE_KEY = 'disney_blind_test_full_state_v2';
 
-    // Playlist d'exemple intégrée (sans dépendance externe cassée ; audioUrl optionnel)
-    const DEFAULT_PLAYLIST = [
-      {
-        id: 'track-1',
-        title: 'L’Histoire de la vie',
-        disney: 'Le Roi Lion',
-        emoji: '🦁',
-        audioUrl: '',
-        notes: 'Ouverture mythique sur les plaines de la Terre des Lions (1994).'
-      },
-      {
-        id: 'track-2',
-        title: 'Ce rêve bleu',
-        disney: 'Aladdin',
-        emoji: '🧞‍♂️',
-        audioUrl: '',
-        notes: 'Duo sur le tapis volant au-dessus d’Agrabah.'
-      },
-      {
-        id: 'track-3',
-        title: 'Libérée, délivrée',
-        disney: 'La Reine des neiges',
-        emoji: '❄️',
-        audioUrl: '',
-        notes: 'L’ascension d’Elsa vers son palais de glace.'
-      },
-      {
-        id: 'track-4',
-        title: 'Sous l’océan',
-        disney: 'La Petite Sirène',
-        emoji: '🧜‍♀️',
-        audioUrl: '',
-        notes: 'Sébastien tente de convaincre Ariel de rester sous l’eau.'
-      },
-      {
-        id: 'track-5',
-        title: 'Un peu d’amour, un brin de miel',
-        disney: 'Les Aventures de Winnie l’Ourson',
-        emoji: '🍯',
-        audioUrl: '',
-        notes: 'Douceur et pot de miel dans la Forêt des Rêves Bleus.'
-      },
-      {
-        id: 'track-6',
-        title: 'Je voudrais déjà être roi',
-        disney: 'Le Roi Lion',
-        emoji: '👑',
-        audioUrl: '',
-        notes: 'Simba et Zazu en pleine répétition royale.'
-      },
-      {
-        id: 'track-7',
-        title: 'Ne parlons pas de Bruno',
-        disney: 'Encanto',
-        emoji: '🦋',
-        audioUrl: '',
-        notes: 'La chanson chorale de la famille Madrigal.'
-      },
-      {
-        id: 'track-8',
-        title: 'Tout le monde veut devenir un cat',
-        disney: 'Les Aristochats',
-        emoji: '🐱',
-        audioUrl: '',
-        notes: 'Le swing endiablé de Scat Cat et ses amis à Paris.'
-      },
-      {
-        id: 'track-9',
-        title: 'Tellement d’amour',
-        disney: 'Raiponce',
-        emoji: ' lanternes'.trim(),
-        audioUrl: '',
-        notes: 'L’envol des lanternes célestes au fil de l’eau.'
-      },
-      {
-        id: 'track-10',
-        title: 'Le Bleu Lumière',
-        disney: 'Vaiana, la légende du bout du monde',
-        emoji: '🌊',
-        audioUrl: '',
-        notes: 'L’appel de l’océan vers l’horizon.'
-      }
-    ];
+    const DISNEY_TRACKS = [
+  {
+    "id": 1,
+    "film": "Blanche-Neige et les Sept Nains",
+    "annee": 1937,
+    "titre_fr": "Un jour mon prince viendra",
+    "titre_en": "Someday My Prince Will Come",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+jour+mon+prince+viendra+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale"
+  },
+  {
+    "id": 2,
+    "film": "Blanche-Neige et les Sept Nains",
+    "annee": 1937,
+    "titre_fr": "Heigh-Ho",
+    "titre_en": "Heigh-Ho",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Heigh-Ho+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale"
+  },
+  {
+    "id": 3,
+    "film": "Blanche-Neige et les Sept Nains",
+    "annee": 1937,
+    "titre_fr": "Siffler en travaillant",
+    "titre_en": "Whistle While You Work",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Siffler+en+travaillant+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale"
+  },
+  {
+    "id": 4,
+    "film": "Blanche-Neige et les Sept Nains",
+    "annee": 1937,
+    "titre_fr": "Je souhaite",
+    "titre_en": "I'm Wishing",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+souhaite+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale"
+  },
+  {
+    "id": 5,
+    "film": "Pinocchio",
+    "annee": 1940,
+    "titre_fr": "Quand on prie la bonne étoile",
+    "titre_en": "When You Wish Upon a Star",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Quand+on+prie+la+bonne+%C3%A9toile+Pinocchio+Disney+bande+originale"
+  },
+  {
+    "id": 6,
+    "film": "Pinocchio",
+    "annee": 1940,
+    "titre_fr": "Sans aucun lien me retenant",
+    "titre_en": "I've Got No Strings",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Sans+aucun+lien+me+retenant+Pinocchio+Disney+bande+originale"
+  },
+  {
+    "id": 7,
+    "film": "Fantasia",
+    "annee": 1940,
+    "titre_fr": "L'Apprenti sorcier",
+    "titre_en": "The Sorcerer's Apprentice",
+    "type": "Instrumental",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Apprenti+sorcier+Fantasia+Disney+bande+originale"
+  },
+  {
+    "id": 8,
+    "film": "Dumbo",
+    "annee": 1941,
+    "titre_fr": "Mon tout petit",
+    "titre_en": "Baby Mine",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Mon+tout+petit+Dumbo+Disney+bande+originale"
+  },
+  {
+    "id": 9,
+    "film": "Dumbo",
+    "annee": 1941,
+    "titre_fr": "Les Éléphants roses",
+    "titre_en": "Pink Elephants on Parade",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Les+%C3%89l%C3%A9phants+roses+Dumbo+Disney+bande+originale"
+  },
+  {
+    "id": 10,
+    "film": "Bambi",
+    "annee": 1942,
+    "titre_fr": "La Chanson de la pluie",
+    "titre_en": "Little April Shower",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=La+Chanson+de+la+pluie+Bambi+Disney+bande+originale"
+  },
+  {
+    "id": 11,
+    "film": "Cendrillon",
+    "annee": 1950,
+    "titre_fr": "Bibbidi-Bobbidi-Boo",
+    "titre_en": "Bibbidi-Bobbidi-Boo",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bibbidi-Bobbidi-Boo+Cendrillon+Disney+bande+originale"
+  },
+  {
+    "id": 12,
+    "film": "Cendrillon",
+    "annee": 1950,
+    "titre_fr": "Tendre rêve",
+    "titre_en": "A Dream Is a Wish Your Heart Makes",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Tendre+r%C3%AAve+Cendrillon+Disney+bande+originale"
+  },
+  {
+    "id": 13,
+    "film": "Cendrillon",
+    "annee": 1950,
+    "titre_fr": "C'est ça l'amour",
+    "titre_en": "So This Is Love",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=C%27est+%C3%A7a+l%27amour+Cendrillon+Disney+bande+originale"
+  },
+  {
+    "id": 14,
+    "film": "Alice au pays des merveilles",
+    "annee": 1951,
+    "titre_fr": "Joyeux non-anniversaire",
+    "titre_en": "The Unbirthday Song",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Joyeux+non-anniversaire+Alice+au+pays+des+merveilles+Disney+bande+originale"
+  },
+  {
+    "id": 15,
+    "film": "Alice au pays des merveilles",
+    "annee": 1951,
+    "titre_fr": "Dans le monde de mes rêves",
+    "titre_en": "In a World of My Own",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Dans+le+monde+de+mes+r%C3%AAves+Alice+au+pays+des+merveilles+Disney+bande+originale"
+  },
+  {
+    "id": 16,
+    "film": "Peter Pan",
+    "annee": 1953,
+    "titre_fr": "Tu t'envoles",
+    "titre_en": "You Can Fly!",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Tu+t%27envoles+Peter+Pan+Disney+bande+originale"
+  },
+  {
+    "id": 17,
+    "film": "Peter Pan",
+    "annee": 1953,
+    "titre_fr": "La Deuxième Étoile à droite",
+    "titre_en": "The Second Star to the Right",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=La+Deuxi%C3%A8me+%C3%89toile+%C3%A0+droite+Peter+Pan+Disney+bande+originale"
+  },
+  {
+    "id": 18,
+    "film": "La Belle et le Clochard",
+    "annee": 1955,
+    "titre_fr": "Bella Notte",
+    "titre_en": "Bella Notte",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bella+Notte+La+Belle+et+le+Clochard+Disney+bande+originale"
+  },
+  {
+    "id": 19,
+    "film": "La Belle et le Clochard",
+    "annee": 1955,
+    "titre_fr": "Nous sommes deux siamois",
+    "titre_en": "The Siamese Cat Song",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Nous+sommes+deux+siamois+La+Belle+et+le+Clochard+Disney+bande+originale"
+  },
+  {
+    "id": 20,
+    "film": "La Belle au bois dormant",
+    "annee": 1959,
+    "titre_fr": "J'en ai rêvé",
+    "titre_en": "Once Upon a Dream",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=J%27en+ai+r%C3%AAv%C3%A9+La+Belle+au+bois+dormant+Disney+bande+originale"
+  },
+  {
+    "id": 21,
+    "film": "Les 101 Dalmatiens",
+    "annee": 1961,
+    "titre_fr": "Cruella De Vil",
+    "titre_en": "Cruella De Vil",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Cruella+De+Vil+Les+101+Dalmatiens+Disney+bande+originale"
+  },
+  {
+    "id": 22,
+    "film": "Merlin l'Enchanteur",
+    "annee": 1963,
+    "titre_fr": "Higitus Figitus",
+    "titre_en": "Higitus Figitus",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Higitus+Figitus+Merlin+l%27Enchanteur+Disney+bande+originale"
+  },
+  {
+    "id": 23,
+    "film": "Merlin l'Enchanteur",
+    "annee": 1963,
+    "titre_fr": "C'est ça qui fait tourner le monde",
+    "titre_en": "That's What Makes the World Go Round",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=C%27est+%C3%A7a+qui+fait+tourner+le+monde+Merlin+l%27Enchanteur+Disney+bande+originale"
+  },
+  {
+    "id": 24,
+    "film": "Mary Poppins",
+    "annee": 1964,
+    "titre_fr": "Supercalifragilisticexpialidocious",
+    "titre_en": "Supercalifragilisticexpialidocious",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Supercalifragilisticexpialidocious+Mary+Poppins+Disney+bande+originale"
+  },
+  {
+    "id": 25,
+    "film": "Mary Poppins",
+    "annee": 1964,
+    "titre_fr": "Cheminée",
+    "titre_en": "Chim Chim Cher-ee",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Chemin%C3%A9e+Mary+Poppins+Disney+bande+originale"
+  },
+  {
+    "id": 26,
+    "film": "Mary Poppins",
+    "annee": 1964,
+    "titre_fr": "Un morceau de sucre",
+    "titre_en": "A Spoonful of Sugar",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+morceau+de+sucre+Mary+Poppins+Disney+bande+originale"
+  },
+  {
+    "id": 27,
+    "film": "Le Livre de la jungle",
+    "annee": 1967,
+    "titre_fr": "Il en faut peu pour être heureux",
+    "titre_en": "The Bare Necessities",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Il+en+faut+peu+pour+%C3%AAtre+heureux+Le+Livre+de+la+jungle+Disney+bande+originale"
+  },
+  {
+    "id": 28,
+    "film": "Le Livre de la jungle",
+    "annee": 1967,
+    "titre_fr": "Être un homme comme vous",
+    "titre_en": "I Wan'na Be Like You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=%C3%8Atre+un+homme+comme+vous+Le+Livre+de+la+jungle+Disney+bande+originale"
+  },
+  {
+    "id": 29,
+    "film": "Le Livre de la jungle",
+    "annee": 1967,
+    "titre_fr": "Aie confiance",
+    "titre_en": "Trust in Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Aie+confiance+Le+Livre+de+la+jungle+Disney+bande+originale"
+  },
+  {
+    "id": 30,
+    "film": "Les Aristochats",
+    "annee": 1970,
+    "titre_fr": "Tout le monde veut devenir un cat",
+    "titre_en": "Ev'rybody Wants to Be a Cat",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Tout+le+monde+veut+devenir+un+cat+Les+Aristochats+Disney+bande+originale"
+  },
+  {
+    "id": 31,
+    "film": "Les Aristochats",
+    "annee": 1970,
+    "titre_fr": "Les Aristochats",
+    "titre_en": "The Aristocats",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Les+Aristochats+Les+Aristochats+Disney+bande+originale"
+  },
+  {
+    "id": 32,
+    "film": "Robin des Bois",
+    "annee": 1973,
+    "titre_fr": "Quel beau jour vraiment",
+    "titre_en": "Oo-De-Lally",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Quel+beau+jour+vraiment+Robin+des+Bois+Disney+bande+originale"
+  },
+  {
+    "id": 33,
+    "film": "Robin des Bois",
+    "annee": 1973,
+    "titre_fr": "Un ami fidèle",
+    "titre_en": "Not in Nottingham",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+ami+fid%C3%A8le+Robin+des+Bois+Disney+bande+originale"
+  },
+  {
+    "id": 34,
+    "film": "Les Aventures de Bernard et Bianca",
+    "annee": 1977,
+    "titre_fr": "Quelqu'un viendra",
+    "titre_en": "Someone's Waiting for You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Quelqu%27un+viendra+Les+Aventures+de+Bernard+et+Bianca+Disney+bande+originale"
+  },
+  {
+    "id": 35,
+    "film": "Rox et Rouky",
+    "annee": 1981,
+    "titre_fr": "Amis pour la vie",
+    "titre_en": "Best of Friends",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Amis+pour+la+vie+Rox+et+Rouky+Disney+bande+originale"
+  },
+  {
+    "id": 36,
+    "film": "La Bande à Picsou (Série)",
+    "annee": 1987,
+    "titre_fr": "La Bande à Picsou (Générique)",
+    "titre_en": "DuckTales Theme",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=La+Bande+%C3%A0+Picsou+%28G%C3%A9n%C3%A9rique%29+La+Bande+%C3%A0+Picsou+%28S%C3%A9rie%29+Disney+bande+originale"
+  },
+  {
+    "id": 37,
+    "film": "Oliver et Compagnie",
+    "annee": 1988,
+    "titre_fr": "Mais pourquoi m'en faire",
+    "titre_en": "Why Should I Worry",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Mais+pourquoi+m%27en+faire+Oliver+et+Compagnie+Disney+bande+originale"
+  },
+  {
+    "id": 38,
+    "film": "La Petite Sirène",
+    "annee": 1989,
+    "titre_fr": "Partir là-bas",
+    "titre_en": "Part of Your World",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Partir+l%C3%A0-bas+La+Petite+Sir%C3%A8ne+Disney+bande+originale"
+  },
+  {
+    "id": 39,
+    "film": "La Petite Sirène",
+    "annee": 1989,
+    "titre_fr": "Sous l'océan",
+    "titre_en": "Under the Sea",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Sous+l%27oc%C3%A9an+La+Petite+Sir%C3%A8ne+Disney+bande+originale"
+  },
+  {
+    "id": 40,
+    "film": "La Petite Sirène",
+    "annee": 1989,
+    "titre_fr": "Embrasse-la",
+    "titre_en": "Kiss the Girl",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Embrasse-la+La+Petite+Sir%C3%A8ne+Disney+bande+originale"
+  },
+  {
+    "id": 41,
+    "film": "La Petite Sirène",
+    "annee": 1989,
+    "titre_fr": "Pauvres âmes en perdition",
+    "titre_en": "Poor Unfortunate Souls",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Pauvres+%C3%A2mes+en+perdition+La+Petite+Sir%C3%A8ne+Disney+bande+originale"
+  },
+  {
+    "id": 42,
+    "film": "La Belle et la Bête",
+    "annee": 1991,
+    "titre_fr": "Histoire éternelle",
+    "titre_en": "Beauty and the Beast",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Histoire+%C3%A9ternelle+La+Belle+et+la+B%C3%AAte+Disney+bande+originale"
+  },
+  {
+    "id": 43,
+    "film": "La Belle et la Bête",
+    "annee": 1991,
+    "titre_fr": "C'est la fête",
+    "titre_en": "Be Our Guest",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=C%27est+la+f%C3%AAte+La+Belle+et+la+B%C3%AAte+Disney+bande+originale"
+  },
+  {
+    "id": 44,
+    "film": "La Belle et la Bête",
+    "annee": 1991,
+    "titre_fr": "Belle",
+    "titre_en": "Belle",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Belle+La+Belle+et+la+B%C3%AAte+Disney+bande+originale"
+  },
+  {
+    "id": 45,
+    "film": "La Belle et la Bête",
+    "annee": 1991,
+    "titre_fr": "Gaston",
+    "titre_en": "Gaston",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Gaston+La+Belle+et+la+B%C3%AAte+Disney+bande+originale"
+  },
+  {
+    "id": 46,
+    "film": "Aladdin",
+    "annee": 1992,
+    "titre_fr": "Ce rêve bleu",
+    "titre_en": "A Whole New World",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ce+r%C3%AAve+bleu+Aladdin+Disney+bande+originale"
+  },
+  {
+    "id": 47,
+    "film": "Aladdin",
+    "annee": 1992,
+    "titre_fr": "Je suis ton meilleur ami",
+    "titre_en": "Friend Like Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+suis+ton+meilleur+ami+Aladdin+Disney+bande+originale"
+  },
+  {
+    "id": 48,
+    "film": "Aladdin",
+    "annee": 1992,
+    "titre_fr": "Prince Ali",
+    "titre_en": "Prince Ali",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Prince+Ali+Aladdin+Disney+bande+originale"
+  },
+  {
+    "id": 49,
+    "film": "Aladdin",
+    "annee": 1992,
+    "titre_fr": "Nuits d'Arabie",
+    "titre_en": "Arabian Nights",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Nuits+d%27Arabie+Aladdin+Disney+bande+originale"
+  },
+  {
+    "id": 50,
+    "film": "Aladdin",
+    "annee": 1992,
+    "titre_fr": "Je vole",
+    "titre_en": "One Jump Ahead",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+vole+Aladdin+Disney+bande+originale"
+  },
+  {
+    "id": 51,
+    "film": "L'Étrange Noël de monsieur Jack",
+    "annee": 1993,
+    "titre_fr": "Bienvenue à Halloween",
+    "titre_en": "This Is Halloween",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bienvenue+%C3%A0+Halloween+L%27%C3%89trange+No%C3%ABl+de+monsieur+Jack+Disney+bande+originale"
+  },
+  {
+    "id": 52,
+    "film": "L'Étrange Noël de monsieur Jack",
+    "annee": 1993,
+    "titre_fr": "Que vois-je ?",
+    "titre_en": "What's This?",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Que+vois-je+%3F+L%27%C3%89trange+No%C3%ABl+de+monsieur+Jack+Disney+bande+originale"
+  },
+  {
+    "id": 53,
+    "film": "Le Roi Lion",
+    "annee": 1994,
+    "titre_fr": "L'Histoire de la vie",
+    "titre_en": "Circle of Life",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Histoire+de+la+vie+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 54,
+    "film": "Le Roi Lion",
+    "annee": 1994,
+    "titre_fr": "Je voudrais déjà être roi",
+    "titre_en": "I Just Can't Wait to Be King",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+voudrais+d%C3%A9j%C3%A0+%C3%AAtre+roi+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 55,
+    "film": "Le Roi Lion",
+    "annee": 1994,
+    "titre_fr": "Soyez prêts",
+    "titre_en": "Be Prepared",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Soyez+pr%C3%AAts+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 56,
+    "film": "Le Roi Lion",
+    "annee": 1994,
+    "titre_fr": "Hakuna Matata",
+    "titre_en": "Hakuna Matata",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Hakuna+Matata+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 57,
+    "film": "Le Roi Lion",
+    "annee": 1994,
+    "titre_fr": "L'Amour brille sous les étoiles",
+    "titre_en": "Can You Feel the Love Tonight",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Amour+brille+sous+les+%C3%A9toiles+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 58,
+    "film": "Pocahontas",
+    "annee": 1995,
+    "titre_fr": "L'Air du vent",
+    "titre_en": "Colors of the Wind",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Air+du+vent+Pocahontas+Disney+bande+originale"
+  },
+  {
+    "id": 59,
+    "film": "Pocahontas",
+    "annee": 1995,
+    "titre_fr": "Au détour de la rivière",
+    "titre_en": "Just Around the Riverbend",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Au+d%C3%A9tour+de+la+rivi%C3%A8re+Pocahontas+Disney+bande+originale"
+  },
+  {
+    "id": 60,
+    "film": "Pocahontas",
+    "annee": 1995,
+    "titre_fr": "Sauvages",
+    "titre_en": "Savages",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Sauvages+Pocahontas+Disney+bande+originale"
+  },
+  {
+    "id": 61,
+    "film": "Dingo et Max",
+    "annee": 1995,
+    "titre_fr": "I2I (Eye to Eye)",
+    "titre_en": "I2I",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=I2I+%28Eye+to+Eye%29+Dingo+et+Max+Disney+bande+originale"
+  },
+  {
+    "id": 62,
+    "film": "Dingo et Max",
+    "annee": 1995,
+    "titre_fr": "Stand Out",
+    "titre_en": "Stand Out",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Stand+Out+Dingo+et+Max+Disney+bande+originale"
+  },
+  {
+    "id": 63,
+    "film": "Toy Story",
+    "annee": 1995,
+    "titre_fr": "Je suis ton ami",
+    "titre_en": "You've Got a Friend in Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+suis+ton+ami+Toy+Story+Disney+bande+originale"
+  },
+  {
+    "id": 64,
+    "film": "Le Bossu de Notre-Dame",
+    "annee": 1996,
+    "titre_fr": "Infernal",
+    "titre_en": "Hellfire",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Infernal+Le+Bossu+de+Notre-Dame+Disney+bande+originale"
+  },
+  {
+    "id": 65,
+    "film": "Le Bossu de Notre-Dame",
+    "annee": 1996,
+    "titre_fr": "Les Cloches de Notre-Dame",
+    "titre_en": "The Bells of Notre Dame",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Les+Cloches+de+Notre-Dame+Le+Bossu+de+Notre-Dame+Disney+bande+originale"
+  },
+  {
+    "id": 66,
+    "film": "Le Bossu de Notre-Dame",
+    "annee": 1996,
+    "titre_fr": "Rien qu'un jour",
+    "titre_en": "Out There",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Rien+qu%27un+jour+Le+Bossu+de+Notre-Dame+Disney+bande+originale"
+  },
+  {
+    "id": 67,
+    "film": "Hercule",
+    "annee": 1997,
+    "titre_fr": "De zéro en héros",
+    "titre_en": "Zero to Hero",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=De+z%C3%A9ro+en+h%C3%A9ros+Hercule+Disney+bande+originale"
+  },
+  {
+    "id": 68,
+    "film": "Hercule",
+    "annee": 1997,
+    "titre_fr": "Je veux savoir",
+    "titre_en": "Go the Distance",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+veux+savoir+Hercule+Disney+bande+originale"
+  },
+  {
+    "id": 69,
+    "film": "Hercule",
+    "annee": 1997,
+    "titre_fr": "Ne parle pas d'eux",
+    "titre_en": "I Won't Say (I'm in Love)",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ne+parle+pas+d%27eux+Hercule+Disney+bande+originale"
+  },
+  {
+    "id": 70,
+    "film": "Hercule",
+    "annee": 1997,
+    "titre_fr": "Le Monde qui est le mien",
+    "titre_en": "I Can Go the Distance (Reprise)",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+Monde+qui+est+le+mien+Hercule+Disney+bande+originale"
+  },
+  {
+    "id": 71,
+    "film": "Anastasia",
+    "annee": 1997,
+    "titre_fr": "Loin du froid de décembre",
+    "titre_en": "Once Upon a December",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Loin+du+froid+de+d%C3%A9cembre+Anastasia+Disney+bande+originale"
+  },
+  {
+    "id": 72,
+    "film": "Anastasia",
+    "annee": 1997,
+    "titre_fr": "Voyage dans le temps",
+    "titre_en": "Journey to the Past",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Voyage+dans+le+temps+Anastasia+Disney+bande+originale"
+  },
+  {
+    "id": 73,
+    "film": "Mulan",
+    "annee": 1998,
+    "titre_fr": "Réflexion",
+    "titre_en": "Reflection",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=R%C3%A9flexion+Mulan+Disney+bande+originale"
+  },
+  {
+    "id": 74,
+    "film": "Mulan",
+    "annee": 1998,
+    "titre_fr": "Comme un homme",
+    "titre_en": "I'll Make a Man Out of You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Comme+un+homme+Mulan+Disney+bande+originale"
+  },
+  {
+    "id": 75,
+    "film": "Mulan",
+    "annee": 1998,
+    "titre_fr": "Honneur à tous",
+    "titre_en": "Honor to Us All",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Honneur+%C3%A0+tous+Mulan+Disney+bande+originale"
+  },
+  {
+    "id": 76,
+    "film": "Le Roi Lion 2 : L'Honneur de la tribu",
+    "annee": 1998,
+    "titre_fr": "Il vit en toi",
+    "titre_en": "He Lives in You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Il+vit+en+toi+Le+Roi+Lion+2+%3A+L%27Honneur+de+la+tribu+Disney+bande+originale"
+  },
+  {
+    "id": 77,
+    "film": "Le Roi Lion 2 : L'Honneur de la tribu",
+    "annee": 1998,
+    "titre_fr": "Mon chant d'espoir",
+    "titre_en": "My Lullaby",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Mon+chant+d%27espoir+Le+Roi+Lion+2+%3A+L%27Honneur+de+la+tribu+Disney+bande+originale"
+  },
+  {
+    "id": 78,
+    "film": "Le Roi Lion 2 : L'Honneur de la tribu",
+    "annee": 1998,
+    "titre_fr": "L'Amour nous guidera",
+    "titre_en": "Love Will Find a Way",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Amour+nous+guidera+Le+Roi+Lion+2+%3A+L%27Honneur+de+la+tribu+Disney+bande+originale"
+  },
+  {
+    "id": 79,
+    "film": "Le Roi Lion 2 : L'Honneur de la tribu",
+    "annee": 1998,
+    "titre_fr": "Nous sommes un",
+    "titre_en": "We Are One",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Nous+sommes+un+Le+Roi+Lion+2+%3A+L%27Honneur+de+la+tribu+Disney+bande+originale"
+  },
+  {
+    "id": 80,
+    "film": "Le Roi Lion 2 : L'Honneur de la tribu",
+    "annee": 1998,
+    "titre_fr": "Trahison",
+    "titre_en": "Not One of Us",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Trahison+Le+Roi+Lion+2+%3A+L%27Honneur+de+la+tribu+Disney+bande+originale"
+  },
+  {
+    "id": 81,
+    "film": "Tarzan",
+    "annee": 1999,
+    "titre_fr": "Toujours dans mon cœur",
+    "titre_en": "You'll Be in My Heart",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Toujours+dans+mon+c%C5%93ur+Tarzan+Disney+bande+originale"
+  },
+  {
+    "id": 82,
+    "film": "Tarzan",
+    "annee": 1999,
+    "titre_fr": "Deux mondes",
+    "titre_en": "Two Worlds",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Deux+mondes+Tarzan+Disney+bande+originale"
+  },
+  {
+    "id": 83,
+    "film": "Tarzan",
+    "annee": 1999,
+    "titre_fr": "Enfants de l'homme",
+    "titre_en": "Son of Man",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Enfants+de+l%27homme+Tarzan+Disney+bande+originale"
+  },
+  {
+    "id": 84,
+    "film": "Toy Story 2",
+    "annee": 1999,
+    "titre_fr": "Quand elle m'aimait bien",
+    "titre_en": "When She Loved Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Quand+elle+m%27aimait+bien+Toy+Story+2+Disney+bande+originale"
+  },
+  {
+    "id": 85,
+    "film": "Kuzco, l'empereur mégalo",
+    "annee": 2000,
+    "titre_fr": "Parfait monde",
+    "titre_en": "Perfect World",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Parfait+monde+Kuzco%2C+l%27empereur+m%C3%A9galo+Disney+bande+originale"
+  },
+  {
+    "id": 86,
+    "film": "Atlantide, l'empire perdu",
+    "annee": 2001,
+    "titre_fr": "Où est ton cœur",
+    "titre_en": "Where the Dream Takes You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=O%C3%B9+est+ton+c%C5%93ur+Atlantide%2C+l%27empire+perdu+Disney+bande+originale"
+  },
+  {
+    "id": 87,
+    "film": "Monstres & Cie",
+    "annee": 2001,
+    "titre_fr": "Si je n'ai pas toi",
+    "titre_en": "If I Didn't Have You",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Si+je+n%27ai+pas+toi+Monstres+%26+Cie+Disney+bande+originale"
+  },
+  {
+    "id": 88,
+    "film": "Lilo & Stitch",
+    "annee": 2002,
+    "titre_fr": "Hawaiian Roller Coaster Ride",
+    "titre_en": "Hawaiian Roller Coaster Ride",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Hawaiian+Roller+Coaster+Ride+Lilo+%26+Stitch+Disney+bande+originale"
+  },
+  {
+    "id": 89,
+    "film": "Lilo & Stitch",
+    "annee": 2002,
+    "titre_fr": "He Mele No Lilo",
+    "titre_en": "He Mele No Lilo",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=He+Mele+No+Lilo+Lilo+%26+Stitch+Disney+bande+originale"
+  },
+  {
+    "id": 90,
+    "film": "La Planète au trésor",
+    "annee": 2002,
+    "titre_fr": "Un homme libre",
+    "titre_en": "I'm Still Here",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+homme+libre+La+Plan%C3%A8te+au+tr%C3%A9sor+Disney+bande+originale"
+  },
+  {
+    "id": 91,
+    "film": "Frère des ours",
+    "annee": 2003,
+    "titre_fr": "Bienvenue",
+    "titre_en": "Welcome",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bienvenue+Fr%C3%A8re+des+ours+Disney+bande+originale"
+  },
+  {
+    "id": 92,
+    "film": "Frère des ours",
+    "annee": 2003,
+    "titre_fr": "Un autre monde",
+    "titre_en": "On My Way",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+autre+monde+Fr%C3%A8re+des+ours+Disney+bande+originale"
+  },
+  {
+    "id": 93,
+    "film": "Frère des ours",
+    "annee": 2003,
+    "titre_fr": "Je m'en vais",
+    "titre_en": "No Way Out",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+m%27en+vais+Fr%C3%A8re+des+ours+Disney+bande+originale"
+  },
+  {
+    "id": 94,
+    "film": "Le Roi Lion 3 : Hakuna Matata",
+    "annee": 2004,
+    "titre_fr": "Creuse un tunnel",
+    "titre_en": "Digga Tunnah",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Creuse+un+tunnel+Le+Roi+Lion+3+%3A+Hakuna+Matata+Disney+bande+originale"
+  },
+  {
+    "id": 95,
+    "film": "Cars",
+    "annee": 2006,
+    "titre_fr": "Life Is a Highway",
+    "titre_en": "Life Is a Highway",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Life+Is+a+Highway+Cars+Disney+bande+originale"
+  },
+  {
+    "id": 96,
+    "film": "High School Musical",
+    "annee": 2006,
+    "titre_fr": "Breaking Free",
+    "titre_en": "Breaking Free",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Breaking+Free+High+School+Musical+Disney+bande+originale"
+  },
+  {
+    "id": 97,
+    "film": "High School Musical",
+    "annee": 2006,
+    "titre_fr": "We're All in This Together",
+    "titre_en": "We're All in This Together",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=We%27re+All+in+This+Together+High+School+Musical+Disney+bande+originale"
+  },
+  {
+    "id": 98,
+    "film": "High School Musical 2",
+    "annee": 2007,
+    "titre_fr": "Bet On It",
+    "titre_en": "Bet On It",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bet+On+It+High+School+Musical+2+Disney+bande+originale"
+  },
+  {
+    "id": 99,
+    "film": "Il était une fois",
+    "annee": 2007,
+    "titre_fr": "Comment savoir",
+    "titre_en": "That's How You Know",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Comment+savoir+Il+%C3%A9tait+une+fois+Disney+bande+originale"
+  },
+  {
+    "id": 100,
+    "film": "Phinéas et Ferb (Série)",
+    "annee": 2007,
+    "titre_fr": "Générique Phinéas et Ferb",
+    "titre_en": "Today Is Gonna Be a Great Day",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=G%C3%A9n%C3%A9rique+Phin%C3%A9as+et+Ferb+Phin%C3%A9as+et+Ferb+%28S%C3%A9rie%29+Disney+bande+originale"
+  },
+  {
+    "id": 101,
+    "film": "Ratatouille",
+    "annee": 2007,
+    "titre_fr": "Le Festin",
+    "titre_en": "Le Festin",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+Festin+Ratatouille+Disney+bande+originale"
+  },
+  {
+    "id": 102,
+    "film": "Camp Rock",
+    "annee": 2008,
+    "titre_fr": "This Is Me",
+    "titre_en": "This Is Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=This+Is+Me+Camp+Rock+Disney+bande+originale"
+  },
+  {
+    "id": 103,
+    "film": "La Princesse et la Grenouille",
+    "annee": 2009,
+    "titre_fr": "Au bout de mes rêves",
+    "titre_en": "Almost There",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Au+bout+de+mes+r%C3%AAves+La+Princesse+et+la+Grenouille+Disney+bande+originale"
+  },
+  {
+    "id": 104,
+    "film": "La Princesse et la Grenouille",
+    "annee": 2009,
+    "titre_fr": "De l'autre côté",
+    "titre_en": "Friends on the Other Side",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=De+l%27autre+c%C3%B4t%C3%A9+La+Princesse+et+la+Grenouille+Disney+bande+originale"
+  },
+  {
+    "id": 105,
+    "film": "La Princesse et la Grenouille",
+    "annee": 2009,
+    "titre_fr": "En famille",
+    "titre_en": "Dig a Little Deeper",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=En+famille+La+Princesse+et+la+Grenouille+Disney+bande+originale"
+  },
+  {
+    "id": 106,
+    "film": "Raiponce",
+    "annee": 2010,
+    "titre_fr": "Je veux y croire",
+    "titre_en": "I See the Light",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+veux+y+croire+Raiponce+Disney+bande+originale"
+  },
+  {
+    "id": 107,
+    "film": "Raiponce",
+    "annee": 2010,
+    "titre_fr": "Où est la vraie vie ?",
+    "titre_en": "When Will My Life Begin?",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=O%C3%B9+est+la+vraie+vie+%3F+Raiponce+Disney+bande+originale"
+  },
+  {
+    "id": 108,
+    "film": "Raiponce",
+    "annee": 2010,
+    "titre_fr": "J'ai un rêve",
+    "titre_en": "I've Got a Dream",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=J%27ai+un+r%C3%AAve+Raiponce+Disney+bande+originale"
+  },
+  {
+    "id": 109,
+    "film": "Raiponce",
+    "annee": 2010,
+    "titre_fr": "N'écoute que moi",
+    "titre_en": "Mother Knows Best",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=N%27%C3%A9coute+que+moi+Raiponce+Disney+bande+originale"
+  },
+  {
+    "id": 110,
+    "film": "Les Mondes de Ralph",
+    "annee": 2012,
+    "titre_fr": "When Can I See You Again?",
+    "titre_en": "When Can I See You Again?",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=When+Can+I+See+You+Again%3F+Les+Mondes+de+Ralph+Disney+bande+originale"
+  },
+  {
+    "id": 111,
+    "film": "Rebelle",
+    "annee": 2012,
+    "titre_fr": "Vers le ciel",
+    "titre_en": "Touch the Sky",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Vers+le+ciel+Rebelle+Disney+bande+originale"
+  },
+  {
+    "id": 112,
+    "film": "La Reine des neiges",
+    "annee": 2013,
+    "titre_fr": "Libérée, délivrée",
+    "titre_en": "Let It Go",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Lib%C3%A9r%C3%A9e%2C+d%C3%A9livr%C3%A9e+La+Reine+des+neiges+Disney+bande+originale"
+  },
+  {
+    "id": 113,
+    "film": "La Reine des neiges",
+    "annee": 2013,
+    "titre_fr": "Je voudrais un bonhomme de neige",
+    "titre_en": "Do You Want to Build a Snowman?",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+voudrais+un+bonhomme+de+neige+La+Reine+des+neiges+Disney+bande+originale"
+  },
+  {
+    "id": 114,
+    "film": "La Reine des neiges",
+    "annee": 2013,
+    "titre_fr": "Le Renouveau",
+    "titre_en": "For the First Time in Forever",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+Renouveau+La+Reine+des+neiges+Disney+bande+originale"
+  },
+  {
+    "id": 115,
+    "film": "La Reine des neiges",
+    "annee": 2013,
+    "titre_fr": "L'Amour est un cadeau",
+    "titre_en": "Love Is an Open Door",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Amour+est+un+cadeau+La+Reine+des+neiges+Disney+bande+originale"
+  },
+  {
+    "id": 116,
+    "film": "La Reine des neiges",
+    "annee": 2013,
+    "titre_fr": "En été",
+    "titre_en": "In Summer",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=En+%C3%A9t%C3%A9+La+Reine+des+neiges+Disney+bande+originale"
+  },
+  {
+    "id": 117,
+    "film": "Les Nouveaux Héros",
+    "annee": 2014,
+    "titre_fr": "Immortals",
+    "titre_en": "Immortals",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Immortals+Les+Nouveaux+H%C3%A9ros+Disney+bande+originale"
+  },
+  {
+    "id": 118,
+    "film": "Descendants",
+    "annee": 2015,
+    "titre_fr": "Rotten to the Core",
+    "titre_en": "Rotten to the Core",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Rotten+to+the+Core+Descendants+Disney+bande+originale"
+  },
+  {
+    "id": 119,
+    "film": "Miraculous (Disney Channel)",
+    "annee": 2015,
+    "titre_fr": "Une vie de Ladybug",
+    "titre_en": "It's Ladybug",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Une+vie+de+Ladybug+Miraculous+%28Disney+Channel%29+Disney+bande+originale"
+  },
+  {
+    "id": 120,
+    "film": "La Garde du Roi Lion",
+    "annee": 2016,
+    "titre_fr": "C'est l'heure",
+    "titre_en": "Here Comes the Lion Guard",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=C%27est+l%27heure+La+Garde+du+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 121,
+    "film": "La Garde du Roi Lion",
+    "annee": 2016,
+    "titre_fr": "Zuka Zama",
+    "titre_en": "Zuka Zama",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Zuka+Zama+La+Garde+du+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 122,
+    "film": "La Garde du Roi Lion",
+    "annee": 2016,
+    "titre_fr": "Ce soir on attaque",
+    "titre_en": "Tonight We Strike",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ce+soir+on+attaque+La+Garde+du+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 123,
+    "film": "La Garde du Roi Lion",
+    "annee": 2016,
+    "titre_fr": "Le chant de la savane",
+    "titre_en": "Call of the Guard",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+chant+de+la+savane+La+Garde+du+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 124,
+    "film": "La Garde du Roi Lion",
+    "annee": 2017,
+    "titre_fr": "Il est de retour",
+    "titre_en": "Bring Back a Legend",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Il+est+de+retour+La+Garde+du+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 125,
+    "film": "Zootopie",
+    "annee": 2016,
+    "titre_fr": "Try Everything",
+    "titre_en": "Try Everything",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Try+Everything+Zootopie+Disney+bande+originale"
+  },
+  {
+    "id": 126,
+    "film": "Vaiana",
+    "annee": 2016,
+    "titre_fr": "Le Bleu lumière",
+    "titre_en": "How Far I'll Go",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+Bleu+lumi%C3%A8re+Vaiana+Disney+bande+originale"
+  },
+  {
+    "id": 127,
+    "film": "Vaiana",
+    "annee": 2016,
+    "titre_fr": "Pour les hommes que je suis",
+    "titre_en": "You're Welcome",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Pour+les+hommes+que+je+suis+Vaiana+Disney+bande+originale"
+  },
+  {
+    "id": 128,
+    "film": "Vaiana",
+    "annee": 2016,
+    "titre_fr": "L'Explorateur",
+    "titre_en": "We Know the Way",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=L%27Explorateur+Vaiana+Disney+bande+originale"
+  },
+  {
+    "id": 129,
+    "film": "Vaiana",
+    "annee": 2016,
+    "titre_fr": "Bling-bling",
+    "titre_en": "Shiny",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Bling-bling+Vaiana+Disney+bande+originale"
+  },
+  {
+    "id": 130,
+    "film": "Coco",
+    "annee": 2017,
+    "titre_fr": "Ne m'oublie pas",
+    "titre_en": "Remember Me",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ne+m%27oublie+pas+Coco+Disney+bande+originale"
+  },
+  {
+    "id": 131,
+    "film": "Coco",
+    "annee": 2017,
+    "titre_fr": "Un poco loco",
+    "titre_en": "Un Poco Loco",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Un+poco+loco+Coco+Disney+bande+originale"
+  },
+  {
+    "id": 132,
+    "film": "Coco",
+    "annee": 2017,
+    "titre_fr": "Le Monde est mi familia",
+    "titre_en": "The World Es Mi Familia",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Le+Monde+est+mi+familia+Coco+Disney+bande+originale"
+  },
+  {
+    "id": 133,
+    "film": "Descendants 2",
+    "annee": 2017,
+    "titre_fr": "Ways to Be Wicked",
+    "titre_en": "Ways to Be Wicked",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ways+to+Be+Wicked+Descendants+2+Disney+bande+originale"
+  },
+  {
+    "id": 134,
+    "film": "La Reine des neiges II",
+    "annee": 2019,
+    "titre_fr": "Dans un autre monde",
+    "titre_en": "Into the Unknown",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Dans+un+autre+monde+La+Reine+des+neiges+II+Disney+bande+originale"
+  },
+  {
+    "id": 135,
+    "film": "La Reine des neiges II",
+    "annee": 2019,
+    "titre_fr": "Je te cherche",
+    "titre_en": "Show Yourself",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+te+cherche+La+Reine+des+neiges+II+Disney+bande+originale"
+  },
+  {
+    "id": 136,
+    "film": "La Reine des neiges II",
+    "annee": 2019,
+    "titre_fr": "Tout réparer",
+    "titre_en": "The Next Right Thing",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Tout+r%C3%A9parer+La+Reine+des+neiges+II+Disney+bande+originale"
+  },
+  {
+    "id": 137,
+    "film": "Le Roi Lion (2019)",
+    "annee": 2019,
+    "titre_fr": "Esprit",
+    "titre_en": "Spirit",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Esprit+Le+Roi+Lion+%282019%29+Disney+bande+originale"
+  },
+  {
+    "id": 138,
+    "film": "Aladdin (2019)",
+    "annee": 2019,
+    "titre_fr": "Parler",
+    "titre_en": "Speechless",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Parler+Aladdin+%282019%29+Disney+bande+originale"
+  },
+  {
+    "id": 139,
+    "film": "Encanto",
+    "annee": 2021,
+    "titre_fr": "Ne parlons pas de Bruno",
+    "titre_en": "We Don't Talk About Bruno",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Ne+parlons+pas+de+Bruno+Encanto+Disney+bande+originale"
+  },
+  {
+    "id": 140,
+    "film": "Encanto",
+    "annee": 2021,
+    "titre_fr": "Sous les apparences",
+    "titre_en": "Surface Pressure",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Sous+les+apparences+Encanto+Disney+bande+originale"
+  },
+  {
+    "id": 141,
+    "film": "Encanto",
+    "annee": 2021,
+    "titre_fr": "La Famille Madrigal",
+    "titre_en": "The Family Madrigal",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=La+Famille+Madrigal+Encanto+Disney+bande+originale"
+  },
+  {
+    "id": 142,
+    "film": "Encanto",
+    "annee": 2021,
+    "titre_fr": "Dos Oruguitas",
+    "titre_en": "Dos Oruguitas",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Dos+Oruguitas+Encanto+Disney+bande+originale"
+  },
+  {
+    "id": 143,
+    "film": "Alerte Rouge",
+    "annee": 2022,
+    "titre_fr": "Nobody Like U",
+    "titre_en": "Nobody Like U",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Nobody+Like+U+Alerte+Rouge+Disney+bande+originale"
+  },
+  {
+    "id": 144,
+    "film": "Wish",
+    "annee": 2023,
+    "titre_fr": "Je m'appelle Asha",
+    "titre_en": "This Wish",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Je+m%27appelle+Asha+Wish+Disney+bande+originale"
+  },
+  {
+    "id": 145,
+    "film": "Wish",
+    "annee": 2023,
+    "titre_fr": "Savoir qui je suis",
+    "titre_en": "Knowing What I Know Now",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Savoir+qui+je+suis+Wish+Disney+bande+originale"
+  },
+  {
+    "id": 146,
+    "film": "Vaiana 2",
+    "annee": 2024,
+    "titre_fr": "Au bout du chemin",
+    "titre_en": "Beyond",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Au+bout+du+chemin+Vaiana+2+Disney+bande+originale"
+  },
+  {
+    "id": 147,
+    "film": "Mufasa : Le Roi Lion",
+    "annee": 2024,
+    "titre_fr": "J'ai toujours voulu un frère",
+    "titre_en": "I Always Wanted a Brother",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=J%27ai+toujours+voulu+un+fr%C3%A8re+Mufasa+%3A+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 148,
+    "film": "Mufasa : Le Roi Lion",
+    "annee": 2024,
+    "titre_fr": "Frère",
+    "titre_en": "Brother Betrayed",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Fr%C3%A8re+Mufasa+%3A+Le+Roi+Lion+Disney+bande+originale"
+  },
+  {
+    "id": 149,
+    "film": "Zootopie 2",
+    "annee": 2025,
+    "titre_fr": "Zoo (Thème Gazelle)",
+    "titre_en": "Zoo",
+    "type": "Chanson",
+    "yt_fallback": "https://www.youtube.com/results?search_query=Zoo+%28Th%C3%A8me+Gazelle%29+Zootopie+2+Disney+bande+originale"
+  },
+  {
+    "id": 150,
+    "film": "Star Wars (Disney / Lucasfilm)",
+    "annee": 1977,
+    "titre_fr": "La Marche impériale",
+    "titre_en": "The Imperial March",
+    "type": "Instrumental",
+    "yt_fallback": "https://www.youtube.com/results?search_query=La+Marche+imp%C3%A9riale+Star+Wars+%28Disney+%2F+Lucasfilm%29+Disney+bande+originale"
+  },
+  {
+    "id": 151,
+    "film": "Pirates des Caraïbes",
+    "annee": 2003,
+    "titre_fr": "He's a Pirate",
+    "titre_en": "He's a Pirate",
+    "type": "Instrumental",
+    "yt_fallback": "https://www.youtube.com/results?search_query=He%27s+a+Pirate+Pirates+des+Cara%C3%AFbes+Disney+bande+originale"
+  }
+];
 
     const DEFAULT_PLAYERS = [
       { id: 'p-1', name: 'Joueur 1', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
       { id: 'p-2', name: 'Joueur 2', score: 0, titlePoints: 0, disneyPoints: 0, roundEarned: 0 },
     ];
 
+    function cloneData(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function buildDefaultYtUrl(titreFr, film) {
+      const q = encodeURIComponent(`${titreFr} ${film} Disney bande originale`);
+      return `https://www.youtube.com/results?search_query=${q}`;
+    }
+
+    function normalizeTrackItem(item, index) {
+      if (!item || typeof item !== 'object') {
+        throw new Error(`Élément #${index + 1} invalide : un objet est attendu.`);
+      }
+
+      const titreFr = String(item.titre_fr ?? item.title ?? item.titre ?? item.song ?? '').trim();
+      const film = String(item.film ?? item.disney ?? item.movie ?? item.source ?? '').trim();
+      const titreEn = String(item.titre_en ?? item.title_en ?? '').trim();
+      const type = String(item.type ?? 'Chanson').trim() || 'Chanson';
+      const rawYear = Number(item.annee ?? item.year);
+      const annee = Number.isFinite(rawYear) && rawYear > 1899 && rawYear < 2100 ? rawYear : 2000;
+
+      if (!titreFr || !film) {
+        throw new Error(`Piste #${index + 1} incomplète : "titre_fr" (ou "title") et "film" (ou "disney") sont requis.`);
+      }
+
+      let ytFallback = String(item.yt_fallback ?? item.youtube ?? '').trim();
+      if (!ytFallback || !/^https?:\/\//i.test(ytFallback)) {
+        ytFallback = buildDefaultYtUrl(titreFr, film);
+      }
+
+      const numericId = Number(item.id);
+      const id = Number.isFinite(numericId) && numericId > 0 ? numericId : `custom-${Date.now()}-${index + 1}`;
+
+      return {
+        id,
+        film,
+        annee,
+        titre_fr: titreFr,
+        titre_en: titreEn,
+        type,
+        yt_fallback: ytFallback,
+      };
+    }
+
+    function parseAndNormalizePlaylist(rawInput) {
+      let parsed = rawInput;
+      if (typeof rawInput === 'string') {
+        parsed = JSON.parse(rawInput);
+      }
+
+      if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.playlist)) parsed = parsed.playlist;
+        else if (Array.isArray(parsed.tracks)) parsed = parsed.tracks;
+        else if (Array.isArray(parsed.items)) parsed = parsed.items;
+      }
+
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Le JSON doit contenir un tableau non vide de pistes.');
+      }
+
+      return parsed.map((item, idx) => normalizeTrackItem(item, idx));
+    }
+
     // État global de l'application
     let state = {
-      playlist: cloneData(DEFAULT_PLAYLIST),
+      playlist: cloneData(DISNEY_TRACKS),
       players: cloneData(DEFAULT_PLAYERS),
       currentTrackId: null,
       playedTrackIds: [],
       roundNumber: 1,
       answerRevealed: false,
-      judgeMode: true, // Mode Juge / Maître du jeu activé par défaut
+      judgeMode: true,
+      shuffleMode: true,
+      filters: {
+        decade: 'ALL',
+        type: 'ALL',
+        film: 'ALL',
+      },
       history: [],
+      undoStack: [],
     };
 
-    // Références DOM
+    // État du minuteur de manche (en mémoire)
+    let timerSeconds = 30;
+    let timerRemaining = 30;
+    let timerIntervalId = null;
+
     const dom = {
       toastBanner: document.getElementById('toastBanner'),
       toastInner: document.getElementById('toastInner'),
@@ -587,30 +2079,37 @@
       judgeModeLabel: document.getElementById('judgeModeLabel'),
       openJsonModalBtn: document.getElementById('openJsonModalBtn'),
       playlistCountBadge: document.getElementById('playlistCountBadge'),
+      undoActionBtn: document.getElementById('undoActionBtn'),
       resetScoresBtn: document.getElementById('resetScoresBtn'),
+
+      filterDecade: document.getElementById('filterDecade'),
+      filterType: document.getElementById('filterType'),
+      filterFilm: document.getElementById('filterFilm'),
+      toggleShuffleBtn: document.getElementById('toggleShuffleBtn'),
+      shuffleIcon: document.getElementById('shuffleIcon'),
+      shuffleLabel: document.getElementById('shuffleLabel'),
+      filteredCountBadge: document.getElementById('filteredCountBadge'),
 
       roundNumberDisplay: document.getElementById('roundNumberDisplay'),
       poolStatusText: document.getElementById('poolStatusText'),
       resetPoolBtn: document.getElementById('resetPoolBtn'),
 
+      timerDisplay: document.getElementById('timerDisplay'),
+      timerStartPauseBtn: document.getElementById('timerStartPauseBtn'),
+      timerResetBtn: document.getElementById('timerResetBtn'),
+      timerDurationSelect: document.getElementById('timerDurationSelect'),
+
       coverBadge: document.getElementById('coverBadge'),
       trackHintLabel: document.getElementById('trackHintLabel'),
+      trackMetaPill: document.getElementById('trackMetaPill'),
       hiddenAnswerBox: document.getElementById('hiddenAnswerBox'),
       judgeCheatPeek: document.getElementById('judgeCheatPeek'),
       judgePeekText: document.getElementById('judgePeekText'),
       revealedAnswerBox: document.getElementById('revealedAnswerBox'),
       revealedTitle: document.getElementById('revealedTitle'),
+      revealedTitleEn: document.getElementById('revealedTitleEn'),
       revealedMovie: document.getElementById('revealedMovie'),
-      revealedNotes: document.getElementById('revealedNotes'),
-
-      audioPlayer: document.getElementById('audioPlayer'),
-      audioSourceStatus: document.getElementById('audioSourceStatus'),
-      audioTimeDisplay: document.getElementById('audioTimeDisplay'),
-      playPauseBtn: document.getElementById('playPauseBtn'),
-      playPauseIcon: document.getElementById('playPauseIcon'),
-      playPauseLabel: document.getElementById('playPauseLabel'),
-      seekSlider: document.getElementById('seekSlider'),
-      volumeSlider: document.getElementById('volumeSlider'),
+      ytFallbackLink: document.getElementById('ytFallbackLink'),
 
       revealAnswerBtn: document.getElementById('revealAnswerBtn'),
       nextTrackBtn: document.getElementById('nextTrackBtn'),
@@ -627,6 +2126,12 @@
       jsonModal: document.getElementById('jsonModal'),
       closeJsonModalBtn: document.getElementById('closeJsonModalBtn'),
       cancelJsonModalBtn: document.getElementById('cancelJsonModalBtn'),
+      addCustomTrackForm: document.getElementById('addCustomTrackForm'),
+      customTitreFr: document.getElementById('customTitreFr'),
+      customFilm: document.getElementById('customFilm'),
+      customAnnee: document.getElementById('customAnnee'),
+      customTitreEn: document.getElementById('customTitreEn'),
+      customType: document.getElementById('customType'),
       jsonFileInput: document.getElementById('jsonFileInput'),
       exportJsonBtn: document.getElementById('exportJsonBtn'),
       loadDefaultJsonBtn: document.getElementById('loadDefaultJsonBtn'),
@@ -637,16 +2142,6 @@
 
     let toastTimeoutId = null;
 
-    /**
-     * Copie profonde sécurisée via JSON
-     */
-    function cloneData(obj) {
-      return JSON.parse(JSON.stringify(obj));
-    }
-
-    /**
-     * Affiche un message toast non-bloquant en haut à droite
-     */
     function showToast(message, type = 'info') {
       if (toastTimeoutId) clearTimeout(toastTimeoutId);
 
@@ -670,165 +2165,177 @@
       }, 3200);
     }
 
-    /**
-     * Sauvegarde l'état complet dans localStorage avec gestion d'erreur
-     */
     function saveState() {
       try {
-        localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
+        // On ne sauvegarde pas l'historique undo volumineux en localStorage
+        const payload = {
+          playlist: state.playlist,
+          players: state.players,
+          currentTrackId: state.currentTrackId,
+          playedTrackIds: state.playedTrackIds,
+          roundNumber: state.roundNumber,
+          answerRevealed: state.answerRevealed,
+          judgeMode: state.judgeMode,
+          shuffleMode: state.shuffleMode,
+          filters: state.filters,
+          history: state.history,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch (err) {
         console.error('Erreur sauvegarde localStorage :', err);
-        showToast('Impossible de sauvegarder dans le stockage local.', 'error');
       }
     }
 
-    /**
-     * Normalise et valide un tableau de pistes JSON
-     * Accepte plusieurs noms de champs courants (title/titre, disney/movie/film, audioUrl/previewUrl/audio)
-     */
-    function parseAndNormalizePlaylist(rawInput) {
-      let parsed = rawInput;
-      if (typeof rawInput === 'string') {
-        parsed = JSON.parse(rawInput);
+    function pushUndoSnapshot() {
+      state.undoStack.push({
+        players: cloneData(state.players),
+        currentTrackId: state.currentTrackId,
+        playedTrackIds: cloneData(state.playedTrackIds),
+        roundNumber: state.roundNumber,
+        answerRevealed: state.answerRevealed,
+        history: cloneData(state.history),
+      });
+      if (state.undoStack.length > 25) {
+        state.undoStack.shift();
+      }
+      updateUndoButton();
+    }
+
+    function undoLastAction() {
+      const snap = state.undoStack.pop();
+      if (!snap) return;
+
+      state.players = snap.players;
+      state.currentTrackId = snap.currentTrackId;
+      state.playedTrackIds = snap.playedTrackIds;
+      state.roundNumber = snap.roundNumber;
+      state.answerRevealed = snap.answerRevealed;
+      state.history = snap.history;
+
+      updateUndoButton();
+      saveState();
+      renderAll();
+      showToast('Dernière action annulée.', 'info');
+    }
+
+    function updateUndoButton() {
+      dom.undoActionBtn.disabled = state.undoStack.length === 0;
+    }
+
+    function matchesDecade(year, decadeFilter) {
+      if (decadeFilter === 'ALL') return true;
+      const y = Number(year);
+      if (!Number.isFinite(y)) return true;
+      if (decadeFilter === '2020s') return y >= 2020;
+      const start = parseInt(decadeFilter.slice(0, 4), 10);
+      return y >= start && y <= start + 9;
+    }
+
+    function getFilteredPlaylist() {
+      return state.playlist.filter((track) => {
+        if (!matchesDecade(track.annee, state.filters.decade)) return false;
+        if (state.filters.type !== 'ALL' && track.type !== state.filters.type) return false;
+        if (state.filters.film !== 'ALL' && track.film !== state.filters.film) return false;
+        return true;
+      });
+    }
+
+    function getCurrentTrack() {
+      return (
+        state.playlist.find((t) => String(t.id) === String(state.currentTrackId)) ||
+        getFilteredPlaylist()[0] ||
+        state.playlist[0] ||
+        null
+      );
+    }
+
+    function pickNextTrackFromPool(pool) {
+      if (!pool.length) return null;
+      const unplayed = pool.filter((t) => !state.playedTrackIds.includes(String(t.id)));
+      const candidates = unplayed.length > 0 ? unplayed : pool;
+
+      if (state.shuffleMode) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+      // Mode séquentiel : piste suivante non jouée dans l'ordre du catalogue/filtre
+      return candidates[0];
+    }
+
+    function ensureCurrentTrack() {
+      const pool = getFilteredPlaylist();
+      const activePool = pool.length > 0 ? pool : state.playlist;
+      if (!activePool.length) {
+        state.currentTrackId = null;
+        return;
       }
 
-      // Permet aussi un objet englobant { playlist: [...] } ou { tracks: [...] }
-      if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
-        if (Array.isArray(parsed.playlist)) parsed = parsed.playlist;
-        else if (Array.isArray(parsed.tracks)) parsed = parsed.tracks;
-        else if (Array.isArray(parsed.items)) parsed = parsed.items;
-      }
-
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        throw new Error('Le JSON doit contenir un tableau non vide de pistes (ex: [{"title": "...", "disney": "..."}]).');
-      }
-
-      const normalized = parsed.map((item, idx) => {
-        if (!item || typeof item !== 'object') {
-          throw new Error(`Élément #${idx + 1} invalide : un objet est attendu.`);
-        }
-
-        const title = String(item.title ?? item.titre ?? item.song ?? item.name ?? '').trim();
-        const disney = String(item.disney ?? item.movie ?? item.film ?? item.source ?? item.show ?? '').trim();
-        const audioUrl = String(item.audioUrl ?? item.previewUrl ?? item.audio ?? item.url ?? '').trim();
-        const notes = String(item.notes ?? item.note ?? item.info ?? '').trim();
-        const emoji = String(item.emoji ?? '🎵').trim() || '🎵';
-
-        if (!title || !disney) {
-          throw new Error(`Piste #${idx + 1} incomplète : "title" et "disney" sont requis.`);
-        }
-
-        // Vérifie si l'URL audio est une URL HTTP(S) ou chemin relatif valide
-        let safeAudioUrl = '';
-        if (audioUrl) {
-          const isHttp = /^https?:\/\//i.test(audioUrl);
-          const isRelative = /^(\.\/|\.\.\/|\/|[\w.-]+\/)/.test(audioUrl);
-          if (isHttp || isRelative) {
-            safeAudioUrl = audioUrl;
-          } else {
-            throw new Error(`Piste "${title}" : URL audio invalide ("${audioUrl}").`);
+      const currentInActive = activePool.some((t) => String(t.id) === String(state.currentTrackId));
+      if (!currentInActive) {
+        const picked = pickNextTrackFromPool(activePool);
+        if (picked) {
+          state.currentTrackId = picked.id;
+          if (!state.playedTrackIds.includes(String(picked.id))) {
+            state.playedTrackIds.push(String(picked.id));
           }
         }
-
-        return {
-          id: String(item.id || `track-${idx + 1}-${title.slice(0, 8)}`),
-          title,
-          disney,
-          audioUrl: safeAudioUrl,
-          notes,
-          emoji,
-        };
-      });
-
-      return normalized;
+      }
     }
 
-    /**
-     * Charge l'état depuis localStorage ou initialise avec les valeurs par défaut
-     */
     function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEYS.STATE);
-        if (!raw) {
-          ensureCurrentTrack();
-          return;
-        }
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved && typeof saved === 'object') {
+            try {
+              state.playlist = parseAndNormalizePlaylist(saved.playlist);
+            } catch {
+              state.playlist = cloneData(DISNEY_TRACKS);
+            }
 
-        const saved = JSON.parse(raw);
-        if (saved && typeof saved === 'object') {
-          try {
-            state.playlist = parseAndNormalizePlaylist(saved.playlist);
-          } catch {
-            state.playlist = cloneData(DEFAULT_PLAYLIST);
+            if (Array.isArray(saved.players) && saved.players.length > 0) {
+              state.players = saved.players.map((p, i) => ({
+                id: String(p.id || `p-${i + 1}`),
+                name: String(p.name || `Joueur ${i + 1}`).trim() || `Joueur ${i + 1}`,
+                score: Number.isFinite(Number(p.score)) ? Number(p.score) : 0,
+                titlePoints: Number.isFinite(Number(p.titlePoints)) ? Number(p.titlePoints) : 0,
+                disneyPoints: Number.isFinite(Number(p.disneyPoints)) ? Number(p.disneyPoints) : 0,
+                roundEarned: Number.isFinite(Number(p.roundEarned)) ? Number(p.roundEarned) : 0,
+              }));
+            }
+
+            state.playedTrackIds = Array.isArray(saved.playedTrackIds) ? saved.playedTrackIds.map(String) : [];
+            state.currentTrackId = saved.currentTrackId ?? null;
+            state.roundNumber = Number.isFinite(Number(saved.roundNumber)) && Number(saved.roundNumber) >= 1
+              ? Number(saved.roundNumber)
+              : 1;
+            state.answerRevealed = Boolean(saved.answerRevealed);
+            state.judgeMode = typeof saved.judgeMode === 'boolean' ? saved.judgeMode : true;
+            state.shuffleMode = typeof saved.shuffleMode === 'boolean' ? saved.shuffleMode : true;
+            if (saved.filters && typeof saved.filters === 'object') {
+              state.filters.decade = String(saved.filters.decade || 'ALL');
+              state.filters.type = String(saved.filters.type || 'ALL');
+              state.filters.film = String(saved.filters.film || 'ALL');
+            }
+            state.history = Array.isArray(saved.history) ? saved.history : [];
           }
-
-          if (Array.isArray(saved.players) && saved.players.length > 0) {
-            state.players = saved.players.map((p, i) => ({
-              id: String(p.id || `p-${i + 1}`),
-              name: String(p.name || `Joueur ${i + 1}`).trim() || `Joueur ${i + 1}`,
-              score: Number.isFinite(Number(p.score)) ? Number(p.score) : 0,
-              titlePoints: Number.isFinite(Number(p.titlePoints)) ? Number(p.titlePoints) : 0,
-              disneyPoints: Number.isFinite(Number(p.disneyPoints)) ? Number(p.disneyPoints) : 0,
-              roundEarned: Number.isFinite(Number(p.roundEarned)) ? Number(p.roundEarned) : 0,
-            }));
-          }
-
-          state.playedTrackIds = Array.isArray(saved.playedTrackIds) ? saved.playedTrackIds.map(String) : [];
-          state.currentTrackId = saved.currentTrackId ? String(saved.currentTrackId) : null;
-          state.roundNumber = Number.isFinite(Number(saved.roundNumber)) && Number(saved.roundNumber) >= 1
-            ? Number(saved.roundNumber)
-            : 1;
-          state.answerRevealed = Boolean(saved.answerRevealed);
-          state.judgeMode = typeof saved.judgeMode === 'boolean' ? saved.judgeMode : true;
-          state.history = Array.isArray(saved.history) ? saved.history : [];
         }
       } catch (err) {
-        console.warn('Chargement état par défaut suite à erreur :', err);
-        state.playlist = cloneData(DEFAULT_PLAYLIST);
-        state.players = cloneData(DEFAULT_PLAYERS);
+        console.warn('Chargement état par défaut :', err);
       }
 
       ensureCurrentTrack();
     }
 
-    /**
-     * S'assure qu'une piste active valide est sélectionnée
-     */
-    function ensureCurrentTrack() {
-      if (!state.playlist.length) {
-        state.currentTrackId = null;
-        return;
-      }
-
-      const exists = state.playlist.some((t) => t.id === state.currentTrackId);
-      if (!exists) {
-        const unplayed = state.playlist.filter((t) => !state.playedTrackIds.includes(t.id));
-        const candidatePool = unplayed.length > 0 ? unplayed : state.playlist;
-        const randomTrack = candidatePool[Math.floor(Math.random() * candidatePool.length)];
-        state.currentTrackId = randomTrack.id;
-        if (!state.playedTrackIds.includes(randomTrack.id)) {
-          state.playedTrackIds.push(randomTrack.id);
-        }
-      }
-    }
-
-    /**
-     * Retourne l'objet piste actuellement actif
-     */
-    function getCurrentTrack() {
-      return state.playlist.find((t) => t.id === state.currentTrackId) || state.playlist[0] || null;
-    }
-
-    /**
-     * Passe à la manche suivante en évitant les doublons dans la session en cours
-     */
     function nextRound() {
-      if (!state.playlist.length) {
-        showToast('Ajoutez d’abord des chansons dans la playlist JSON.', 'error');
+      const pool = getFilteredPlaylist();
+      if (!pool.length) {
+        showToast('Aucune piste ne correspond aux filtres sélectionnés.', 'error');
         return;
       }
 
-      // Enregistre la manche précédente dans l'historique si des points ont été marqués ou si révélée
+      pushUndoSnapshot();
+
       const prevTrack = getCurrentTrack();
       if (prevTrack) {
         const scorers = state.players
@@ -838,70 +2345,67 @@
         if (scorers.length > 0 || state.answerRevealed) {
           state.history.unshift({
             round: state.roundNumber,
-            title: prevTrack.title,
-            disney: prevTrack.disney,
+            title: prevTrack.titre_fr,
+            disney: prevTrack.film,
             scorers,
             timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           });
-          if (state.history.length > 40) state.history.pop();
+          if (state.history.length > 50) state.history.pop();
         }
       }
 
-      // Réinitialise les gains ponctuels de la manche pour chaque joueur
       state.players.forEach((p) => {
         p.roundEarned = 0;
       });
 
-      // Pioche parmi les morceaux non encore joués
-      const unplayed = state.playlist.filter((t) => !state.playedTrackIds.includes(t.id));
-
+      const unplayed = pool.filter((t) => !state.playedTrackIds.includes(String(t.id)));
       if (unplayed.length === 0) {
-        showToast('Toutes les chansons de la playlist ont été jouées ! Relancez la pioche si besoin.', 'info');
+        showToast('Toutes les pistes de cette sélection ont été jouées ! Cliquez sur "Réinitialiser la pioche".', 'info');
         saveState();
         renderAll();
         return;
       }
 
-      const nextTrack = unplayed[Math.floor(Math.random() * unplayed.length)];
+      const nextTrack = pickNextTrackFromPool(pool);
       state.currentTrackId = nextTrack.id;
-      state.playedTrackIds.push(nextTrack.id);
+      if (!state.playedTrackIds.includes(String(nextTrack.id))) {
+        state.playedTrackIds.push(String(nextTrack.id));
+      }
       state.roundNumber += 1;
       state.answerRevealed = false;
 
-      stopAudio();
-      loadCurrentTrackAudio(nextTrack);
+      resetTimer(false);
       saveState();
       renderAll();
       showToast(`Manche #${state.roundNumber} prête !`, 'info');
     }
 
-    /**
-     * Réinitialise la pioche des chansons jouées dans la session
-     */
     function resetPool() {
-      if (!state.playlist.length) return;
-      state.playedTrackIds = [];
+      const pool = getFilteredPlaylist();
+      if (!pool.length) return;
+      pushUndoSnapshot();
+      const poolIds = new Set(pool.map((t) => String(t.id)));
+      state.playedTrackIds = state.playedTrackIds.filter((id) => !poolIds.has(id));
       const current = getCurrentTrack();
-      if (current) {
-        state.playedTrackIds.push(current.id);
+      if (current && poolIds.has(String(current.id))) {
+        state.playedTrackIds.push(String(current.id));
       }
       saveState();
       renderTrackStage();
-      showToast('Pioche réinitialisée : toutes les pistes sont de nouveau disponibles.', 'success');
+      showToast('Pioche réinitialisée pour la sélection actuelle.', 'success');
     }
 
-    /**
-     * Attribue des points à un joueur avec garde-fou maximum de +2 pts par manche
-     * type: 'title' (+1), 'disney' (+1), 'combo' (+2), 'minus' (-1)
-     */
     function adjustPlayerScore(playerId, type) {
       const player = state.players.find((p) => p.id === playerId);
       if (!player) return;
 
+      pushUndoSnapshot();
       const currentRoundEarned = Number(player.roundEarned || 0);
 
       if (type === 'title') {
         if (currentRoundEarned + 1 > 2) {
+          state.undoStack.pop();
+          updateUndoButton();
           showToast(`${player.name} a déjà atteint le maximum de +2 pts sur cette manche.`, 'info');
           return;
         }
@@ -911,6 +2415,8 @@
         showToast(`+1 Titre pour ${player.name} !`, 'success');
       } else if (type === 'disney') {
         if (currentRoundEarned + 1 > 2) {
+          state.undoStack.pop();
+          updateUndoButton();
           showToast(`${player.name} a déjà atteint le maximum de +2 pts sur cette manche.`, 'info');
           return;
         }
@@ -921,6 +2427,8 @@
       } else if (type === 'combo') {
         const allowedAdd = Math.max(0, 2 - currentRoundEarned);
         if (allowedAdd === 0) {
+          state.undoStack.pop();
+          updateUndoButton();
           showToast(`${player.name} a déjà ses +2 pts de manche.`, 'info');
           return;
         }
@@ -943,9 +2451,6 @@
       renderPlayersAndLeaderboard(playerId);
     }
 
-    /**
-     * Ajoute un nouveau joueur
-     */
     function addPlayer(name) {
       const cleanName = String(name || '').trim();
       if (!cleanName) {
@@ -953,6 +2458,7 @@
         return;
       }
 
+      pushUndoSnapshot();
       state.players.push({
         id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         name: cleanName,
@@ -967,9 +2473,6 @@
       showToast(`${cleanName} rejoint la partie !`, 'success');
     }
 
-    /**
-     * Renomme un joueur existant
-     */
     function renamePlayer(playerId, newName) {
       const player = state.players.find((p) => p.id === playerId);
       if (!player) return;
@@ -983,14 +2486,12 @@
       renderPlayersAndLeaderboard();
     }
 
-    /**
-     * Supprime un joueur
-     */
     function removePlayer(playerId) {
       if (state.players.length <= 1) {
         showToast('Il faut garder au moins 1 joueur ou équipe.', 'error');
         return;
       }
+      pushUndoSnapshot();
       const target = state.players.find((p) => p.id === playerId);
       state.players = state.players.filter((p) => p.id !== playerId);
       saveState();
@@ -998,10 +2499,8 @@
       if (target) showToast(`${target.name} a été retiré.`, 'info');
     }
 
-    /**
-     * Remet tous les scores et l'historique à zéro
-     */
     function resetAllScores() {
+      pushUndoSnapshot();
       state.players.forEach((p) => {
         p.score = 0;
         p.titlePoints = 0;
@@ -1015,59 +2514,100 @@
       showToast('Tous les scores et l’historique ont été remis à zéro.', 'success');
     }
 
-    /**
-     * =========================================================================
-     * GESTION AUDIO HTML5 (<audio>)
-     * =========================================================================
-     */
-    function stopAudio() {
-      try {
-        dom.audioPlayer.pause();
-        dom.audioPlayer.currentTime = 0;
-      } catch {
-        // Ignore si non chargé
-      }
-      updatePlayPauseUI(false);
-    }
-
-    function loadCurrentTrackAudio(track) {
-      stopAudio();
-      dom.seekSlider.value = 0;
-      dom.audioTimeDisplay.textContent = '00:00 / 00:00';
-
-      if (track && track.audioUrl) {
-        dom.audioPlayer.src = track.audioUrl;
-        dom.audioPlayer.load();
-        dom.playPauseBtn.disabled = false;
-        dom.seekSlider.disabled = false;
-        dom.audioSourceStatus.textContent = 'Extrait audio prêt';
-        dom.audioSourceStatus.className = 'font-medium text-emerald-300';
-      } else {
-        dom.audioPlayer.removeAttribute('src');
-        dom.playPauseBtn.disabled = true;
-        dom.seekSlider.disabled = true;
-        dom.audioSourceStatus.textContent = 'Pas d’URL audio — diffusez votre source ou ajoutez audioUrl en JSON';
-        dom.audioSourceStatus.className = 'font-medium text-slate-400';
-      }
-    }
-
-    function updatePlayPauseUI(isPlaying) {
-      dom.playPauseIcon.textContent = isPlaying ? '⏸' : '▶';
-      dom.playPauseLabel.textContent = isPlaying ? 'Pause' : 'Lecture';
-    }
-
-    function formatTime(sec) {
-      if (!Number.isFinite(sec) || sec < 0) return '00:00';
-      const mins = Math.floor(sec / 60);
-      const rem = Math.floor(sec % 60);
+    // Minuteur de manche
+    function formatChrono(sec) {
+      const s = Math.max(0, Number(sec) || 0);
+      const mins = Math.floor(s / 60);
+      const rem = s % 60;
       return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
     }
 
-    /**
-     * =========================================================================
-     * RENDU INTERFACE
-     * =========================================================================
-     */
+    function renderTimer() {
+      dom.timerDisplay.textContent = formatChrono(timerRemaining);
+      if (timerRemaining <= 5 && timerRemaining > 0) {
+        dom.timerDisplay.className = 'font-mono text-lg font-bold text-rose-400 animate-pulse';
+      } else {
+        dom.timerDisplay.className = 'font-mono text-lg font-bold text-goldLight';
+      }
+      dom.timerStartPauseBtn.textContent = timerIntervalId ? '⏸ Pause' : '▶ Start';
+    }
+
+    function toggleTimer() {
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+        renderTimer();
+        return;
+      }
+
+      if (timerRemaining <= 0) {
+        timerRemaining = timerSeconds;
+      }
+
+      timerIntervalId = setInterval(() => {
+        timerRemaining -= 1;
+        if (timerRemaining <= 0) {
+          timerRemaining = 0;
+          clearInterval(timerIntervalId);
+          timerIntervalId = null;
+          showToast('Temps écoulé pour cette manche !', 'info');
+        }
+        renderTimer();
+      }, 1000);
+
+      renderTimer();
+    }
+
+    function resetTimer(autoStart = false) {
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+      timerRemaining = timerSeconds;
+      renderTimer();
+      if (autoStart) toggleTimer();
+    }
+
+    // Rendu filtres & interface
+    function populateFilmFilterOptions() {
+      const previousFilm = state.filters.film;
+      const films = Array.from(new Set(state.playlist.map((t) => t.film))).sort((a, b) =>
+        a.localeCompare(b, 'fr', { sensitivity: 'base' })
+      );
+
+      dom.filterFilm.innerHTML = '<option value="ALL">Tous les films / séries</option>';
+      films.forEach((film) => {
+        const opt = document.createElement('option');
+        opt.value = film;
+        opt.textContent = film;
+        dom.filterFilm.appendChild(opt);
+      });
+
+      if (films.includes(previousFilm)) {
+        dom.filterFilm.value = previousFilm;
+      } else {
+        state.filters.film = 'ALL';
+        dom.filterFilm.value = 'ALL';
+      }
+
+      dom.filterDecade.value = state.filters.decade;
+      dom.filterType.value = state.filters.type;
+    }
+
+    function renderShuffleButton() {
+      if (state.shuffleMode) {
+        dom.shuffleIcon.textContent = '🔀';
+        dom.shuffleLabel.textContent = 'Aléatoire : Activé';
+        dom.toggleShuffleBtn.className =
+          'flex w-full items-center justify-center gap-2 rounded-xl border border-gold/45 bg-gold/20 px-3 py-2.5 text-xs font-bold text-goldLight transition hover:bg-gold/30 sm:text-sm';
+      } else {
+        dom.shuffleIcon.textContent = '🔢';
+        dom.shuffleLabel.textContent = 'Ordre : Séquentiel';
+        dom.toggleShuffleBtn.className =
+          'flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-2.5 text-xs font-bold text-slate-200 transition hover:border-gold/40 sm:text-sm';
+      }
+    }
+
     function renderJudgeModeButton() {
       if (state.judgeMode) {
         dom.judgeModeIcon.textContent = '👑';
@@ -1083,35 +2623,45 @@
     }
 
     function renderTrackStage() {
+      const pool = getFilteredPlaylist();
       const track = getCurrentTrack();
+
       dom.playlistCountBadge.textContent = String(state.playlist.length);
+      dom.filteredCountBadge.textContent = String(pool.length);
       dom.roundNumberDisplay.textContent = String(state.roundNumber);
 
-      const playedCount = state.playedTrackIds.length;
-      dom.poolStatusText.textContent = `Pioche : ${playedCount} / ${state.playlist.length} joués`;
+      const playedInPool = pool.filter((t) => state.playedTrackIds.includes(String(t.id))).length;
+      dom.poolStatusText.textContent = `Pioche : ${playedInPool} / ${pool.length} joués`;
 
       if (!track) {
         dom.coverBadge.textContent = '🎶';
-        dom.trackHintLabel.textContent = 'Aucune piste disponible';
+        dom.trackHintLabel.textContent = 'Aucune piste trouvée';
+        dom.trackMetaPill.textContent = '—';
         dom.hiddenAnswerBox.classList.remove('hidden');
         dom.revealedAnswerBox.classList.add('hidden');
         dom.judgeCheatPeek.classList.add('hidden');
+        dom.ytFallbackLink.href = 'https://www.youtube.com';
         return;
       }
 
+      dom.ytFallbackLink.href = track.yt_fallback || buildDefaultYtUrl(track.titre_fr, track.film);
+      dom.trackMetaPill.textContent = `${track.type || 'Chanson'} · ${track.annee || 'Disney'}`;
+
       if (state.answerRevealed) {
-        dom.coverBadge.textContent = track.emoji || '✨';
+        dom.coverBadge.textContent = track.type === 'Instrumental' ? '🎻' : '✨';
         dom.trackHintLabel.textContent = 'Réponse révélée';
         dom.hiddenAnswerBox.classList.add('hidden');
         dom.revealedAnswerBox.classList.remove('hidden');
-        dom.revealedTitle.textContent = `🎵 ${track.title}`;
-        dom.revealedMovie.textContent = `🎬 ${track.disney}`;
-        dom.revealedNotes.textContent = track.notes ? `💬 ${track.notes}` : '';
+        dom.revealedTitle.textContent = `🎵 ${track.titre_fr}`;
+        dom.revealedTitleEn.textContent = track.titre_en && track.titre_en !== track.titre_fr
+          ? `VO : ${track.titre_en}`
+          : '';
+        dom.revealedMovie.textContent = `🎬 ${track.film} (${track.annee})`;
         dom.revealAnswerBtn.innerHTML = '<span>✓</span><span>Réponse affichée</span>';
       } else {
-        dom.coverBadge.textContent = state.judgeMode ? (track.emoji || '🏰') : '🏰';
+        dom.coverBadge.textContent = track.type === 'Instrumental' ? '🎻' : '🏰';
         dom.trackHintLabel.textContent = state.judgeMode
-          ? 'Mode Juge : réponse visible uniquement pour vous'
+          ? 'Mode Juge : aperçu réservé à l’animateur'
           : 'Écoutez et trouvez le Titre (1 pt) & le Disney (1 pt)';
         dom.hiddenAnswerBox.classList.remove('hidden');
         dom.revealedAnswerBox.classList.add('hidden');
@@ -1119,11 +2669,20 @@
 
         if (state.judgeMode) {
           dom.judgeCheatPeek.classList.remove('hidden');
-          dom.judgePeekText.textContent = `${track.title} — ${track.disney}`;
+          dom.judgePeekText.textContent = `${track.titre_fr} — ${track.film} (${track.annee})`;
         } else {
           dom.judgeCheatPeek.classList.add('hidden');
         }
       }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function renderPlayersAndLeaderboard(bumpedPlayerId = null) {
@@ -1215,7 +2774,6 @@
         dom.playersGrid.appendChild(card);
       });
 
-      // Classement trié par score décroissant
       const sorted = [...state.players].sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return (b.titlePoints + b.disneyPoints) - (a.titlePoints + a.disneyPoints);
@@ -1289,27 +2847,16 @@
     }
 
     function renderAll() {
+      populateFilmFilterOptions();
+      renderShuffleButton();
       renderJudgeModeButton();
       renderTrackStage();
       renderPlayersAndLeaderboard();
       renderHistory();
+      renderTimer();
+      updateUndoButton();
     }
 
-    /**
-     * Échappe les caractères HTML pour éviter toute injection XSS dans les noms/titres
-     */
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    /**
-     * Attache les gestionnaires d'événements sur les cartes joueurs générées dynamiquement
-     */
     function attachDynamicPlayerEvents() {
       document.querySelectorAll('.score-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -1340,11 +2887,7 @@
       });
     }
 
-    /**
-     * =========================================================================
-     * MODALE PLAYLIST JSON (OUVERTURE, IMPORT, EXPORT, VALIDATION)
-     * =========================================================================
-     */
+    // Modale JSON & ajout de piste personnalisée
     function openJsonModal() {
       dom.jsonTextarea.value = JSON.stringify(state.playlist, null, 2);
       dom.jsonValidationBox.classList.add('hidden');
@@ -1368,18 +2911,18 @@
     function applyJsonPlaylist() {
       try {
         const normalized = parseAndNormalizePlaylist(dom.jsonTextarea.value);
+        pushUndoSnapshot();
         state.playlist = normalized;
         state.playedTrackIds = [];
         state.currentTrackId = null;
         state.answerRevealed = false;
         ensureCurrentTrack();
         saveState();
-        loadCurrentTrackAudio(getCurrentTrack());
         renderAll();
         showJsonValidation(`${normalized.length} piste(s) Disney validée(s) et enregistrée(s).`, false);
         setTimeout(() => {
           closeJsonModal();
-          showToast(`Playlist mise à jour (${normalized.length} chansons).`, 'success');
+          showToast(`Playlist mise à jour (${normalized.length} pistes).`, 'success');
         }, 450);
       } catch (err) {
         showJsonValidation(err.message || 'JSON invalide.', true);
@@ -1393,7 +2936,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'disney-blind-test-playlist.json';
+        a.download = 'disney-blind-test-tracks.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1405,11 +2948,6 @@
       }
     }
 
-    /**
-     * =========================================================================
-     * INITIALISATION & ÉCOUTEURS D'ÉVÉNEMENTS GLOBAUX
-     * =========================================================================
-     */
     function bindGlobalEvents() {
       dom.toggleJudgeModeBtn.addEventListener('click', () => {
         state.judgeMode = !state.judgeMode;
@@ -1418,8 +2956,46 @@
         renderTrackStage();
       });
 
+      dom.undoActionBtn.addEventListener('click', undoLastAction);
       dom.resetScoresBtn.addEventListener('click', resetAllScores);
       dom.resetPoolBtn.addEventListener('click', resetPool);
+
+      // Filtres & tirage aléatoire
+      dom.filterDecade.addEventListener('change', (e) => {
+        state.filters.decade = e.target.value;
+        ensureCurrentTrack();
+        saveState();
+        renderTrackStage();
+      });
+
+      dom.filterType.addEventListener('change', (e) => {
+        state.filters.type = e.target.value;
+        ensureCurrentTrack();
+        saveState();
+        renderTrackStage();
+      });
+
+      dom.filterFilm.addEventListener('change', (e) => {
+        state.filters.film = e.target.value;
+        ensureCurrentTrack();
+        saveState();
+        renderTrackStage();
+      });
+
+      dom.toggleShuffleBtn.addEventListener('click', () => {
+        state.shuffleMode = !state.shuffleMode;
+        saveState();
+        renderShuffleButton();
+        showToast(state.shuffleMode ? 'Tirage aléatoire activé.' : 'Tirage séquentiel activé.', 'info');
+      });
+
+      // Minuteur
+      dom.timerStartPauseBtn.addEventListener('click', toggleTimer);
+      dom.timerResetBtn.addEventListener('click', () => resetTimer(false));
+      dom.timerDurationSelect.addEventListener('change', (e) => {
+        timerSeconds = Number(e.target.value) || 30;
+        resetTimer(false);
+      });
 
       dom.revealAnswerBtn.addEventListener('click', () => {
         state.answerRevealed = !state.answerRevealed;
@@ -1436,44 +3012,43 @@
         dom.newPlayerInput.focus();
       });
 
-      // Contrôles Audio
-      dom.playPauseBtn.addEventListener('click', () => {
-        if (!dom.audioPlayer.src) return;
-        if (dom.audioPlayer.paused) {
-          dom.audioPlayer.play().catch(() => {
-            showToast('Impossible de lancer la lecture audio (vérifiez l’URL ou les droits du fichier).', 'error');
-          });
-        } else {
-          dom.audioPlayer.pause();
+      // Ajout piste personnalisée
+      dom.addCustomTrackForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const titreFr = dom.customTitreFr.value.trim();
+        const film = dom.customFilm.value.trim();
+        const annee = Number(dom.customAnnee.value) || 2024;
+        const titreEn = dom.customTitreEn.value.trim();
+        const type = dom.customType.value || 'Chanson';
+
+        if (!titreFr || !film) {
+          showJsonValidation('Veuillez renseigner au moins le titre FR et le film Disney.', true);
+          return;
         }
-      });
 
-      dom.audioPlayer.addEventListener('play', () => updatePlayPauseUI(true));
-      dom.audioPlayer.addEventListener('pause', () => updatePlayPauseUI(false));
-      dom.audioPlayer.addEventListener('ended', () => updatePlayPauseUI(false));
+        const newTrack = normalizeTrackItem(
+          {
+            id: `custom-${Date.now()}`,
+            film,
+            annee,
+            titre_fr: titreFr,
+            titre_en: titreEn,
+            type,
+            yt_fallback: buildDefaultYtUrl(titreFr, film),
+          },
+          state.playlist.length
+        );
 
-      dom.audioPlayer.addEventListener('loadedmetadata', () => {
-        dom.seekSlider.max = dom.audioPlayer.duration || 100;
-        dom.audioTimeDisplay.textContent = `00:00 / ${formatTime(dom.audioPlayer.duration)}`;
+        pushUndoSnapshot();
+        state.playlist.push(newTrack);
+        dom.jsonTextarea.value = JSON.stringify(state.playlist, null, 2);
+        saveState();
+        renderAll();
+        dom.addCustomTrackForm.reset();
+        dom.customType.value = 'Chanson';
+        showJsonValidation(`Piste "${newTrack.titre_fr}" (${newTrack.film}) ajoutée à la playlist.`, false);
+        showToast(`Piste "${newTrack.titre_fr}" ajoutée !`, 'success');
       });
-
-      dom.audioPlayer.addEventListener('timeupdate', () => {
-        if (!dom.seekSlider.matches(':active')) {
-          dom.seekSlider.value = dom.audioPlayer.currentTime || 0;
-        }
-        dom.audioTimeDisplay.textContent = `${formatTime(dom.audioPlayer.currentTime)} / ${formatTime(dom.audioPlayer.duration)}`;
-      });
-
-      dom.seekSlider.addEventListener('input', () => {
-        if (dom.audioPlayer.src) {
-          dom.audioPlayer.currentTime = Number(dom.seekSlider.value);
-        }
-      });
-
-      dom.volumeSlider.addEventListener('input', () => {
-        dom.audioPlayer.volume = Number(dom.volumeSlider.value);
-      });
-      dom.audioPlayer.volume = Number(dom.volumeSlider.value);
 
       // Modale JSON
       dom.openJsonModalBtn.addEventListener('click', openJsonModal);
@@ -1483,8 +3058,8 @@
       dom.exportJsonBtn.addEventListener('click', exportPlaylistJson);
 
       dom.loadDefaultJsonBtn.addEventListener('click', () => {
-        dom.jsonTextarea.value = JSON.stringify(DEFAULT_PLAYLIST, null, 2);
-        showJsonValidation('Liste Disney par défaut chargée dans l’éditeur (cliquez sur "Appliquer" pour valider).', false);
+        dom.jsonTextarea.value = JSON.stringify(DISNEY_TRACKS, null, 2);
+        showJsonValidation('Catalogue complet des 151 pistes Disney chargé (cliquez sur "Appliquer" pour valider).', false);
       });
 
       dom.jsonFileInput.addEventListener('change', (e) => {
@@ -1520,11 +3095,9 @@
       });
     }
 
-    // Démarrage de l'application
     window.addEventListener('DOMContentLoaded', () => {
       loadState();
       bindGlobalEvents();
-      loadCurrentTrackAudio(getCurrentTrack());
       renderAll();
     });
   </script>
