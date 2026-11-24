@@ -69,17 +69,22 @@
         <div class="room-backend-box">
           <div class="room-backend-header">
             <span class="sync-note">
-              <strong>Synchro inter-appareils (Firebase RTDB) :</strong> colle l'URL de ta base Firebase (ex: <code>https://ton-projet-default-rtdb.firebaseio.com/</code>) ou l'ID du projet pour jouer entre PC, mobile et amis à distance.
+              <strong>Connexion sans compte ni configuration :</strong> partage simplement le <strong>code de room</strong> ou le <strong>lien d'invitation</strong> pour jouer entre PC, téléphone et amis.
             </span>
-            <span class="fb-status-pill" id="firebaseStatusPill">⚪ Local uniquement</span>
+            <span class="fb-status-pill connected" id="firebaseStatusPill">⚡ Mode sans compte prêt</span>
           </div>
           <div class="remote-row">
-            <input type="text" id="firebaseUrlInput" placeholder="https://ton-projet-default-rtdb.firebaseio.com/ ou ID projet..." style="flex:1; min-width:240px;" />
-            <button type="button" class="ghost" id="saveFirebaseBtn">💾 Connecter &amp; tester</button>
-            <button type="button" class="ghost" id="copyFirebaseRulesBtn">🛡️ Règles Firebase</button>
-            <button type="button" class="ghost" id="clearFirebaseBtn">✖ Déconnecter</button>
+            <button type="button" class="gold" id="quickZeroConfigBtn">🚀 Activer synchro instantanée</button>
+            <button type="button" class="ghost" id="toggleAdvancedSyncBtn">⚙️ Réglage manuel (optionnel)</button>
           </div>
-          <div id="firebaseDiagMsg" class="sync-note" aria-live="polite"></div>
+          <div id="advancedSyncDrawer" style="display:none; flex-direction:column; gap:0.55rem; margin-top:0.25rem;">
+            <div class="remote-row">
+              <input type="text" id="firebaseUrlInput" placeholder="URL de secours personnalisée (optionnel)..." style="flex:1; min-width:240px;" />
+              <button type="button" class="ghost" id="saveFirebaseBtn">💾 Appliquer</button>
+              <button type="button" class="ghost" id="clearFirebaseBtn">✖ Réinitialiser</button>
+            </div>
+          </div>
+          <div id="firebaseDiagMsg" class="sync-note" aria-live="polite">Aucun compte ni base de données à créer : crée une room et envoie le lien d'invitation.</div>
         </div>
       </div>      </div>
     </section>

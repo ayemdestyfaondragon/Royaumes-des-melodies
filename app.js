@@ -1551,3 +1551,82 @@ if (clearFirebaseBtn) {
     setFirebaseStatus("", "⚪ Local uniquement", "Optionnel : ajoute une URL Firebase RTDB pour synchroniser PC, téléphone et amis.");
   }
 })();
+
+
+// =========================================================
+// MODE SALON SIMPLIFIÉ SANS COMPTE (ZÉRO CONFIG)
+// =========================================================
+const quickZeroConfigBtn = document.getElementById("quickZeroConfigBtn");
+const toggleAdvancedSyncBtn = document.getElementById("toggleAdvancedSyncBtn");
+const advancedSyncDrawer = document.getElementById("advancedSyncDrawer");
+const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
+const firebaseStatusPill = document.getElementById("firebaseStatusPill");
+const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
+
+function setSyncBanner(modeClass, badgeText, msgText) {
+  if (firebaseStatusPill) {
+    firebaseStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
+    firebaseStatusPill.textContent = badgeText;
+  }
+  if (firebaseDiagMsg && msgText) {
+    firebaseDiagMsg.textContent = msgText;
+  }
+}
+
+if (toggleAdvancedSyncBtn && advancedSyncDrawer) {
+  toggleAdvancedSyncBtn.addEventListener("click", () => {
+    const isOpen = advancedSyncDrawer.style.display === "flex";
+    advancedSyncDrawer.style.display = isOpen ? "none" : "flex";
+  });
+}
+
+if (quickZeroConfigBtn) {
+  quickZeroConfigBtn.addEventListener("click", () => {
+    if (!state.roomCode) {
+      createRoomBtn.click();
+    } else {
+      saveState();
+      renderRoomPanel();
+    }
+    setSyncBanner(
+      "connected",
+      "⚡ Salon actif",
+      `Room ${state.roomCode} prête ! Clique sur « 📋 Lien d'invitation » et envoie le lien aux joueurs.`
+    );
+  });
+}
+
+if (clearFirebaseBtn) {
+  clearFirebaseBtn.addEventListener("click", () => {
+    roomSystem.firebaseBaseUrl = "";
+    const fbInput = document.getElementById("firebaseUrlInput");
+    if (fbInput) fbInput.value = "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    setSyncBanner(
+      "connected",
+      "⚡ Mode sans compte prêt",
+      "Aucun compte ni base de données à créer : crée une room et envoie le lien d'invitation."
+    );
+    renderRoomPanel();
+  });
+}
+
+if (saveFirebaseBtn) {
+  const cleanSaveBtn = saveFirebaseBtn.cloneNode(true);
+  saveFirebaseBtn.parentNode.replaceChild(cleanSaveBtn, saveFirebaseBtn);
+  cleanSaveBtn.addEventListener("click", () => {
+    const raw = (document.getElementById("firebaseUrlInput")?.value || "").trim().replace(/\/+$/, "");
+    roomSystem.firebaseBaseUrl = raw && /^https?:\/\//i.test(raw) ? raw : "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    setSyncBanner(
+      "connected",
+      roomSystem.firebaseBaseUrl ? "🔗 Endpoint lié" : "⚡ Mode sans compte prêt",
+      roomSystem.firebaseBaseUrl
+        ? `Endpoint personnalisé enregistré : ${roomSystem.firebaseBaseUrl}`
+        : "Réglage remis par défaut (sans configuration externe)."
+    );
+    renderRoomPanel();
+  });
+}
