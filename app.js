@@ -1923,6 +1923,13 @@ if (autoSkipPhaseBtn) {
 renderAutoStatus();
 
 
+
+// Ensure simple link mode has no leftover external relay or console URLs
+roomSystem.firebaseBaseUrl = "";
+try {
+  localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
+} catch (_) {}
+
 // Initial boot
 if (state.remotePseudo && remotePseudoInput) {
   remotePseudoInput.value = state.remotePseudo;
