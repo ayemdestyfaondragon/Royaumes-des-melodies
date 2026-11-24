@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Royaumes des Mélodies — Blind-Test Disney</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Royaumes des Mélodies</h1>
+      <p class="subtitle">Blind-Test Disney — <strong>1 pt</strong> pour le titre • <strong>1 pt</strong> pour le Disney</p>
+    </header>
+
+    <section class="panel">
+      <div class="score-bar">
+        <input type="text" id="playerNameInput" placeholder="Nom du joueur ou de l'équipe..." />
+        <button type="button" id="addPlayerBtn">+ Ajouter joueur</button>
+        <button type="button" class="ghost" id="resetScoresBtn">Scores à 0</button>
+      </div>
+      <div id="playersGrid" class="players-grid"></div>
+    </section>
+
+    <section class="stage">
+      <div class="stage-top">
+        <span class="round-pill" id="roundBadge">Manche #0 • Prêt</span>
+        <div class="stage-actions">
+          <button type="button" class="gold" id="randomRoundBtn">🎲 Manche aléatoire</button>
+          <button type="button" class="reveal-btn" id="revealBtn">👁️ Révéler réponse</button>
+        </div>
+      </div>
+
+      <div class="stage-grid">
+        <div class="cover-wrap mystery" id="coverWrap">
+          <img id="coverImg" alt="Pochette Disney" />
+          <div class="cover-mystery-badge" id="mysteryOverlay">
+            ?
+            <span>Pochette masquée</span>
+          </div>
+        </div>
+
+        <div class="player-area">
+          <div>
+            <h2 class="now-playing-title" id="stageTitle">Lance une manche aléatoire ou choisis un titre</h2>
+            <p class="now-playing-sub" id="stageSub">La pochette et le titre restent masqués pendant l'écoute (1 pt Titre • 1 pt Disney)</p>
+          </div>
+
+          <div class="custom-audio">
+            <div class="audio-row">
+              <button type="button" class="play-circle" id="playPauseBtn" disabled aria-label="Lecture / Pause">▶</button>
+              <div class="seek-wrap">
+                <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1" disabled />
+                <div class="time-row">
+                  <span id="currentTimeLabel">0:00</span>
+                  <span id="durationLabel">0:30</span>
+                </div>
+              </div>
+              <div class="vol-wrap">
+                <span class="vol-icon">🔊</span>
+                <input type="range" id="volumeBar" min="0" max="1" step="0.05" value="0.9" />
+              </div>
+            </div>
+            <div class="status-row">
+              <span class="status-msg" id="audioStatus">En attente d'un morceau...</span>
+              <span class="source-tag" id="sourceTag">Audio prêt</span>
+            </div>
+          </div>
+
+          <div id="fallbackBox" class="fallback-box">
+            <a id="ytFallbackLink" href="#" target="_blank" rel="noopener noreferrer">
+              ↗ Ouvrir ce morceau sur YouTube
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="filters">
+        <input type="search" id="searchInput" placeholder="Rechercher un titre FR/EN, un film Disney ou une année..." />
+        <select id="typeFilter">
+          <option value="ALL">Tous (151)</option>
+          <option value="Chanson">Chansons</option>
+          <option value="Instrumental">Instrumentaux</option>
+        </select>
+        <button type="button" class="ghost" id="resetPlayedBtn">Réinitialiser tirages</button>
+      </div>
+
+      <div class="catalog-meta">
+        <span id="countLabel">151 morceaux</span>
+        <span id="playedLabel">0 / 151 joué(s)</span>
+      </div>
+
+      <div id="tracksList" class="track-list"></div>
+    </section>
+  </div>
+
+  <audio id="audioEl" preload="auto"></audio>
+
+  <script src="tracks.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
