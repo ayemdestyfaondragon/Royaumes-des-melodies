@@ -351,6 +351,7 @@ window.promoteToHost = function (targetClientId) {
   appendRoomSystemMessage(`${target ? target.pseudo : "Un joueur"} est maintenant hôte de la room.`);
   saveState();
   renderRoomPanel();
+  if (typeof renderRoundGuesses === 'function') renderRoundGuesses();
 };
 
 function renderBuzzUI() {
@@ -1553,62 +1554,233 @@ if (clearFirebaseBtn) {
 })();
 
 
+
+
 // =========================================================
-// MODE SALON SIMPLIFIÉ SANS COMPTE (ZÉRO CONFIG)
+// VRAIE SYNCHRO MULTI-APPAREILS (PC + TÉLÉPHONE + AMIS)
 // =========================================================
-const quickZeroConfigBtn = document.getElementById("quickZeroConfigBtn");
+const DEFAULT_RELAY_BASE = "https://ntfy.sh";
+let relayPollTimer = null;
+let lastSeenRelayMsgId = "";
+
+const relayStatusPill = document.getElementById("relayStatusPill");
+const forceSyncNowBtn = document.getElementById("forceSyncNowBtn");
 const toggleAdvancedSyncBtn = document.getElementById("toggleAdvancedSyncBtn");
 const advancedSyncDrawer = document.getElementById("advancedSyncDrawer");
-const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
-const firebaseStatusPill = document.getElementById("firebaseStatusPill");
 const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
 
-function setSyncBanner(modeClass, badgeText, msgText) {
-  if (firebaseStatusPill) {
-    firebaseStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
-    firebaseStatusPill.textContent = badgeText;
+function getRelayBaseUrl() {
+  const custom = (roomSystem.firebaseBaseUrl || "").trim().replace(/\/+$/, "");
+  if (custom && /^https?:\/\//i.test(custom) && !custom.includes("firebaseio.com")) {
+    return custom;
+  }
+  return DEFAULT_RELAY_BASE;
+}
+
+function getRoomTopic(code) {
+  const cleanCode = String(code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return `royaumes-melodies-room-${cleanCode}`;
+}
+
+function setRelayBanner(modeClass, badgeText, msgText) {
+  if (relayStatusPill) {
+    relayStatusPill.className = "fb-status-pill" + (modeClass ? ` ${modeClass}` : "");
+    relayStatusPill.textContent = badgeText;
   }
   if (firebaseDiagMsg && msgText) {
     firebaseDiagMsg.textContent = msgText;
   }
 }
 
+async function publishRoomSnapshotToRelay(snapshot) {
+  if (!snapshot || !snapshot.roomCode) return;
+  const base = getRelayBaseUrl();
+  const topic = getRoomTopic(snapshot.roomCode);
+  const url = `${base}/${encodeURIComponent(topic)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        __royaumesRoomSync: true,
+        snapshot
+      })
+    });
+    if (res.ok) {
+      setRelayBanner(
+        "connected",
+        `🟢 Connecté • ${snapshot.roomCode}`,
+        `Room ${snapshot.roomCode} synchronisée à distance (${snapshot.members ? snapshot.members.length : 0} joueur(s)).`
+      );
+    }
+  } catch (_) {
+    setRelayBanner(
+      "",
+      "🟡 Canal local actif",
+      "Relais réseau injoignable : la synchro locale / multi-onglets reste active."
+    );
+  }
+}
+
+async function pullRoomSnapshotFromRelay(code) {
+  const cleanCode = String(code || "").trim().toUpperCase();
+  if (!cleanCode) return null;
+  const base = getRelayBaseUrl();
+  const topic = getRoomTopic(cleanCode);
+  const url = `${base}/${encodeURIComponent(topic)}/json?poll=1&since=10m`;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const rawText = await res.text();
+    if (!rawText.trim()) return null;
+
+    const lines = rawText.trim().split("\n");
+    let newestSnap = null;
+
+    for (const line of lines) {
+      try {
+        const evt = JSON.parse(line);
+        if (evt && evt.event === "message" && typeof evt.message === "string") {
+          const parsedMsg = JSON.parse(evt.message);
+          if (parsedMsg && parsedMsg.__royaumesRoomSync && parsedMsg.snapshot) {
+            const snap = parsedMsg.snapshot;
+            if (snap.roomCode === cleanCode) {
+              if (!newestSnap || (snap.updatedAt || 0) >= (newestSnap.updatedAt || 0)) {
+                newestSnap = snap;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return newestSnap;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Hook into saveState so every room change pushes across devices as well as tabs
+const baseSaveState = saveState;
+saveState = function (options = {}) {
+  baseSaveState(options);
+  if (state.mode === "remote" && state.roomCode && !options.skipBroadcast) {
+    const snap = buildFullRoomSnapshot();
+    publishRoomSnapshotToRelay(snap);
+  }
+};
+
+// Hook into startRoomListeners to poll the shared network room topic regularly
+const baseStartRoomListeners = startRoomListeners;
+startRoomListeners = function () {
+  baseStartRoomListeners();
+  if (relayPollTimer) {
+    clearInterval(relayPollTimer);
+    relayPollTimer = null;
+  }
+  if (state.mode !== "remote" || !state.roomCode) return;
+
+  const pollNow = async () => {
+    if (state.mode !== "remote" || !state.roomCode) return;
+    const remoteSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(remoteSnap);
+    }
+  };
+
+  pollNow();
+  relayPollTimer = setInterval(pollNow, 1500);
+};
+
+// Upgrade joinRoomBtn so joining from a phone/PC fetches the live room from the network relay immediately
+if (joinRoomBtn) {
+  const freshJoinBtn = joinRoomBtn.cloneNode(true);
+  joinRoomBtn.parentNode.replaceChild(freshJoinBtn, joinRoomBtn);
+  freshJoinBtn.addEventListener("click", async () => {
+    const code = (joinRoomInput?.value || "").trim().toUpperCase();
+    if (!code) return;
+
+    state.mode = "remote";
+    tabLocal.classList.remove("active");
+    tabRemote.classList.add("active");
+    remoteBox.style.display = "flex";
+
+    state.roomCode = code;
+    roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+    syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
+    startRoomListeners();
+
+    let loaded = null;
+    try {
+      loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
+    } catch (_) {}
+
+    const netSnap = await pullRoomSnapshotFromRelay(code);
+    if (netSnap && (!loaded || (netSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+      loaded = netSnap;
+    }
+
+    if (loaded) {
+      applyRemotePayload(loaded);
+    } else {
+      roomSystem.hostId = roomSystem.clientId;
+      roomSystem.roomName = `Room ${code}`;
+    }
+
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+    appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+    renderBuzzUI();
+    renderRoomPanel();
+  });
+}
+
+// Auto-join room when opened via ?room=CODE link on a phone or another PC
+(async () => {
+  if (state.mode === "remote" && state.roomCode) {
+    startRoomListeners();
+    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    if (netSnap && (netSnap.updatedAt || 0) >= (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(netSnap);
+    }
+    upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+    appendRoomSystemMessage(`${currentPseudo()} a rejoint via le lien d'invitation.`);
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+    renderBuzzUI();
+    renderRoomPanel();
+  }
+})();
+
+if (forceSyncNowBtn) {
+  forceSyncNowBtn.addEventListener("click", async () => {
+    if (!state.roomCode) {
+      createRoomBtn.click();
+      return;
+    }
+    const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
+    if (netSnap && (netSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+      applyRemotePayload(netSnap);
+    } else {
+      roomSystem.updatedAt = Date.now();
+      saveState();
+    }
+    setRelayBanner(
+      "connected",
+      `🟢 Synchronisé • ${state.roomCode}`,
+      `État à jour pour la room ${state.roomCode}. Partage le code ${state.roomCode} ou le lien d'invitation.`
+    );
+  });
+}
+
 if (toggleAdvancedSyncBtn && advancedSyncDrawer) {
   toggleAdvancedSyncBtn.addEventListener("click", () => {
     const isOpen = advancedSyncDrawer.style.display === "flex";
     advancedSyncDrawer.style.display = isOpen ? "none" : "flex";
-  });
-}
-
-if (quickZeroConfigBtn) {
-  quickZeroConfigBtn.addEventListener("click", () => {
-    if (!state.roomCode) {
-      createRoomBtn.click();
-    } else {
-      saveState();
-      renderRoomPanel();
-    }
-    setSyncBanner(
-      "connected",
-      "⚡ Salon actif",
-      `Room ${state.roomCode} prête ! Clique sur « 📋 Lien d'invitation » et envoie le lien aux joueurs.`
-    );
-  });
-}
-
-if (clearFirebaseBtn) {
-  clearFirebaseBtn.addEventListener("click", () => {
-    roomSystem.firebaseBaseUrl = "";
-    const fbInput = document.getElementById("firebaseUrlInput");
-    if (fbInput) fbInput.value = "";
-    saveState({ skipBroadcast: true });
-    startRoomListeners();
-    setSyncBanner(
-      "connected",
-      "⚡ Mode sans compte prêt",
-      "Aucun compte ni base de données à créer : crée une room et envoie le lien d'invitation."
-    );
-    renderRoomPanel();
   });
 }
 
@@ -1620,13 +1792,25 @@ if (saveFirebaseBtn) {
     roomSystem.firebaseBaseUrl = raw && /^https?:\/\//i.test(raw) ? raw : "";
     saveState({ skipBroadcast: true });
     startRoomListeners();
-    setSyncBanner(
+    setRelayBanner(
       "connected",
-      roomSystem.firebaseBaseUrl ? "🔗 Endpoint lié" : "⚡ Mode sans compte prêt",
-      roomSystem.firebaseBaseUrl
-        ? `Endpoint personnalisé enregistré : ${roomSystem.firebaseBaseUrl}`
-        : "Réglage remis par défaut (sans configuration externe)."
+      "🌐 Relais mis à jour",
+      `Relais actif : ${getRelayBaseUrl()}`
     );
-    renderRoomPanel();
+  });
+}
+
+if (clearFirebaseBtn) {
+  clearFirebaseBtn.addEventListener("click", () => {
+    roomSystem.firebaseBaseUrl = "";
+    const fbInput = document.getElementById("firebaseUrlInput");
+    if (fbInput) fbInput.value = "";
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    setRelayBanner(
+      "connected",
+      "🌐 Relais réseau prêt",
+      `Relais par défaut actif (${DEFAULT_RELAY_BASE}).`
+    );
   });
 }

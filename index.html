@@ -69,22 +69,22 @@
         <div class="room-backend-box">
           <div class="room-backend-header">
             <span class="sync-note">
-              <strong>Connexion sans compte ni configuration :</strong> partage simplement le <strong>code de room</strong> ou le <strong>lien d'invitation</strong> pour jouer entre PC, téléphone et amis.
+              <strong>Relais multi-appareils actif (PC + Téléphone + Amis) :</strong> chaque code de room utilise un canal réseau partagé automatiquement sans création de compte.
             </span>
-            <span class="fb-status-pill connected" id="firebaseStatusPill">⚡ Mode sans compte prêt</span>
+            <span class="fb-status-pill connected" id="relayStatusPill">🌐 Relais réseau prêt</span>
           </div>
           <div class="remote-row">
-            <button type="button" class="gold" id="quickZeroConfigBtn">🚀 Activer synchro instantanée</button>
-            <button type="button" class="ghost" id="toggleAdvancedSyncBtn">⚙️ Réglage manuel (optionnel)</button>
+            <button type="button" class="gold" id="forceSyncNowBtn">🔄 Synchroniser maintenant</button>
+            <button type="button" class="ghost" id="toggleAdvancedSyncBtn">⚙️ Serveur relais (optionnel)</button>
           </div>
           <div id="advancedSyncDrawer" style="display:none; flex-direction:column; gap:0.55rem; margin-top:0.25rem;">
             <div class="remote-row">
-              <input type="text" id="firebaseUrlInput" placeholder="URL de secours personnalisée (optionnel)..." style="flex:1; min-width:240px;" />
+              <input type="text" id="firebaseUrlInput" placeholder="Serveur relais (défaut : https://ntfy.sh)..." style="flex:1; min-width:240px;" />
               <button type="button" class="ghost" id="saveFirebaseBtn">💾 Appliquer</button>
-              <button type="button" class="ghost" id="clearFirebaseBtn">✖ Réinitialiser</button>
+              <button type="button" class="ghost" id="clearFirebaseBtn">✖ Par défaut</button>
             </div>
           </div>
-          <div id="firebaseDiagMsg" class="sync-note" aria-live="polite">Aucun compte ni base de données à créer : crée une room et envoie le lien d'invitation.</div>
+          <div id="firebaseDiagMsg" class="sync-note" aria-live="polite">Crée ou rejoins une room avec le même code sur PC et téléphone : les joueurs, buzzers, scores et manches se partagent à distance.</div>
         </div>
       </div>      </div>
     </section>
