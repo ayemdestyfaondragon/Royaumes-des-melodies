@@ -3,115 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Test Disney - La Magie en Musique</title>
+    <title>Blind Test Disney - Magie Musicale</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome pour les icônes -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Canvas Confetti pour la célébration -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <!-- MQTT.js pour le relais multijoueur multi-appareils automatique -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <!-- Polices Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Client MQTT pour synchronisation multijoueur multi-appareils -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
     <style>
-        :root {
-            --disney-navy: #070b1e;
-            --disney-royal: #111c44;
-            --disney-gold: #fbbf24;
-            --disney-gold-light: #fef08a;
-            --disney-magic: #38bdf8;
-        }
-
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: radial-gradient(ellipse at top, #162456 0%, #090e26 55%, #040612 100%);
-            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(ellipse at top, #172554 0%, #090d24 55%, #030510 100%);
             min-height: 100vh;
+            color: #f8fafc;
             overflow-x: hidden;
-            position: relative;
         }
 
         .font-magic {
             font-family: 'Cinzel Decorative', serif;
         }
 
-        /* Arrière-plan étoilé animé */
-        #starfield {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* Effet verre féerique */
         .magic-card {
-            background: rgba(17, 28, 68, 0.72);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(251, 191, 36, 0.28);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 0 20px rgba(56, 189, 248, 0.08);
+            background: rgba(15, 23, 54, 0.78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
 
         .gold-glow {
-            text-shadow: 0 0 18px rgba(251, 191, 36, 0.65), 0 0 35px rgba(56, 189, 248, 0.35);
+            text-shadow: 0 0 22px rgba(251, 191, 36, 0.65);
         }
 
         .btn-magic {
             background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%);
-            color: #090e26;
+            color: #090d24;
             font-weight: 800;
-            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.45);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-
         .btn-magic:hover:not(:disabled) {
             transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 28px rgba(251, 191, 36, 0.7);
+            box-shadow: 0 10px 28px rgba(251, 191, 36, 0.55);
         }
-
         .btn-magic:active:not(:disabled) {
             transform: translateY(0) scale(0.98);
         }
+        .btn-magic:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
 
         .btn-royal {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-            border: 1px solid rgba(96, 165, 250, 0.4);
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
-            transition: all 0.25s ease;
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-
         .btn-royal:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6);
-            border-color: #93c5fd;
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 28px rgba(99, 102, 241, 0.5);
         }
-
-        /* Égaliseur audio animé */
-        .eq-bar {
-            width: 5px;
-            border-radius: 9999px;
-            background: linear-gradient(to top, #f59e0b, #38bdf8);
-            transition: height 0.15s ease;
-        }
-
-        .eq-playing .eq-bar:nth-child(1) { animation: eqBounce 0.7s ease-in-out infinite alternate; }
-        .eq-playing .eq-bar:nth-child(2) { animation: eqBounce 0.5s ease-in-out infinite alternate 0.1s; }
-        .eq-playing .eq-bar:nth-child(3) { animation: eqBounce 0.8s ease-in-out infinite alternate 0.25s; }
-        .eq-playing .eq-bar:nth-child(4) { animation: eqBounce 0.45s ease-in-out infinite alternate 0.15s; }
-        .eq-playing .eq-bar:nth-child(5) { animation: eqBounce 0.65s ease-in-out infinite alternate 0.3s; }
-        .eq-playing .eq-bar:nth-child(6) { animation: eqBounce 0.55s ease-in-out infinite alternate 0.05s; }
 
         @keyframes eqBounce {
-            0% { height: 8px; }
-            100% { height: 34px; }
+            0%, 100% { transform: scaleY(0.25); }
+            50% { transform: scaleY(1); }
+        }
+        .eq-bar {
+            width: 5px;
+            background: linear-gradient(to top, #38bdf8, #fbbf24);
+            border-radius: 9999px;
+            transform-origin: bottom;
+        }
+        .eq-playing .eq-bar:nth-child(1) { animation: eqBounce 0.7s infinite ease-in-out 0.1s; }
+        .eq-playing .eq-bar:nth-child(2) { animation: eqBounce 0.5s infinite ease-in-out 0.3s; }
+        .eq-playing .eq-bar:nth-child(3) { animation: eqBounce 0.8s infinite ease-in-out 0.0s; }
+        .eq-playing .eq-bar:nth-child(4) { animation: eqBounce 0.6s infinite ease-in-out 0.2s; }
+        .eq-playing .eq-bar:nth-child(5) { animation: eqBounce 0.75s infinite ease-in-out 0.4s; }
+        .eq-playing .eq-bar:nth-child(6) { animation: eqBounce 0.55s infinite ease-in-out 0.15s; }
+
+        @keyframes spinVinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .vinyl-spin {
+            animation: spinVinyl 6s linear infinite;
+        }
+        .vinyl-paused {
+            animation-play-state: paused;
         }
 
-        /* Animation Secousse erreur */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%, 60% { transform: translateX(-6px); }
@@ -121,52 +108,42 @@
             animation: shake 0.35s ease-in-out;
         }
 
-        /* Animation Pop validation */
         @keyframes popIn {
-            0% { transform: scale(0.85); opacity: 0; }
-            70% { transform: scale(1.04); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { opacity: 0; transform: scale(0.85) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .animate-pop {
-            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
-        /* Disque Vinyle tournant */
-        @keyframes spinSlow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .vinyl-spin {
-            animation: spinSlow 8s linear infinite;
-        }
-        .vinyl-paused {
-            animation-play-state: paused;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(9, 13, 36, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.35); border-radius: 9999px; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen selection:bg-amber-400 selection:text-slate-950">
+<body class="relative flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
 
-    <!-- Canvas étoiles scintillantes -->
-    <canvas id="starfield"></canvas>
+    <!-- Fond étoilé animé -->
+    <canvas id="starfield" class="fixed inset-0 pointer-events-none z-0"></canvas>
 
-    <!-- Notification Toast (Remplace alert()) -->
+    <!-- Conteneur de notifications Toast -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
     <!-- En-tête -->
-    <header class="relative z-10 w-full max-w-5xl mx-auto px-4 pt-5 pb-3 flex flex-wrap items-center justify-between gap-3">
-        <div onclick="confirmReturnHome()" class="flex items-center gap-3 cursor-pointer group">
-            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/30 group-hover:scale-105 transition">
-                <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+    <header class="relative z-10 w-full max-w-5xl mx-auto px-4 pt-5 pb-2 flex items-center justify-between gap-3">
+        <button onclick="confirmReturnHome()" class="flex items-center gap-3 text-left group focus:outline-none">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-500 to-yellow-600 flex items-center justify-center text-slate-950 text-xl shadow-lg shadow-amber-500/30 group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
             <div>
-                <h1 class="font-magic text-xl sm:text-2xl font-black tracking-wide text-amber-300 gold-glow leading-none">
-                    Disney Blind Test
+                <h1 class="font-magic text-lg sm:text-2xl font-black tracking-wide text-amber-300 gold-glow leading-none">
+                    Blind Test Disney
                 </h1>
-                <p class="text-xs text-sky-300/80 font-medium mt-0.5">La Magie des Classiques en Musique</p>
+                <p class="text-[11px] sm:text-xs text-sky-300/80 font-medium mt-0.5">100 % Versions Françaises</p>
             </div>
-        </div>
+        </button>
 
-        <!-- Contrôle volume global & Badge Salle -->
+        <!-- Contrôles globaux (État réseau + Salle + Volume) -->
         <div class="flex items-center gap-2 sm:gap-3">
             <!-- Badge d'état réseau multijoueur -->
             <div id="sync-status-badge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-emerald-500/40 text-xs font-semibold text-emerald-300">
@@ -191,76 +168,104 @@
         </div>
     </header>
 
+    <!-- Modale de sélection personnalisée de chansons -->
+    <div id="custom-playlist-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="magic-card rounded-3xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden animate-pop">
+            <div class="p-5 sm:p-6 border-b border-slate-700/70 flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-magic text-xl font-bold text-amber-300">Playlist Personnalisée (VF)</h3>
+                    <p class="text-xs text-slate-300 mt-0.5">Cochez exactement les chansons françaises à inclure dans la partie</p>
+                </div>
+                <button onclick="closeCustomPlaylistModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row gap-2.5">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input id="custom-search-input" type="text" oninput="renderCustomSongList()" placeholder="Rechercher une chanson, un film, une série..."
+                        class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-400 outline-none text-sm text-white">
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button type="button" onclick="toggleAllCustomSongs(true)" class="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 cursor-pointer">
+                        Tout cocher
+                    </button>
+                    <button type="button" onclick="toggleAllCustomSongs(false)" class="px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold hover:bg-rose-500/30 cursor-pointer">
+                        Tout décocher
+                    </button>
+                </div>
+            </div>
+
+            <div id="custom-songs-list" class="p-4 overflow-y-auto flex-1 space-y-2">
+                <!-- Liste générée dynamiquement -->
+            </div>
+
+            <div class="p-4 sm:p-5 border-t border-slate-700/70 bg-slate-950/70 flex items-center justify-between gap-3">
+                <span class="text-sm font-bold text-sky-300">
+                    <span id="custom-selected-count" class="text-amber-400 font-black text-base">0</span> chanson(s) sélectionnée(s)
+                </span>
+                <button type="button" onclick="confirmCustomPlaylist()" class="btn-magic px-6 py-2.5 rounded-xl text-sm cursor-pointer">
+                    Valider la sélection
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenu Principal -->
     <main class="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 py-4 flex flex-col justify-center">
 
         <!-- ==================== ÉCRAN 1 : ACCUEIL ==================== -->
-        <section id="screen-home" class="w-full max-w-2xl mx-auto animate-pop">
-            <div class="magic-card rounded-3xl p-6 sm:p-10 text-center">
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4">
-                    <i class="fa-solid fa-sparkles"></i> Édition Chansons Françaises
+        <section id="screen-home" class="w-full max-w-3xl mx-auto animate-pop">
+            <div class="magic-card rounded-3xl p-6 sm:p-9 text-center">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3">
+                    <i class="fa-solid fa-sparkles"></i> 100 % Versions Françaises Officielles
                 </div>
-                <h2 class="font-magic text-3xl sm:text-4xl font-black text-white mb-3 leading-tight">
+                <h2 class="font-magic text-3xl sm:text-4xl font-black text-white mb-2 leading-tight">
                     Reconnaîtrez-vous la <span class="text-amber-400">Magie</span> ?
                 </h2>
-                <p class="text-slate-300 text-sm sm:text-base max-w-lg mx-auto mb-8">
-                    Écoutez l'extrait musical de 30 secondes, devinez le <strong class="text-amber-300">titre de la chanson</strong> et le <strong class="text-sky-300">film Disney</strong> le plus vite possible ! Les fautes d'orthographe sont tolérées.
+                <p class="text-slate-300 text-sm max-w-xl mx-auto mb-6">
+                    Configurez votre partie sur mesure (catégories, durée des extraits, barème et réponses attendues) puis jouez en Solo ou entre amis sur plusieurs appareils !
                 </p>
 
                 <!-- Saisie Pseudo -->
                 <div class="max-w-md mx-auto mb-6 text-left">
-                    <label for="player-name-input" class="block text-xs font-bold uppercase tracking-wider text-sky-300 mb-2">
+                    <label for="player-name-input" class="block text-xs font-bold uppercase tracking-wider text-sky-300 mb-1.5">
                         <i class="fa-solid fa-crown text-amber-400 mr-1"></i> Votre Pseudonyme
                     </label>
-                    <input id="player-name-input" type="text" maxlength="18" placeholder="Ex: Simba, Elsa, Génie..."
-                        class="w-full px-4 py-3.5 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 outline-none text-white font-semibold text-base transition">
+                    <input id="player-name-input" type="text" maxlength="18" placeholder="Ex: Simba, Elsa, Génie, Kim..."
+                        class="w-full px-4 py-3 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 outline-none text-white font-semibold text-base transition">
                 </div>
 
-                <!-- Sélecteur nombre de manches (Solo ou Création salle) -->
-                <div class="max-w-md mx-auto mb-4 flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3">
-                    <span class="text-sm text-slate-300 font-medium"><i class="fa-solid fa-music text-amber-400 mr-2"></i>Nombre de manches :</span>
-                    <div class="flex gap-1.5" id="rounds-selector">
-                        <button type="button" onclick="selectRoundCount(5)" data-rounds="5" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">5</button>
-                        <button type="button" onclick="selectRoundCount(10)" data-rounds="10" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-amber-400 text-slate-950 transition">10</button>
-                        <button type="button" onclick="selectRoundCount(15)" data-rounds="15" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">15</button>
-                        <button type="button" onclick="selectRoundCount(20)" data-rounds="20" class="round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">20</button>
-                    </div>
-                </div>
-
-                <!-- Sélecteur d'époque / catalogue -->
-                <div class="max-w-md mx-auto mb-8 flex items-center justify-between bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3">
-                    <span class="text-sm text-slate-300 font-medium"><i class="fa-solid fa-wand-sparkles text-sky-400 mr-2"></i>Sélection :</span>
-                    <select id="era-selector" onchange="selectEraFilter(this.value)" class="bg-slate-800 text-amber-300 font-bold text-xs sm:text-sm rounded-xl px-3 py-1.5 border border-slate-700 outline-none cursor-pointer">
-                        <option value="all">Tous les Classiques (42 titres)</option>
-                        <option value="90s">Âge d'Or & Rétro (avant 2000)</option>
-                        <option value="modern">Nouvelle Génération (2000+)</option>
-                    </select>
+                <!-- PANNEAU DE CONFIGURATION DE PARTIE (ACCUEIL) -->
+                <div id="home-config-mount" class="max-w-2xl mx-auto mb-7 text-left">
+                    <!-- Injecté dynamiquement par renderConfigPanel('home-config-mount') -->
                 </div>
 
                 <!-- Boutons Mode de Jeu -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
                     <!-- Solo -->
-                    <button onclick="startSoloGame()" class="btn-magic rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer">
+                    <button onclick="startSoloGame()" class="btn-magic rounded-2xl p-4 flex flex-col items-center justify-center gap-1 cursor-pointer">
                         <div class="flex items-center gap-2 text-lg">
                             <i class="fa-solid fa-user-astronaut"></i>
-                            <span>Mode Solo</span>
+                            <span>Lancer en Solo</span>
                         </div>
-                        <span class="text-xs font-semibold text-slate-900/80">Contre la montre & record personnel</span>
+                        <span class="text-xs font-semibold text-slate-900/80">Jouer immédiatement avec ces réglages</span>
                     </button>
 
                     <!-- Créer Multijoueur -->
-                    <button id="btn-create-room" onclick="createMultiplayerRoom()" class="btn-royal rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 text-white cursor-pointer">
+                    <button id="btn-create-room" onclick="createMultiplayerRoom()" class="btn-royal rounded-2xl p-4 flex flex-col items-center justify-center gap-1 text-white cursor-pointer">
                         <div class="flex items-center gap-2 text-lg font-bold">
                             <i class="fa-solid fa-users"></i>
-                            <span>Créer une Salle</span>
+                            <span>Créer une Salle Multi</span>
                         </div>
-                        <span class="text-xs text-sky-200/80">Jouer entre amis sur plusieurs appareils</span>
+                        <span class="text-xs text-sky-200/80">Modifiable aussi dans le salon d'attente</span>
                     </button>
                 </div>
 
                 <!-- Rejoindre une salle existante -->
-                <div class="mt-8 pt-6 border-t border-slate-700/60 max-w-md mx-auto">
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Ou rejoindre une partie existante</p>
+                <div class="mt-7 pt-5 border-t border-slate-700/60 max-w-md mx-auto">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Ou rejoindre une partie existante</p>
                     <div class="flex gap-2">
                         <input id="join-code-input" type="text" maxlength="4" placeholder="CODE (ex: A7K2)"
                             class="w-full px-4 py-3 rounded-2xl bg-slate-950/80 border border-slate-700 focus:border-sky-400 outline-none text-center font-mono font-extrabold text-lg uppercase tracking-widest text-amber-300">
@@ -273,9 +278,9 @@
         </section>
 
         <!-- ==================== ÉCRAN 2 : LOBBY MULTIJOUEUR ==================== -->
-        <section id="screen-lobby" class="hidden w-full max-w-2xl mx-auto animate-pop">
+        <section id="screen-lobby" class="hidden w-full max-w-3xl mx-auto animate-pop">
             <div class="magic-card rounded-3xl p-6 sm:p-8">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-700/60">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-700/60">
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Salon d'attente</span>
@@ -285,26 +290,41 @@
                         </div>
                         <h2 class="font-magic text-2xl sm:text-3xl font-bold text-white mt-1">Prêts pour le spectacle ?</h2>
                     </div>
-                    <div class="bg-slate-950/90 border-2 border-amber-400/60 rounded-2xl px-5 py-3 text-center">
+                    <div class="bg-slate-950/90 border-2 border-amber-400/60 rounded-2xl px-5 py-2.5 text-center">
                         <span class="block text-[11px] uppercase tracking-wider text-slate-400">Code de la salle</span>
                         <div class="flex items-center justify-center gap-2 mt-0.5">
                             <span id="lobby-room-code" class="font-mono text-3xl font-black text-amber-400 tracking-widest">----</span>
-                            <button onclick="copyRoomCode()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 transition" title="Copier le code">
+                            <button onclick="copyRoomCode()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 transition cursor-pointer" title="Copier le code">
                                 <i class="fa-regular fa-copy"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="my-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">
+                <!-- Joueurs connectés -->
+                <div class="my-5">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">
                             <i class="fa-solid fa-users text-amber-400 mr-2"></i>Joueurs connectés (<span id="lobby-player-count">1</span>)
                         </h3>
-                        <span class="text-xs text-slate-400"><span id="lobby-rounds-info">8</span> manches • 30s / chanson</span>
+                        <span id="lobby-quick-summary" class="text-xs text-amber-300 font-semibold">10 manches • 30s</span>
                     </div>
-                    <div id="lobby-players-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="lobby-players-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <!-- Liste dynamique des joueurs -->
+                    </div>
+                </div>
+
+                <!-- Panneau des règles dans le Lobby (Editable par l'hôte, lecture en direct pour les invités) -->
+                <div id="lobby-host-config-mount" class="my-5">
+                    <!-- Panneau interactif pour l'hôte -->
+                </div>
+
+                <div id="lobby-guest-rules-view" class="hidden my-5 bg-slate-950/75 border border-slate-800 rounded-2xl p-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-sky-300 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-amber-400"></i> Règles de la partie choisies par l'hôte
+                    </div>
+                    <div id="lobby-guest-rules-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <!-- Résumé synchronisé en temps réel -->
                     </div>
                 </div>
 
@@ -337,7 +357,7 @@
                         <!-- Barre supérieure manche & score -->
                         <div class="flex items-center justify-between gap-2 mb-4">
                             <span class="px-3.5 py-1.5 rounded-xl bg-sky-500/20 border border-sky-400/30 text-sky-300 font-bold text-xs sm:text-sm">
-                                Manche <span id="game-round-current">1</span> / <span id="game-round-total">8</span>
+                                Manche <span id="game-round-current">1</span> / <span id="game-round-total">10</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-slate-400 uppercase font-bold">Votre Score</span>
@@ -357,7 +377,7 @@
                         </div>
 
                         <!-- Lecteur Audio Visuel -->
-                        <div class="bg-slate-950/75 border border-slate-800/90 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4">
+                        <div class="bg-slate-950/75 border border-slate-800/90 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
                                 <!-- Vinyle animé -->
                                 <div id="vinyl-disc" class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 border-2 border-amber-400/60 flex items-center justify-center relative shrink-0 shadow-lg vinyl-spin">
@@ -368,7 +388,7 @@
 
                                 <div>
                                     <div id="audio-status-label" class="text-sm font-bold text-white flex items-center gap-2">
-                                        <span>Musique en cours...</span>
+                                        <span>Version Française en cours...</span>
                                     </div>
                                     <p id="audio-sub-label" class="text-xs text-slate-400 mt-0.5">Écoutez attentivement l'extrait !</p>
                                     <!-- Bouton secours si autoplay bloqué -->
@@ -391,14 +411,14 @@
 
                         <!-- ZONE DE SAISIE DES RÉPONSES (Pendant la manche) -->
                         <div id="answer-inputs-area" class="space-y-4">
-                            <!-- Badges d'état trouvé -->
-                            <div class="grid grid-cols-2 gap-3">
+                            <!-- Badges d'état trouvé (s'adaptent dynamiquement au mode de réponse) -->
+                            <div id="status-badges-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div id="badge-song-status" class="p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 flex items-center gap-2.5 transition-all">
                                     <div id="icon-song-status" class="w-7 h-7 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs shrink-0">
                                         <i class="fa-solid fa-music"></i>
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Chanson</div>
+                                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Titre de la Chanson</div>
                                         <div id="text-song-status" class="text-xs sm:text-sm font-bold text-slate-300 truncate">À trouver...</div>
                                     </div>
                                 </div>
@@ -408,26 +428,48 @@
                                         <i class="fa-solid fa-film"></i>
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Film Disney</div>
+                                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Film ou Série Disney</div>
                                         <div id="text-movie-status" class="text-xs sm:text-sm font-bold text-slate-300 truncate">À trouver...</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Champ unique intelligent OU double validation -->
-                            <form id="guess-form" onsubmit="handleGuessSubmit(event)" class="relative">
-                                <div class="flex gap-2">
-                                    <input id="guess-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-                                        placeholder="Tapez le titre de la chanson OU du film..."
-                                        class="w-full px-4 py-4 rounded-2xl bg-slate-950 border-2 border-amber-400/50 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20 outline-none text-white font-bold text-base sm:text-lg placeholder:text-slate-500 placeholder:font-normal transition">
-                                    <button type="submit" class="btn-magic px-6 rounded-2xl font-extrabold text-base shrink-0 cursor-pointer">
-                                        Valider
-                                    </button>
+                            <!-- Formulaire de réponse dynamique (1 ou 2 champs selon les règles) -->
+                            <form id="guess-form" onsubmit="handleGuessSubmit(event)" class="space-y-3">
+                                <div id="fields-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <!-- Champ Chanson -->
+                                    <div id="song-input-wrapper">
+                                        <label for="guess-song-input" class="block text-[11px] font-bold uppercase tracking-wider text-amber-300/90 mb-1">
+                                            <i class="fa-solid fa-music mr-1"></i> Titre de la chanson (VF)
+                                        </label>
+                                        <input id="guess-song-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+                                            placeholder="Ex: Libérée, délivrée..."
+                                            class="w-full px-4 py-3.5 rounded-2xl bg-slate-950 border-2 border-amber-400/40 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20 outline-none text-white font-bold text-sm sm:text-base placeholder:text-slate-500 placeholder:font-normal transition">
+                                    </div>
+
+                                    <!-- Champ Film / Série -->
+                                    <div id="movie-input-wrapper">
+                                        <label for="guess-movie-input" class="block text-[11px] font-bold uppercase tracking-wider text-sky-300/90 mb-1">
+                                            <i class="fa-solid fa-film mr-1"></i> Film ou Série
+                                        </label>
+                                        <input id="guess-movie-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+                                            placeholder="Ex: La Reine des Neiges..."
+                                            class="w-full px-4 py-3.5 rounded-2xl bg-slate-950 border-2 border-sky-400/40 focus:border-sky-400 focus:ring-4 focus:ring-sky-400/20 outline-none text-white font-bold text-sm sm:text-base placeholder:text-slate-500 placeholder:font-normal transition">
+                                    </div>
                                 </div>
-                                <p class="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
-                                    <span><i class="fa-solid fa-wand-sparkles text-amber-400 mr-1"></i>Astuce : Vous pouvez taper la chanson puis le film séparément !</span>
-                                    <span id="potential-points-hint" class="text-amber-300 font-semibold">+1000 pts max</span>
-                                </p>
+
+                                <div class="flex items-center justify-between gap-3 pt-1">
+                                    <p class="text-[11px] text-slate-400">
+                                        <i class="fa-solid fa-wand-sparkles text-amber-400 mr-1"></i>
+                                        <span id="guess-helper-text">Appuyez sur Entrée pour valider vos réponses</span>
+                                    </p>
+                                    <div class="flex items-center gap-3 shrink-0">
+                                        <span id="potential-points-hint" class="text-xs text-amber-300 font-bold">+1000 pts max</span>
+                                        <button type="submit" id="btn-submit-guess" class="btn-magic px-6 py-2.5 rounded-xl font-extrabold text-sm cursor-pointer">
+                                            Valider
+                                        </button>
+                                    </div>
+                                </div>
                             </form>
                         </div>
 
@@ -437,9 +479,14 @@
                                 <img id="reveal-artwork" src="https://placehold.co/200x200/1e293b/fbbf24?text=Disney" alt="Pochette"
                                     class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-amber-400/60 shadow-xl shrink-0">
                                 <div class="text-center sm:text-left flex-1">
-                                    <span class="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-1">
-                                        Réponse de la manche
-                                    </span>
+                                    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                                        <span class="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                                            Réponse VF
+                                        </span>
+                                        <span id="reveal-category-badge" class="inline-block px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[11px] font-semibold">
+                                            Catégorie
+                                        </span>
+                                    </div>
                                     <h3 id="reveal-song-title" class="text-xl sm:text-2xl font-extrabold text-white leading-tight">Titre de la chanson</h3>
                                     <p id="reveal-movie-title" class="text-base sm:text-lg font-bold text-sky-300 mt-0.5">Film Disney</p>
                                     <p id="reveal-artist" class="text-xs text-slate-400 mt-1">Interprète</p>
@@ -494,19 +541,29 @@
                 <h2 class="font-magic text-3xl sm:text-4xl font-black text-amber-300 gold-glow mb-2">
                     Fin du Spectacle !
                 </h2>
-                <p id="podium-subtitle" class="text-slate-300 text-sm mb-8">Voici le classement final de cette aventure musicale</p>
+                <p id="podium-subtitle" class="text-slate-300 text-sm mb-6">Voici le classement final de cette aventure musicale</p>
 
                 <!-- Liste Podium -->
-                <div id="final-podium-list" class="space-y-3 max-w-lg mx-auto mb-8 text-left">
+                <div id="final-podium-list" class="space-y-3 max-w-lg mx-auto mb-6 text-left">
                     <!-- Généré dynamiquement -->
+                </div>
+
+                <!-- Récapitulatif des titres joués -->
+                <div class="max-w-lg mx-auto mb-8 text-left bg-slate-950/65 border border-slate-800 rounded-2xl p-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-sky-300 mb-2.5 flex items-center gap-2">
+                        <i class="fa-solid fa-list-music text-amber-400"></i> Récapitulatif de la playlist (VF)
+                    </div>
+                    <div id="podium-playlist-recap" class="space-y-1.5 max-h-44 overflow-y-auto pr-1 text-xs">
+                        <!-- Liste des chansons de la partie -->
+                    </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button id="btn-replay" onclick="handleReplay()" class="w-full sm:w-auto btn-magic px-8 py-3.5 rounded-2xl text-base cursor-pointer">
-                        <i class="fa-solid fa-rotate-right mr-2"></i>Rejouer
+                        <i class="fa-solid fa-rotate-right mr-2"></i>Rejouer (mêmes réglages)
                     </button>
                     <button onclick="returnToHome()" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-base transition cursor-pointer">
-                        <i class="fa-solid fa-house mr-2"></i>Accueil
+                        <i class="fa-solid fa-sliders mr-2"></i>Nouveaux réglages
                     </button>
                 </div>
             </div>
@@ -527,10 +584,9 @@
         let app = null;
         let auth = null;
         let db = null;
-        let syncLayer = 'p2p'; // 'firebase' | 'p2p'
+        let syncLayer = 'p2p';
         let authPromise = null;
 
-        // Identifiant joueur unique immédiat
         const fallbackPlayerId = 'player_' + (typeof crypto !== 'undefined' && crypto.randomUUID
             ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
             : Math.random().toString(36).substring(2, 14));
@@ -583,7 +639,6 @@
             } catch (err) {
                 console.warn("Bascule sur le mode Direct P2P :", err.message);
             }
-            // Fallback automatique et immédiat vers le relais P2P multi-appareils
             updateSyncBadges('p2p');
         }
         initSyncEngine();
@@ -676,7 +731,6 @@
             handleIncomingMessage(msg) {
                 if (!msg || msg.senderId === currentUser.uid) return;
 
-                // Un invité demande l'état de la salle
                 if (msg.type === 'WHO_IS_HOST' && state.isHost && this.localState) {
                     this.publish({
                         type: 'ROOM_STATE',
@@ -685,7 +739,6 @@
                     });
                 }
 
-                // Un invité rejoint la salle -> l'hôte l'ajoute et diffuse l'état à tous
                 if (msg.type === 'JOIN_REQUEST' && state.isHost && this.localState) {
                     this.localState.players[msg.playerId] = msg.playerData;
                     this.localState.updatedAt = Date.now();
@@ -693,7 +746,6 @@
                     if (this.onUpdateCallback) this.onUpdateCallback({ ...this.localState });
                 }
 
-                // Un invité met à jour son score -> l'hôte fusionne et rediffuse
                 if (msg.type === 'PLAYER_SCORE' && state.isHost && this.localState) {
                     if (this.localState.players[msg.playerId]) {
                         this.localState.players[msg.playerId].score = msg.score;
@@ -705,7 +757,6 @@
                     }
                 }
 
-                // Réception d'un état complet diffusé par l'hôte
                 if (msg.type === 'ROOM_STATE' && msg.roomState) {
                     this.localState = msg.roomState;
                     if (this.pendingJoinResolver) {
@@ -749,7 +800,6 @@
                     this.client.subscribe(`disney-blindtest-v1/${code}/#`);
                 }
 
-                // Demander l'état à l'hôte et envoyer la requête d'inscription
                 const roomState = await new Promise((resolve) => {
                     this.pendingJoinResolver = resolve;
                     this.publish({ type: 'WHO_IS_HOST', senderId: playerId });
@@ -774,7 +824,6 @@
 
             updateHostRoom(patch) {
                 if (!this.localState) return;
-                // Appliquer patch (supporte les clés imbriquées type "players.uid.foundSong")
                 for (const [key, val] of Object.entries(patch)) {
                     if (key.startsWith('players.')) {
                         const parts = key.split('.');
@@ -824,104 +873,249 @@
 
         const p2pTransport = new P2PRoomTransport();
 
-        // --- CATALOGUE ENRICHI DES CHANSONS DISNEY (42 TITRES FRANÇAIS) ---
+        // --- DÉFINITION DES CATÉGORIES DISNEY (VF) ---
+        const SONG_CATEGORIES = [
+            { id: 'classics', label: 'Grands Classiques (1937–1989)', icon: 'fa-crown' },
+            { id: 'renaissance', label: "Âge d'Or / Renaissance (1989–1999)", icon: 'fa-wand-sparkles' },
+            { id: 'modern', label: 'Ère Moderne (2000–2024)', icon: 'fa-snowflake' },
+            { id: 'pixar', label: 'Pixar', icon: 'fa-rocket' },
+            { id: 'series', label: 'Séries & Disney Channel', icon: 'fa-tv' },
+            { id: 'villains', label: 'Chansons de Méchants', icon: 'fa-skull' }
+        ];
+
+        // --- CATALOGUE 100 % VERSIONS FRANÇAISES (68 TITRES) ---
         const DISNEY_SONGS = [
+            // === GRANDS CLASSIQUES (1937-1989) ===
             {
-                id: "frozen_letitgo",
-                song: "Libérée, délivrée",
-                songAliases: ["liberee delivree", "libere delivre", "let it go"],
-                movie: "La Reine des Neiges",
-                movieAliases: ["reine des neiges", "frozen", "la reine des neige"],
-                artist: "Anaïs Delva",
-                era: "modern",
-                itunesQuery: "Anais Delva Liberee delivree",
-                notes: [392.00, 440.00, 493.88, 392.00, 587.33, 523.25]
+                id: "snowwhite_whistle",
+                song: "Sifflez en travaillant",
+                songAliases: ["sifflez en travaillant", "siffler en travaillant"],
+                movie: "Blanche-Neige et les Sept Nains",
+                movieAliases: ["blanche neige", "blanche neige et les sept nains", "blanche neige et les 7 nains"],
+                artist: "Rachel Pignot (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Sifflez en travaillant Blanche Neige francais",
+                notes: [392.00, 440.00, 493.88, 523.25, 493.88, 440.00]
             },
             {
-                id: "frozen_snowman",
-                song: "Je voudrais un bonhomme de neige",
-                songAliases: ["bonhomme de neige", "do you want to build a snowman"],
-                movie: "La Reine des Neiges",
-                movieAliases: ["reine des neiges", "frozen"],
-                artist: "Emmylou Homs",
-                era: "modern",
-                itunesQuery: "Je voudrais un bonhomme de neige Reine des neiges",
-                notes: [329.63, 329.63, 329.63, 261.63, 329.63, 392.00]
+                id: "snowwhite_heighho",
+                song: "Heigh-Ho",
+                songAliases: ["heigh ho", "hey ho", "on rentre du boulot"],
+                movie: "Blanche-Neige et les Sept Nains",
+                movieAliases: ["blanche neige", "blanche neige et les sept nains"],
+                artist: "Les Sept Nains (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Heigh Ho Blanche Neige francais",
+                notes: [261.63, 329.63, 392.00, 329.63, 261.63, 196.00]
             },
             {
-                id: "frozen2_intotheunknown",
-                song: "Dans un autre monde",
-                songAliases: ["dans un autre monde", "into the unknown"],
-                movie: "La Reine des Neiges 2",
-                movieAliases: ["reine des neiges 2", "reine des neiges", "frozen 2"],
-                artist: "Charlotte Hervieux",
-                era: "modern",
-                itunesQuery: "Charlotte Hervieux Dans un autre monde",
-                notes: [392.00, 440.00, 523.25, 493.88, 440.00, 392.00]
+                id: "pinocchio_star",
+                song: "Quand on prie la bonne étoile",
+                songAliases: ["quand on prie la bonne etoile", "bonne etoile"],
+                movie: "Pinocchio",
+                movieAliases: ["pinocchio", "pinochio"],
+                artist: "Jiminy Cricket (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Quand on prie la bonne etoile Pinocchio",
+                notes: [392.00, 659.25, 587.33, 523.25, 493.88, 440.00]
             },
             {
-                id: "lionking_hakuna",
-                song: "Hakuna Matata",
-                songAliases: ["hakuna matata", "akuna matata"],
-                movie: "Le Roi Lion",
-                movieAliases: ["roi lion", "lion king", "le roi lion"],
-                artist: "Timon, Pumbaa & Simba",
-                era: "90s",
-                itunesQuery: "Hakuna Matata Le Roi Lion",
+                id: "cinderella_bibbidi",
+                song: "Bibbidi-Bobbidi-Boo",
+                songAliases: ["bibbidi bobbidi boo", "bibidi bobidi bou"],
+                movie: "Cendrillon",
+                movieAliases: ["cendrillon"],
+                artist: "Marraine la Bonne Fée (VF)",
+                categories: ["classics"],
+                itunesQuery: "Bibbidi Bobbidi Boo Cendrillon francais",
+                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 261.63]
+            },
+            {
+                id: "cinderella_dream",
+                song: "Tendre rêve",
+                songAliases: ["tendre reve", "c est ca l amour"],
+                movie: "Cendrillon",
+                movieAliases: ["cendrillon"],
+                artist: "Paulette Rollin (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Tendre reve Cendrillon",
+                notes: [329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+            },
+            {
+                id: "peterpan_fly",
+                song: "Tu t'envoles",
+                songAliases: ["tu t envoles", "tu tenvoles"],
+                movie: "Peter Pan",
+                movieAliases: ["peter pan"],
+                artist: "Chœur Peter Pan (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Tu t envoles Peter Pan francais",
+                notes: [329.63, 392.00, 523.25, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "sleepingbeauty_once",
+                song: "J'en ai rêvé",
+                songAliases: ["j en ai reve", "jen ai reve"],
+                movie: "La Belle au bois dormant",
+                movieAliases: ["belle au bois dormant", "la belle au bois dormant"],
+                artist: "Huguette Boulangeot (VF)",
+                categories: ["classics"],
+                itunesQuery: "J en ai reve La Belle au bois dormant",
+                notes: [293.66, 349.23, 440.00, 415.30, 392.00, 349.23]
+            },
+            {
+                id: "marypoppins_supercali",
+                song: "Supercalifragilisticexpialidocious",
+                songAliases: ["supercalifragilistic", "supercalifragilisticexpialidocious"],
+                movie: "Mary Poppins",
+                movieAliases: ["mary poppins", "marie poppins"],
+                artist: "Éliane Thibault & Michel Roux (VF)",
+                categories: ["classics"],
+                itunesQuery: "Supercalifragilisticexpialidocious Mary Poppins francais",
+                notes: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00]
+            },
+            {
+                id: "marypoppins_spoonful",
+                song: "Un morceau de sucre",
+                songAliases: ["un morceau de sucre", "morceau de sucre"],
+                movie: "Mary Poppins",
+                movieAliases: ["mary poppins", "marie poppins"],
+                artist: "Éliane Thibault (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Un morceau de sucre Mary Poppins",
+                notes: [329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
+            },
+            {
+                id: "jungle_bare",
+                song: "Il en faut peu pour être heureux",
+                songAliases: ["il en faut peu pour etre heureux", "il en faut peu"],
+                movie: "Le Livre de la Jungle",
+                movieAliases: ["livre de la jungle", "le livre de la jungle"],
+                artist: "Jean Stout (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Il en faut peu pour etre heureux Livre de la jungle",
+                notes: [261.63, 293.66, 329.63, 392.00, 440.00, 392.00]
+            },
+            {
+                id: "jungle_iwannabe",
+                song: "Être un homme comme vous",
+                songAliases: ["etre un homme comme vous", "homme comme vous"],
+                movie: "Le Livre de la Jungle",
+                movieAliases: ["livre de la jungle", "le livre de la jungle"],
+                artist: "José Germain (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Etre un homme comme vous Livre de la jungle",
+                notes: [293.66, 349.23, 440.00, 493.88, 440.00, 349.23]
+            },
+            {
+                id: "aristocats_everybody",
+                song: "Tout le monde veut devenir un cat",
+                songAliases: ["tout le monde veut devenir un cat", "devenir un cat"],
+                movie: "Les Aristochats",
+                movieAliases: ["aristochats", "les aristochats", "aristochat"],
+                artist: "José Germain (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Tout le monde veut devenir un cat Aristochats",
+                notes: [293.66, 349.23, 440.00, 523.25, 440.00, 349.23]
+            },
+            {
+                id: "aristocats_scales",
+                song: "Des gammes et des arpèges",
+                songAliases: ["des gammes et des arpeges", "gammes et des arpeges"],
+                movie: "Les Aristochats",
+                movieAliases: ["aristochats", "les aristochats"],
+                artist: "Anne Germain (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Des gammes et des arpeges Aristochats",
+                notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]
+            },
+            {
+                id: "robinhood_whistle",
+                song: "Quel beau jour vraiment",
+                songAliases: ["quel beau jour vraiment", "sifflote robin des bois"],
+                movie: "Robin des Bois",
+                movieAliases: ["robin des bois"],
+                artist: "Roger Carel (Version Française)",
+                categories: ["classics"],
+                itunesQuery: "Quel beau jour vraiment Robin des Bois",
                 notes: [329.63, 392.00, 440.00, 392.00, 329.63, 261.63]
             },
+
+            // === ÂGE D'OR / RENAISSANCE (1989-1999) ===
             {
-                id: "lionking_circle",
-                song: "L'histoire de la vie",
-                songAliases: ["l histoire de la vie", "histoire de la vie", "circle of life"],
-                movie: "Le Roi Lion",
-                movieAliases: ["roi lion", "lion king"],
-                artist: "Debbie Davis",
-                era: "90s",
-                itunesQuery: "L histoire de la vie Le Roi Lion",
-                notes: [293.66, 392.00, 440.00, 493.88, 523.25, 587.33]
+                id: "mermaid_underthesea",
+                song: "Sous l'océan",
+                songAliases: ["sous l ocean", "sous locean"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "la petite sirene"],
+                artist: "Henri Salvador (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Henri Salvador Sous l ocean Petite Sirene",
+                notes: [261.63, 329.63, 392.00, 523.25, 493.88, 392.00]
             },
             {
-                id: "lionking_king",
-                song: "Je voudrais déjà être roi",
-                songAliases: ["je voudrais deja etre roi", "deja etre roi", "i just cant wait to be king"],
-                movie: "Le Roi Lion",
-                movieAliases: ["roi lion", "lion king"],
-                artist: "Dimitri Rougeul",
-                era: "90s",
-                itunesQuery: "Je voudrais deja etre roi Le Roi Lion",
-                notes: [261.63, 329.63, 392.00, 392.00, 440.00, 392.00]
+                id: "mermaid_partofyourworld",
+                song: "Partir là-bas",
+                songAliases: ["partir la bas", "partir labas"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "la petite sirene"],
+                artist: "Claire Guyot (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Partir la bas La Petite Sirene",
+                notes: [329.63, 349.23, 392.00, 440.00, 392.00, 349.23]
             },
             {
-                id: "lionking_love",
-                song: "L'amour brille sous les étoiles",
-                songAliases: ["l amour brille sous les etoiles", "amour brille sous les etoiles", "can you feel the love tonight"],
-                movie: "Le Roi Lion",
-                movieAliases: ["roi lion", "lion king"],
-                artist: "Emmanuel Curtil & Maïdi Roth",
-                era: "90s",
-                itunesQuery: "L amour brille sous les etoiles Le Roi Lion",
-                notes: [349.23, 392.00, 440.00, 392.00, 349.23, 293.66]
+                id: "mermaid_embrasse",
+                song: "Embrasse-la",
+                songAliases: ["embrasse la", "embrasse-la"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "la petite sirene"],
+                artist: "Henri Salvador (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Henri Salvador Embrasse la Petite Sirene",
+                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
+            },
+            {
+                id: "beauty_beourguest",
+                song: "C'est la fête",
+                songAliases: ["c est la fete", "cest la fete"],
+                movie: "La Belle et la Bête",
+                movieAliases: ["belle et la bete", "la belle et la bete"],
+                artist: "Daniel Beretta (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "C est la fete La Belle et la Bete",
+                notes: [261.63, 329.63, 392.00, 440.00, 493.88, 523.25]
+            },
+            {
+                id: "beauty_tale",
+                song: "Histoire éternelle",
+                songAliases: ["histoire eternelle"],
+                movie: "La Belle et la Bête",
+                movieAliases: ["belle et la bete", "la belle et la bete"],
+                artist: "Lucie Dolène (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Histoire eternelle La Belle et la Bete",
+                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
             },
             {
                 id: "aladdin_wholenewworld",
                 song: "Ce rêve bleu",
-                songAliases: ["ce reve bleu", "reve bleu", "a whole new world"],
+                songAliases: ["ce reve bleu", "reve bleu"],
                 movie: "Aladdin",
                 movieAliases: ["aladin", "aladdin"],
-                artist: "Paolo Domingo & Karine Costa",
-                era: "90s",
-                itunesQuery: "Ce reve bleu Aladdin",
+                artist: "Paolo Domingo & Karine Costa (VF)",
+                categories: ["renaissance"],
+                itunesQuery: "Ce reve bleu Aladdin francais",
                 notes: [349.23, 329.63, 392.00, 349.23, 293.66, 329.63]
             },
             {
                 id: "aladdin_friendlikeme",
                 song: "Je suis ton meilleur ami",
-                songAliases: ["je suis ton meilleur ami", "ton meilleur ami", "friend like me"],
+                songAliases: ["je suis ton meilleur ami", "ton meilleur ami"],
                 movie: "Aladdin",
                 movieAliases: ["aladin", "aladdin"],
-                artist: "Richard Darbois",
-                era: "90s",
+                artist: "Richard Darbois (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "Je suis ton meilleur ami Aladdin",
                 notes: [293.66, 349.23, 440.00, 415.30, 349.23, 293.66]
             },
@@ -931,228 +1125,342 @@
                 songAliases: ["prince ali", "prince aly"],
                 movie: "Aladdin",
                 movieAliases: ["aladin", "aladdin"],
-                artist: "Richard Darbois",
-                era: "90s",
-                itunesQuery: "Prince Ali Aladdin",
+                artist: "Richard Darbois (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Prince Ali Aladdin francais",
                 notes: [329.63, 392.00, 440.00, 493.88, 523.25, 493.88]
             },
             {
-                id: "mermaid_underthesea",
-                song: "Sous l'océan",
-                songAliases: ["sous l ocean", "sous locean", "under the sea"],
-                movie: "La Petite Sirène",
-                movieAliases: ["petite sirene", "little mermaid", "la petite sirene"],
-                artist: "Henri Salvador",
-                era: "90s",
-                itunesQuery: "Henri Salvador Sous l ocean",
-                notes: [261.63, 329.63, 392.00, 523.25, 493.88, 392.00]
+                id: "lionking_hakuna",
+                song: "Hakuna Matata",
+                songAliases: ["hakuna matata", "akuna matata"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "le roi lion"],
+                artist: "Jean-Philippe Puymartin & Michel Elias (VF)",
+                categories: ["renaissance"],
+                itunesQuery: "Hakuna Matata Le Roi Lion francais",
+                notes: [329.63, 392.00, 440.00, 392.00, 329.63, 261.63]
             },
             {
-                id: "mermaid_partofyourworld",
-                song: "Partir là-bas",
-                songAliases: ["partir la bas", "partir labas", "part of your world"],
-                movie: "La Petite Sirène",
-                movieAliases: ["petite sirene", "little mermaid"],
-                artist: "Claire Guyot",
-                era: "90s",
-                itunesQuery: "Partir la bas La Petite Sirene",
-                notes: [329.63, 349.23, 392.00, 440.00, 392.00, 349.23]
+                id: "lionking_circle",
+                song: "L'histoire de la vie",
+                songAliases: ["l histoire de la vie", "histoire de la vie"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "le roi lion"],
+                artist: "Debbie Davis (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "L histoire de la vie Le Roi Lion",
+                notes: [293.66, 392.00, 440.00, 493.88, 523.25, 587.33]
             },
             {
-                id: "tangled_iseethelight",
-                song: "Je veux y croire",
-                songAliases: ["je veux y croire", "i see the light"],
-                movie: "Raiponce",
-                movieAliases: ["raiponce", "tangled", "responce"],
-                artist: "Maeva Méline & Romain Duris",
-                era: "modern",
-                itunesQuery: "Je veux y croire Raiponce",
-                notes: [329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
+                id: "lionking_king",
+                song: "Je voudrais déjà être roi",
+                songAliases: ["je voudrais deja etre roi", "deja etre roi"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "le roi lion"],
+                artist: "Dimitri Rougeul (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Je voudrais deja etre roi Le Roi Lion",
+                notes: [261.63, 329.63, 392.00, 392.00, 440.00, 392.00]
             },
             {
-                id: "tangled_whenwillmylife",
-                song: "Où est la vraie vie",
-                songAliases: ["ou est la vraie vie", "la vraie vie", "when will my life begin"],
-                movie: "Raiponce",
-                movieAliases: ["raiponce", "tangled"],
-                artist: "Maeva Méline",
-                era: "modern",
-                itunesQuery: "Ou est la vraie vie Raiponce",
-                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 329.63]
-            },
-            {
-                id: "moana_howfar",
-                song: "Le bleu lumière",
-                songAliases: ["le bleu lumiere", "bleu lumiere", "how far i ll go"],
-                movie: "Vaiana",
-                movieAliases: ["vaiana", "moana", "vaiana la legende du bout du monde"],
-                artist: "Cerise Calixte",
-                era: "modern",
-                itunesQuery: "Cerise Calixte Le bleu lumiere",
-                notes: [329.63, 369.99, 415.30, 493.88, 415.30, 369.99]
-            },
-            {
-                id: "moana_yourewelcome",
-                song: "Pour les hommes",
-                songAliases: ["pour les hommes", "you re welcome"],
-                movie: "Vaiana",
-                movieAliases: ["vaiana", "moana"],
-                artist: "Anthony Kavanagh",
-                era: "modern",
-                itunesQuery: "Anthony Kavanagh Pour les hommes Vaiana",
-                notes: [261.63, 329.63, 392.00, 329.63, 440.00, 392.00]
-            },
-            {
-                id: "jungle_bare",
-                song: "Il en faut peu pour être heureux",
-                songAliases: ["il en faut peu pour etre heureux", "il en faut peu", "bare necessities"],
-                movie: "Le Livre de la Jungle",
-                movieAliases: ["livre de la jungle", "jungle book"],
-                artist: "Jean Stout",
-                era: "90s",
-                itunesQuery: "Il en faut peu pour etre heureux",
-                notes: [261.63, 293.66, 329.63, 392.00, 440.00, 392.00]
-            },
-            {
-                id: "jungle_iwannabe",
-                song: "Être un homme comme vous",
-                songAliases: ["etre un homme comme vous", "homme comme vous", "i wanna be like you"],
-                movie: "Le Livre de la Jungle",
-                movieAliases: ["livre de la jungle", "jungle book"],
-                artist: "José Germain",
-                era: "90s",
-                itunesQuery: "Etre un homme comme vous Livre de la jungle",
-                notes: [293.66, 349.23, 440.00, 493.88, 440.00, 349.23]
-            },
-            {
-                id: "mulan_makeaman",
-                song: "Comme un homme",
-                songAliases: ["comme un homme", "i ll make a man out of you"],
-                movie: "Mulan",
-                movieAliases: ["mulan", "moulan"],
-                artist: "Patrick Fiori",
-                era: "90s",
-                itunesQuery: "Patrick Fiori Comme un homme Mulan",
-                notes: [220.00, 261.63, 329.63, 392.00, 329.63, 261.63]
-            },
-            {
-                id: "mulan_reflection",
-                song: "Réflexion",
-                songAliases: ["reflexion", "reflection"],
-                movie: "Mulan",
-                movieAliases: ["mulan", "moulan"],
-                artist: "Marie Galey",
-                era: "90s",
-                itunesQuery: "Reflexion Mulan",
-                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
-            },
-            {
-                id: "toystory_friend",
-                song: "Je suis ton ami",
-                songAliases: ["je suis ton ami", "you ve got a friend in me"],
-                movie: "Toy Story",
-                movieAliases: ["toy story", "toystory", "toys story"],
-                artist: "Charlélie Couture",
-                era: "90s",
-                itunesQuery: "Je suis ton ami Toy Story",
-                notes: [311.13, 392.00, 466.16, 392.00, 311.13, 293.66]
-            },
-            {
-                id: "beauty_beourguest",
-                song: "C'est la fête",
-                songAliases: ["c est la fete", "cest la fete", "be our guest"],
-                movie: "La Belle et la Bête",
-                movieAliases: ["belle et la bete", "beauty and the beast"],
-                artist: "Lumière",
-                era: "90s",
-                itunesQuery: "C est la fete La Belle et la Bete",
-                notes: [261.63, 329.63, 392.00, 440.00, 493.88, 523.25]
-            },
-            {
-                id: "beauty_tale",
-                song: "Histoire éternelle",
-                songAliases: ["histoire eternelle", "beauty and the beast"],
-                movie: "La Belle et la Bête",
-                movieAliases: ["belle et la bete", "beauty and the beast"],
-                artist: "Lucie Dolène",
-                era: "90s",
-                itunesQuery: "Histoire eternelle La Belle et la Bete",
-                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
-            },
-            {
-                id: "aristocats_everybody",
-                song: "Tout le monde veut devenir un cat",
-                songAliases: ["tout le monde veut devenir un cat", "devenir un cat", "everybody wants to be a cat"],
-                movie: "Les Aristochats",
-                movieAliases: ["aristochats", "les aristochats", "aristochat"],
-                artist: "José Germain",
-                era: "90s",
-                itunesQuery: "Tout le monde veut devenir un cat",
-                notes: [293.66, 349.23, 440.00, 523.25, 440.00, 349.23]
+                id: "lionking_love",
+                song: "L'amour brille sous les étoiles",
+                songAliases: ["l amour brille sous les etoiles", "amour brille sous les etoiles"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "le roi lion"],
+                artist: "Emmanuel Curtil & Maïdi Roth (VF)",
+                categories: ["renaissance"],
+                itunesQuery: "L amour brille sous les etoiles Le Roi Lion",
+                notes: [349.23, 392.00, 440.00, 392.00, 349.23, 293.66]
             },
             {
                 id: "pocahontas_colors",
                 song: "L'air du vent",
-                songAliases: ["l air du vent", "air du vent", "colors of the wind"],
+                songAliases: ["l air du vent", "air du vent"],
                 movie: "Pocahontas",
                 movieAliases: ["pocahontas", "pocahontas une legende indienne"],
-                artist: "Laura Mayne",
-                era: "90s",
+                artist: "Laura Mayne (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "L air du vent Pocahontas",
                 notes: [329.63, 392.00, 493.88, 440.00, 392.00, 329.63]
             },
             {
+                id: "hunchback_outthere",
+                song: "Rien qu'un jour",
+                songAliases: ["rien qu un jour", "rien quun jour"],
+                movie: "Le Bossu de Notre-Dame",
+                movieAliases: ["bossu de notre dame", "le bossu de notre dame"],
+                artist: "Francis Lalanne (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Rien qu un jour Le Bossu de Notre Dame",
+                notes: [261.63, 329.63, 392.00, 493.88, 523.25, 493.88]
+            },
+            {
                 id: "hercules_godistance",
                 song: "Le monde qui est le mien",
-                songAliases: ["le monde qui est le mien", "monde qui est le mien", "go the distance"],
+                songAliases: ["le monde qui est le mien", "monde qui est le mien"],
                 movie: "Hercule",
-                movieAliases: ["hercule", "hercules"],
-                artist: "Emmanuel Dahl",
-                era: "90s",
+                movieAliases: ["hercule"],
+                artist: "Emmanuel Dahl (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "Le monde qui est le mien Hercule",
                 notes: [261.63, 349.23, 392.00, 440.00, 523.25, 440.00]
             },
             {
                 id: "hercules_zerotohero",
                 song: "De zéro en héros",
-                songAliases: ["de zero en heros", "zero en heros", "zero to hero"],
+                songAliases: ["de zero en heros", "zero en heros"],
                 movie: "Hercule",
-                movieAliases: ["hercule", "hercules"],
-                artist: "Les Muses",
-                era: "90s",
+                movieAliases: ["hercule"],
+                artist: "Les Muses (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "De zero en heros Hercule",
                 notes: [329.63, 392.00, 440.00, 523.25, 440.00, 392.00]
             },
             {
+                id: "mulan_makeaman",
+                song: "Comme un homme",
+                songAliases: ["comme un homme"],
+                movie: "Mulan",
+                movieAliases: ["mulan", "moulan"],
+                artist: "Patrick Fiori (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Patrick Fiori Comme un homme Mulan",
+                notes: [220.00, 261.63, 329.63, 392.00, 329.63, 261.63]
+            },
+            {
+                id: "mulan_reflection",
+                song: "Réflexion",
+                songAliases: ["reflexion"],
+                movie: "Mulan",
+                movieAliases: ["mulan", "moulan"],
+                artist: "Marie Galey (Version Française)",
+                categories: ["renaissance"],
+                itunesQuery: "Reflexion Mulan francais",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+            {
                 id: "tarzan_youllbeinmyheart",
                 song: "Toujours dans mon cœur",
-                songAliases: ["toujours dans mon coeur", "dans mon coeur", "you ll be in my heart"],
+                songAliases: ["toujours dans mon coeur", "dans mon coeur"],
                 movie: "Tarzan",
                 movieAliases: ["tarzan"],
-                artist: "Phil Collins",
-                era: "90s",
+                artist: "Phil Collins (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "Phil Collins Toujours dans mon coeur Tarzan",
                 notes: [349.23, 392.00, 440.00, 493.88, 440.00, 392.00]
             },
             {
                 id: "tarzan_two_worlds",
                 song: "Deux mondes",
-                songAliases: ["deux mondes", "two worlds"],
+                songAliases: ["deux mondes"],
                 movie: "Tarzan",
                 movieAliases: ["tarzan"],
-                artist: "Phil Collins",
-                era: "90s",
+                artist: "Phil Collins (Version Française)",
+                categories: ["renaissance"],
                 itunesQuery: "Phil Collins Deux mondes Tarzan",
                 notes: [293.66, 329.63, 392.00, 440.00, 392.00, 329.63]
+            },
+
+            // === ÈRE MODERNE (2000-2024) ===
+            {
+                id: "princessfrog_almostthere",
+                song: "Au bout du rêve",
+                songAliases: ["au bout du reve"],
+                movie: "La Princesse et la Grenouille",
+                movieAliases: ["princesse et la grenouille", "la princesse et la grenouille"],
+                artist: "China Moses (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "China Moses Au bout du reve",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "tangled_iseethelight",
+                song: "Je veux y croire",
+                songAliases: ["je veux y croire"],
+                movie: "Raiponce",
+                movieAliases: ["raiponce", "responce"],
+                artist: "Maeva Méline & Romain Duris (VF)",
+                categories: ["modern"],
+                itunesQuery: "Je veux y croire Raiponce",
+                notes: [329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
+            },
+            {
+                id: "tangled_whenwillmylife",
+                song: "Où est la vraie vie",
+                songAliases: ["ou est la vraie vie", "la vraie vie"],
+                movie: "Raiponce",
+                movieAliases: ["raiponce"],
+                artist: "Maeva Méline (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Ou est la vraie vie Raiponce",
+                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 329.63]
+            },
+            {
+                id: "frozen_letitgo",
+                song: "Libérée, délivrée",
+                songAliases: ["liberee delivree", "libere delivre"],
+                movie: "La Reine des Neiges",
+                movieAliases: ["reine des neiges", "la reine des neiges", "la reine des neige"],
+                artist: "Anaïs Delva (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Anais Delva Liberee delivree",
+                notes: [392.00, 440.00, 493.88, 392.00, 587.33, 523.25]
+            },
+            {
+                id: "frozen_snowman",
+                song: "Je voudrais un bonhomme de neige",
+                songAliases: ["bonhomme de neige", "je voudrais un bonhomme de neige"],
+                movie: "La Reine des Neiges",
+                movieAliases: ["reine des neiges", "la reine des neiges"],
+                artist: "Emmylou Homs (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Je voudrais un bonhomme de neige Reine des neiges",
+                notes: [329.63, 329.63, 329.63, 261.63, 329.63, 392.00]
+            },
+            {
+                id: "frozen2_intotheunknown",
+                song: "Dans un autre monde",
+                songAliases: ["dans un autre monde"],
+                movie: "La Reine des Neiges 2",
+                movieAliases: ["reine des neiges 2", "reine des neiges", "la reine des neiges 2"],
+                artist: "Charlotte Hervieux (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Charlotte Hervieux Dans un autre monde",
+                notes: [392.00, 440.00, 523.25, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "zootopia_tryeverything",
+                song: "Tout essayer",
+                songAliases: ["tout essayer", "try everything"],
+                movie: "Zootopie",
+                movieAliases: ["zootopie"],
+                artist: "Shakira (Bande Originale Zootopie)",
+                categories: ["modern"],
+                itunesQuery: "Shakira Try Everything Zootopie",
+                notes: [349.23, 392.00, 440.00, 493.88, 523.25, 493.88]
+            },
+            {
+                id: "moana_howfar",
+                song: "Le bleu lumière",
+                songAliases: ["le bleu lumiere", "bleu lumiere"],
+                movie: "Vaiana",
+                movieAliases: ["vaiana", "vaiana la legende du bout du monde"],
+                artist: "Cerise Calixte (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Cerise Calixte Le bleu lumiere",
+                notes: [329.63, 369.99, 415.30, 493.88, 415.30, 369.99]
+            },
+            {
+                id: "moana_yourewelcome",
+                song: "Pour les hommes",
+                songAliases: ["pour les hommes"],
+                movie: "Vaiana",
+                movieAliases: ["vaiana"],
+                artist: "Anthony Kavanagh (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Anthony Kavanagh Pour les hommes Vaiana",
+                notes: [261.63, 329.63, 392.00, 329.63, 440.00, 392.00]
+            },
+            {
+                id: "encanto_bruno",
+                song: "Ne parlons pas de Bruno",
+                songAliases: ["ne parlons pas de bruno", "parlons pas de bruno"],
+                movie: "Encanto",
+                movieAliases: ["encanto", "encanto la fantastique famille madrigal"],
+                artist: "Casting Encanto (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Ne parlons pas de Bruno Encanto",
+                notes: [261.63, 311.13, 392.00, 415.30, 392.00, 311.13]
+            },
+            {
+                id: "encanto_surface",
+                song: "Sous les apparences",
+                songAliases: ["sous les apparences"],
+                movie: "Encanto",
+                movieAliases: ["encanto"],
+                artist: "Kaycie Chase (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Sous les apparences Encanto",
+                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
+            },
+            {
+                id: "wish_thiswish",
+                song: "Je fais le vœu",
+                songAliases: ["je fais le voeu", "fais le voeu"],
+                movie: "Wish",
+                movieAliases: ["wish", "wish asha et la bonne etoile"],
+                artist: "Océane Demontis (Version Française)",
+                categories: ["modern"],
+                itunesQuery: "Je fais le voeu Wish Disney",
+                notes: [329.63, 392.00, 440.00, 493.88, 523.25, 493.88]
+            },
+
+            // === PIXAR ===
+            {
+                id: "toystory_friend",
+                song: "Je suis ton ami",
+                songAliases: ["je suis ton ami"],
+                movie: "Toy Story",
+                movieAliases: ["toy story", "toystory", "toys story"],
+                artist: "Charlélie Couture (Version Française)",
+                categories: ["pixar"],
+                itunesQuery: "Charlelie Couture Je suis ton ami Toy Story",
+                notes: [311.13, 392.00, 466.16, 392.00, 311.13, 293.66]
+            },
+            {
+                id: "toystory2_whenshelovedme",
+                song: "Quand elle m'aimait",
+                songAliases: ["quand elle m aimait", "quand elle maimait"],
+                movie: "Toy Story 2",
+                movieAliases: ["toy story 2", "toy story"],
+                artist: "Myriam Morea (Version Française)",
+                categories: ["pixar"],
+                itunesQuery: "Quand elle m aimait Toy Story 2",
+                notes: [349.23, 392.00, 440.00, 392.00, 349.23, 293.66]
+            },
+            {
+                id: "monsters_ifididnthaveyou",
+                song: "Si je ne t'avais pas",
+                songAliases: ["si je ne t avais pas", "si je ne tavais pas"],
+                movie: "Monstres et Cie",
+                movieAliases: ["monstres et cie", "monstres et compagnie", "monstres & cie"],
+                artist: "Jacques Frantz & Éric Métayer (VF)",
+                categories: ["pixar"],
+                itunesQuery: "Si je ne t avais pas Monstres et Cie",
+                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 329.63]
+            },
+            {
+                id: "ratatouille_festin",
+                song: "Le Festin",
+                songAliases: ["le festin", "festin"],
+                movie: "Ratatouille",
+                movieAliases: ["ratatouille"],
+                artist: "Camille (Bande Originale Française)",
+                categories: ["pixar"],
+                itunesQuery: "Camille Le Festin Ratatouille",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+            {
+                id: "brave_touchthesky",
+                song: "Vers le ciel",
+                songAliases: ["vers le ciel"],
+                movie: "Rebelle",
+                movieAliases: ["rebelle"],
+                artist: "Maeva Méline (Version Française)",
+                categories: ["pixar", "modern"],
+                itunesQuery: "Maeva Meline Vers le ciel Rebelle",
+                notes: [293.66, 349.23, 392.00, 440.00, 523.25, 440.00]
             },
             {
                 id: "coco_rememberme",
                 song: "Ne m'oublie pas",
-                songAliases: ["ne m oublie pas", "ne moublie pas", "remember me"],
+                songAliases: ["ne m oublie pas", "ne moublie pas"],
                 movie: "Coco",
                 movieAliases: ["coco"],
-                artist: "Andrea Santamaria",
-                era: "modern",
+                artist: "Andrea Santamaria (Version Française)",
+                categories: ["pixar", "modern"],
                 itunesQuery: "Ne m oublie pas Coco Disney",
                 notes: [392.00, 329.63, 349.23, 392.00, 523.25, 493.88]
             },
@@ -1162,144 +1470,211 @@
                 songAliases: ["un poco loco", "poco loco"],
                 movie: "Coco",
                 movieAliases: ["coco"],
-                artist: "Andrea Santamaria & Ary Abittan",
-                era: "modern",
-                itunesQuery: "Un poco loco Coco",
+                artist: "Andrea Santamaria & Ary Abittan (VF)",
+                categories: ["pixar", "modern"],
+                itunesQuery: "Un poco loco Coco francais",
                 notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]
             },
             {
-                id: "encanto_bruno",
-                song: "Ne parlons pas de Bruno",
-                songAliases: ["ne parlons pas de bruno", "parlons pas de bruno", "we don t talk about bruno"],
-                movie: "Encanto",
-                movieAliases: ["encanto", "encanto la fantastique famille madrigal"],
-                artist: "Casting Encanto",
-                era: "modern",
-                itunesQuery: "Ne parlons pas de Bruno Encanto",
-                notes: [261.63, 311.13, 392.00, 415.30, 392.00, 311.13]
+                id: "elemental_stealtheshow",
+                song: "Steal the Show (Élémentaire)",
+                songAliases: ["steal the show", "elementaire"],
+                movie: "Élémentaire",
+                movieAliases: ["elementaire", "l elementaire"],
+                artist: "Lauv (Bande Originale Élémentaire)",
+                categories: ["pixar", "modern"],
+                itunesQuery: "Steal the Show Elementaire",
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
+            },
+
+            // === SÉRIES & DISNEY CHANNEL (DCOM) ===
+            {
+                id: "ducktales_theme",
+                song: "La Bande à Picsou (Générique)",
+                songAliases: ["la bande a picsou", "bande a picsou", "picsou"],
+                movie: "La Bande à Picsou",
+                movieAliases: ["la bande a picsou", "bande a picsou"],
+                artist: "Jean-Claude Corbel (Version Française)",
+                categories: ["series"],
+                itunesQuery: "La Bande a Picsou generique francais",
+                notes: [261.63, 329.63, 392.00, 440.00, 493.88, 523.25]
             },
             {
-                id: "encanto_surface",
-                song: "Sous les apparences",
-                songAliases: ["sous les apparences", "surface pressure"],
-                movie: "Encanto",
-                movieAliases: ["encanto"],
-                artist: "Kaycie Chase",
-                era: "modern",
-                itunesQuery: "Sous les apparences Encanto",
-                notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23]
+                id: "phineas_theme",
+                song: "Tout l'été devant nous",
+                songAliases: ["tout l ete devant nous", "phineas et ferb", "generique phineas et ferb"],
+                movie: "Phineas et Ferb",
+                movieAliases: ["phineas et ferb", "phineus et ferb"],
+                artist: "Générique Français Phineas et Ferb",
+                categories: ["series"],
+                itunesQuery: "Phineas et Ferb generique francais",
+                notes: [293.66, 369.99, 440.00, 493.88, 440.00, 369.99]
             },
             {
-                id: "cinderella_bibbidi",
-                song: "Bibbidi-Bobbidi-Boo",
-                songAliases: ["bibbidi bobbidi boo", "bibidi bobidi bou"],
-                movie: "Cendrillon",
-                movieAliases: ["cendrillon", "cinderella"],
-                artist: "Marraine la Bonne Fée",
-                era: "90s",
-                itunesQuery: "Bibbidi Bobbidi Boo Cendrillon",
-                notes: [261.63, 329.63, 392.00, 440.00, 392.00, 261.63]
+                id: "kimpossible_callme",
+                song: "Appelle-moi, bip-moi",
+                songAliases: ["appelle moi bip moi", "kim possible", "bip moi"],
+                movie: "Kim Possible",
+                movieAliases: ["kim possible"],
+                artist: "Priscilla (Version Française)",
+                categories: ["series"],
+                itunesQuery: "Kim Possible generique francais",
+                notes: [329.63, 392.00, 440.00, 523.25, 440.00, 392.00]
             },
             {
-                id: "cinderella_dream",
-                song: "Tendre rêve",
-                songAliases: ["tendre reve", "a dream is a wish your heart makes"],
-                movie: "Cendrillon",
-                movieAliases: ["cendrillon", "cinderella"],
-                artist: "Paulette Rollin",
-                era: "90s",
-                itunesQuery: "Tendre reve Cendrillon",
-                notes: [329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+                id: "hsm_breakfree",
+                song: "L'un pour l'autre",
+                songAliases: ["l un pour l autre", "lun pour lautre", "breaking free"],
+                movie: "High School Musical",
+                movieAliases: ["high school musical", "hsm"],
+                artist: "Lââm & Sofiane (Version Française)",
+                categories: ["series"],
+                itunesQuery: "L un pour l autre High School Musical",
+                notes: [261.63, 329.63, 392.00, 440.00, 493.88, 523.25]
             },
             {
-                id: "snowwhite_whistle",
-                song: "Sifflez en travaillant",
-                songAliases: ["sifflez en travaillant", "whistle while you work"],
-                movie: "Blanche-Neige",
-                movieAliases: ["blanche neige", "blanche neige et les sept nains", "snow white"],
-                artist: "Rachel Pignot",
-                era: "90s",
-                itunesQuery: "Sifflez en travaillant Blanche Neige",
-                notes: [392.00, 440.00, 493.88, 523.25, 493.88, 440.00]
-            },
-            {
-                id: "pinocchio_star",
-                song: "Quand on prie la bonne étoile",
-                songAliases: ["quand on prie la bonne etoile", "bonne etoile", "when you wish upon a star"],
-                movie: "Pinocchio",
-                movieAliases: ["pinocchio", "pinochio"],
-                artist: "Jiminy Cricket",
-                era: "90s",
-                itunesQuery: "Quand on prie la bonne etoile Pinocchio",
-                notes: [392.00, 659.25, 587.33, 523.25, 493.88, 440.00]
-            },
-            {
-                id: "marypoppins_supercali",
-                song: "Supercalifragilisticexpialidocious",
-                songAliases: ["supercalifragilistic", "supercalifragilisticexpialidocious"],
-                movie: "Mary Poppins",
-                movieAliases: ["mary poppins", "marie poppins"],
-                artist: "Éliane Thibault & Michel Roux",
-                era: "90s",
-                itunesQuery: "Supercalifragilisticexpialidocious Mary Poppins",
-                notes: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00]
-            },
-            {
-                id: "princessfrog_almostthere",
-                song: "Au bout du rêve",
-                songAliases: ["au bout du reve", "almost there"],
-                movie: "La Princesse et la Grenouille",
-                movieAliases: ["princesse et la grenouille", "princess and the frog"],
-                artist: "China Moses",
-                era: "modern",
-                itunesQuery: "China Moses Au bout du reve",
+                id: "camprock_thisisme",
+                song: "Être moi",
+                songAliases: ["etre moi", "this is me"],
+                movie: "Camp Rock",
+                movieAliases: ["camp rock"],
+                artist: "Sheryfa Luna (Version Française)",
+                categories: ["series"],
+                itunesQuery: "Sheryfa Luna Etre moi Camp Rock",
                 notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00]
             },
             {
-                id: "brave_touchthesky",
-                song: "Vers le ciel",
-                songAliases: ["vers le ciel", "touch the sky"],
-                movie: "Rebelle",
-                movieAliases: ["rebelle", "brave"],
-                artist: "Maeva Méline",
-                era: "modern",
-                itunesQuery: "Maeva Meline Vers le ciel Rebelle",
-                notes: [293.66, 349.23, 392.00, 440.00, 523.25, 440.00]
+                id: "hannah_bestofboth",
+                song: "Le meilleur des deux mondes",
+                songAliases: ["le meilleur des deux mondes", "meilleur des deux mondes"],
+                movie: "Hannah Montana",
+                movieAliases: ["hannah montana", "hana montana"],
+                artist: "Sarah (Version Française)",
+                categories: ["series"],
+                itunesQuery: "Le meilleur des deux mondes Hannah Montana",
+                notes: [293.66, 349.23, 440.00, 493.88, 440.00, 349.23]
             },
             {
-                id: "zootopia_tryeverything",
-                song: "Try Everything",
-                songAliases: ["try everything", "tout essayer"],
-                movie: "Zootopie",
-                movieAliases: ["zootopie", "zootopia"],
-                artist: "Shakira",
-                era: "modern",
-                itunesQuery: "Shakira Try Everything Zootopia",
-                notes: [349.23, 392.00, 440.00, 493.88, 523.25, 493.88]
+                id: "violetta_enmivida",
+                song: "Dans mon monde",
+                songAliases: ["dans mon monde", "en mi mundo"],
+                movie: "Violetta",
+                movieAliases: ["violetta"],
+                artist: "Cynthia (Version Française)",
+                categories: ["series"],
+                itunesQuery: "Dans mon monde Violetta francais",
+                notes: [329.63, 392.00, 440.00, 493.88, 523.25, 493.88]
             },
             {
-                id: "hunchback_outthere",
-                song: "Rien qu'un jour",
-                songAliases: ["rien qu un jour", "rien quun jour", "out there"],
+                id: "descendants_rotten",
+                song: "Pourris jusqu'au cœur",
+                songAliases: ["pourris jusqu au coeur", "pourris jusquau coeur", "rotten to the core"],
+                movie: "Descendants",
+                movieAliases: ["descendants"],
+                artist: "Casting Descendants (VF)",
+                categories: ["series"],
+                itunesQuery: "Descendants bande originale francais",
+                notes: [261.63, 311.13, 392.00, 415.30, 392.00, 311.13]
+            },
+
+            // === CHANSONS DE MÉCHANTS ===
+            {
+                id: "villain_scar",
+                song: "Soyez prêtes",
+                songAliases: ["soyez pretes", "soyez pret"],
+                movie: "Le Roi Lion",
+                movieAliases: ["roi lion", "le roi lion"],
+                artist: "Jean Piat (Scar - Version Française)",
+                categories: ["villains", "renaissance"],
+                itunesQuery: "Soyez pretes Le Roi Lion",
+                notes: [220.00, 261.63, 311.13, 329.63, 261.63, 220.00]
+            },
+            {
+                id: "villain_ursula",
+                song: "Pauvres âmes en perdition",
+                songAliases: ["pauvres ames en perdition", "pauvre ame en perdition"],
+                movie: "La Petite Sirène",
+                movieAliases: ["petite sirene", "la petite sirene"],
+                artist: "Micheline Dax (Ursula - Version Française)",
+                categories: ["villains", "renaissance"],
+                itunesQuery: "Pauvres ames en perdition La Petite Sirene",
+                notes: [246.94, 293.66, 349.23, 329.63, 293.66, 246.94]
+            },
+            {
+                id: "villain_gaston",
+                song: "Gaston",
+                songAliases: ["gaston", "personne n est aussi fort que gaston"],
+                movie: "La Belle et la Bête",
+                movieAliases: ["belle et la bete", "la belle et la bete"],
+                artist: "François Le Roux (Version Française)",
+                categories: ["villains", "renaissance"],
+                itunesQuery: "Gaston La Belle et la Bete francais",
+                notes: [261.63, 329.63, 392.00, 329.63, 261.63, 196.00]
+            },
+            {
+                id: "villain_frollo",
+                song: "Infernal",
+                songAliases: ["infernal", "hellfire"],
                 movie: "Le Bossu de Notre-Dame",
-                movieAliases: ["bossu de notre dame", "hunchback of notre dame"],
-                artist: "Francis Lalanne",
-                era: "90s",
-                itunesQuery: "Rien qu un jour Le Bossu de Notre Dame",
-                notes: [261.63, 329.63, 392.00, 493.88, 523.25, 493.88]
+                movieAliases: ["bossu de notre dame", "le bossu de notre dame"],
+                artist: "Jean Piat (Frollo - Version Française)",
+                categories: ["villains", "renaissance"],
+                itunesQuery: "Infernal Le Bossu de Notre Dame",
+                notes: [220.00, 246.94, 261.63, 329.63, 261.63, 220.00]
+            },
+            {
+                id: "villain_gothel",
+                song: "N'écoute que moi",
+                songAliases: ["n ecoute que moi", "necoutequemoi", "necoute que moi"],
+                movie: "Raiponce",
+                movieAliases: ["raiponce"],
+                artist: "Sophie Delmas (Mère Gothel - VF)",
+                categories: ["villains", "modern"],
+                itunesQuery: "N ecoute que moi Raiponce",
+                notes: [293.66, 329.63, 349.23, 440.00, 392.00, 349.23]
+            },
+            {
+                id: "villain_tamatoa",
+                song: "Bling-Bling",
+                songAliases: ["bling bling", "bling-bling"],
+                movie: "Vaiana",
+                movieAliases: ["vaiana"],
+                artist: "Adrien Antoine (Tamatoa - VF)",
+                categories: ["villains", "modern"],
+                itunesQuery: "Bling Bling Vaiana",
+                notes: [261.63, 311.13, 392.00, 466.16, 392.00, 311.13]
+            },
+            {
+                id: "villain_facilier",
+                song: "Mes amis de l'au-delà",
+                songAliases: ["mes amis de l au dela", "amis de l au dela"],
+                movie: "La Princesse et la Grenouille",
+                movieAliases: ["princesse et la grenouille", "la princesse et la grenouille"],
+                artist: "Frantz Confiac (Dr. Facilier - VF)",
+                categories: ["villains", "modern"],
+                itunesQuery: "Mes amis de l au dela Princesse et la Grenouille",
+                notes: [220.00, 261.63, 329.63, 392.00, 329.63, 261.63]
             }
         ];
 
         // --- ÉTAT GLOBAL DE L'APPLICATION ---
-        const ROUND_DURATION = 30; // secondes
         const REVEAL_DURATION = 5; // secondes
 
         let state = {
             mode: 'solo', // 'solo' | 'multi'
             playerName: '',
-            selectedRounds: 10,
-            selectedEra: 'all',
             soloBestScore: 0,
+
+            // Paramètres personnalisables de partie
+            settings: {
+                categories: ['classics', 'renaissance', 'modern', 'pixar', 'series', 'villains'],
+                useCustomSelection: false,
+                customSongIds: DISNEY_SONGS.map(s => s.id),
+                requestedRounds: 10,
+                roundDuration: 30, // 10, 15, 20, 30
+                scoringMode: 'speed', // 'speed' | 'fixed'
+                answerMode: 'both' // 'both' | 'song' | 'movie'
+            },
 
             // État multijoueur
             roomCode: null,
@@ -1327,6 +1702,319 @@
             isMuted: false,
             synthInterval: null,
             audioCtx: null
+        };
+
+        // --- CALCUL DU POOL DE CHANSONS DISPONIBLES SELON LES RÉGLAGES ---
+        function getAvailableSongs(settingsObj = state.settings) {
+            if (settingsObj.useCustomSelection) {
+                const idSet = new Set(settingsObj.customSongIds || []);
+                return DISNEY_SONGS.filter(s => idSet.has(s.id));
+            }
+            const activeCats = new Set(settingsObj.categories || []);
+            if (activeCats.size === 0) return [];
+            return DISNEY_SONGS.filter(s => s.categories.some(c => activeCats.has(c)));
+        }
+
+        function getEffectiveRoundCount(settingsObj = state.settings) {
+            const poolLen = getAvailableSongs(settingsObj).length;
+            if (poolLen === 0) return 0;
+            return Math.max(1, Math.min(settingsObj.requestedRounds, poolLen));
+        }
+
+        // --- RENDU DU PANNEAU DE CONFIGURATION (ACCUEIL & LOBBY HÔTE) ---
+        function renderConfigPanel(mountId) {
+            const mount = document.getElementById(mountId);
+            if (!mount) return;
+
+            const availableSongs = getAvailableSongs();
+            const maxAvailable = availableSongs.length;
+            const effectiveRounds = getEffectiveRoundCount();
+            if (maxAvailable > 0 && state.settings.requestedRounds > maxAvailable) {
+                state.settings.requestedRounds = maxAvailable;
+            }
+
+            const categoriesHtml = SONG_CATEGORIES.map(cat => {
+                const isSelected = !state.settings.useCustomSelection && state.settings.categories.includes(cat.id);
+                const countInCat = DISNEY_SONGS.filter(s => s.categories.includes(cat.id)).length;
+                return `
+                    <button type="button" onclick="toggleCategory('${cat.id}')"
+                        class="px-3 py-2 rounded-xl border text-left text-xs font-bold flex items-center justify-between gap-2 transition cursor-pointer ${isSelected
+                            ? 'bg-amber-400/20 border-amber-400 text-amber-200 shadow-sm shadow-amber-400/10'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-600'}">
+                        <span class="truncate"><i class="fa-solid ${cat.icon} mr-1.5 ${isSelected ? 'text-amber-400' : 'text-slate-500'}"></i>${cat.label}</span>
+                        <span class="px-1.5 py-0.5 rounded-md bg-slate-900 text-[10px] text-slate-300 shrink-0">${countInCat}</span>
+                    </button>
+                `;
+            }).join('');
+
+            mount.innerHTML = `
+                <div class="bg-slate-950/65 border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders"></i> Options de la partie
+                        </span>
+                        <span class="text-xs font-bold ${maxAvailable > 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${maxAvailable} chanson(s) VF disponible(s)
+                        </span>
+                    </div>
+
+                    <!-- 1. Catégories & Playlist personnalisée -->
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <label class="text-xs font-bold text-slate-300">Catégories de chansons :</label>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="selectAllCategories()" class="text-[11px] font-bold text-sky-400 hover:text-sky-300 underline cursor-pointer">
+                                    Tout sélectionner
+                                </button>
+                                <button type="button" onclick="openCustomPlaylistModal()"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold flex items-center gap-1.5 transition cursor-pointer ${state.settings.useCustomSelection
+                                        ? 'bg-sky-400 text-slate-950'
+                                        : 'bg-slate-800 text-sky-300 border border-sky-400/40 hover:bg-slate-700'}">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>${state.settings.useCustomSelection ? `Sélection manuelle (${state.settings.customSongIds.length})` : 'Personnaliser la playlist'}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 ${state.settings.useCustomSelection ? 'opacity-50' : ''}">
+                            ${categoriesHtml}
+                        </div>
+                    </div>
+
+                    <!-- 2. Nombre de manches & Durée des extraits -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <!-- Nombre de manches -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-300"><i class="fa-solid fa-music text-amber-400 mr-1.5"></i>Nombre de manches</span>
+                                <span class="font-mono text-sm font-black text-amber-300">${effectiveRounds} / ${maxAvailable}</span>
+                            </div>
+                            <input type="range" min="1" max="${Math.max(1, maxAvailable)}" value="${effectiveRounds}"
+                                ${maxAvailable === 0 ? 'disabled' : ''}
+                                oninput="updateRequestedRounds(this.value)"
+                                class="w-full accent-amber-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg mb-2.5">
+                            <div class="flex flex-wrap gap-1.5">
+                                ${[5, 10, 15, 20].map(n => `
+                                    <button type="button" onclick="updateRequestedRounds(${n})" ${maxAvailable < n ? 'disabled' : ''}
+                                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${effectiveRounds === n
+                                            ? 'bg-amber-400 text-slate-950'
+                                            : maxAvailable < n
+                                                ? 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer'}">
+                                        ${n}
+                                    </button>
+                                `).join('')}
+                                <button type="button" onclick="updateRequestedRounds(${maxAvailable})" ${maxAvailable === 0 ? 'disabled' : ''}
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${effectiveRounds === maxAvailable && maxAvailable > 0
+                                        ? 'bg-amber-400 text-slate-950'
+                                        : 'bg-slate-800 text-sky-300 hover:bg-slate-700 cursor-pointer'}">
+                                    Max (${maxAvailable})
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Durée des extraits -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-300"><i class="fa-solid fa-stopwatch text-sky-400 mr-1.5"></i>Durée des extraits</span>
+                                <span class="font-mono text-sm font-black text-sky-300">${state.settings.roundDuration}s</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5 mt-3">
+                                ${[10, 15, 20, 30].map(sec => `
+                                    <button type="button" onclick="updateRoundDuration(${sec})"
+                                        class="py-2 rounded-lg text-xs font-extrabold transition cursor-pointer ${state.settings.roundDuration === sec
+                                            ? 'bg-sky-400 text-slate-950'
+                                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                                        ${sec}s
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Attribution des points & Éléments à deviner -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Attribution des points -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+                            <span class="block text-xs font-bold text-slate-300 mb-2">
+                                <i class="fa-solid fa-star text-amber-400 mr-1.5"></i>Attribution des points
+                            </span>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button type="button" onclick="updateScoringMode('speed')"
+                                    class="p-2 rounded-lg text-left transition cursor-pointer border ${state.settings.scoringMode === 'speed'
+                                        ? 'bg-amber-400/20 border-amber-400 text-amber-200'
+                                        : 'bg-slate-800/80 border-transparent text-slate-400 hover:text-slate-200'}">
+                                    <div class="text-xs font-extrabold">Selon le temps</div>
+                                    <div class="text-[10px] opacity-80">Jusqu'à 500 pts/rép.</div>
+                                </button>
+                                <button type="button" onclick="updateScoringMode('fixed')"
+                                    class="p-2 rounded-lg text-left transition cursor-pointer border ${state.settings.scoringMode === 'fixed'
+                                        ? 'bg-amber-400/20 border-amber-400 text-amber-200'
+                                        : 'bg-slate-800/80 border-transparent text-slate-400 hover:text-slate-200'}">
+                                    <div class="text-xs font-extrabold">+1 pt / réponse</div>
+                                    <div class="text-[10px] opacity-80">Barème classique</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Éléments à deviner -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+                            <span class="block text-xs font-bold text-slate-300 mb-2">
+                                <i class="fa-solid fa-pen-to-square text-sky-400 mr-1.5"></i>Réponses à trouver
+                            </span>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <button type="button" onclick="updateAnswerMode('both')"
+                                    class="py-2 px-1.5 rounded-lg text-center transition cursor-pointer border ${state.settings.answerMode === 'both'
+                                        ? 'bg-sky-400/20 border-sky-400 text-sky-200'
+                                        : 'bg-slate-800/80 border-transparent text-slate-400 hover:text-slate-200'}">
+                                    <div class="text-[11px] font-extrabold">Les deux</div>
+                                    <div class="text-[9px] opacity-80">Titre + Film</div>
+                                </button>
+                                <button type="button" onclick="updateAnswerMode('song')"
+                                    class="py-2 px-1.5 rounded-lg text-center transition cursor-pointer border ${state.settings.answerMode === 'song'
+                                        ? 'bg-sky-400/20 border-sky-400 text-sky-200'
+                                        : 'bg-slate-800/80 border-transparent text-slate-400 hover:text-slate-200'}">
+                                    <div class="text-[11px] font-extrabold">Chanson</div>
+                                    <div class="text-[9px] opacity-80">Titre seul</div>
+                                </button>
+                                <button type="button" onclick="updateAnswerMode('movie')"
+                                    class="py-2 px-1.5 rounded-lg text-center transition cursor-pointer border ${state.settings.answerMode === 'movie'
+                                        ? 'bg-sky-400/20 border-sky-400 text-sky-200'
+                                        : 'bg-slate-800/80 border-transparent text-slate-400 hover:text-slate-200'}">
+                                    <div class="text-[11px] font-extrabold">Film / Série</div>
+                                    <div class="text-[9px] opacity-80">Œuvre seule</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function refreshAllConfigPanels() {
+            renderConfigPanel('home-config-mount');
+            if (state.mode === 'multi' && state.isHost) {
+                renderConfigPanel('lobby-host-config-mount');
+                syncHostSettingsToRoom();
+            }
+        }
+
+        window.toggleCategory = function(catId) {
+            state.settings.useCustomSelection = false;
+            const idx = state.settings.categories.indexOf(catId);
+            if (idx >= 0) {
+                if (state.settings.categories.length === 1) {
+                    showToast("Gardez au moins une catégorie sélectionnée.", "info");
+                    return;
+                }
+                state.settings.categories.splice(idx, 1);
+            } else {
+                state.settings.categories.push(catId);
+            }
+            const maxAvail = getAvailableSongs().length;
+            if (state.settings.requestedRounds > maxAvail) {
+                state.settings.requestedRounds = maxAvail;
+            }
+            refreshAllConfigPanels();
+        };
+
+        window.selectAllCategories = function() {
+            state.settings.useCustomSelection = false;
+            state.settings.categories = SONG_CATEGORIES.map(c => c.id);
+            refreshAllConfigPanels();
+        };
+
+        window.updateRequestedRounds = function(val) {
+            const maxAvail = Math.max(1, getAvailableSongs().length);
+            state.settings.requestedRounds = Math.max(1, Math.min(parseInt(val, 10) || 1, maxAvail));
+            refreshAllConfigPanels();
+        };
+
+        window.updateRoundDuration = function(sec) {
+            state.settings.roundDuration = parseInt(sec, 10);
+            refreshAllConfigPanels();
+        };
+
+        window.updateScoringMode = function(mode) {
+            state.settings.scoringMode = mode;
+            refreshAllConfigPanels();
+        };
+
+        window.updateAnswerMode = function(mode) {
+            state.settings.answerMode = mode;
+            refreshAllConfigPanels();
+        };
+
+        // --- MODALE DE PLAYLIST PERSONNALISÉE ---
+        window.openCustomPlaylistModal = function() {
+            document.getElementById('custom-playlist-modal').classList.remove('hidden');
+            renderCustomSongList();
+        };
+
+        window.closeCustomPlaylistModal = function() {
+            document.getElementById('custom-playlist-modal').classList.add('hidden');
+        };
+
+        window.renderCustomSongList = function() {
+            const query = normalizeText(document.getElementById('custom-search-input').value || '');
+            const listEl = document.getElementById('custom-songs-list');
+            const selectedSet = new Set(state.settings.customSongIds);
+
+            const filtered = DISNEY_SONGS.filter(s => {
+                if (!query) return true;
+                const hay = normalizeText(`${s.song} ${s.movie} ${s.artist}`);
+                return hay.includes(query);
+            });
+
+            listEl.innerHTML = filtered.map(s => {
+                const checked = selectedSet.has(s.id);
+                const catLabels = s.categories.map(cid => SONG_CATEGORIES.find(c => c.id === cid)?.label.split(' ')[0] || '').join(' • ');
+                return `
+                    <label class="p-3 rounded-xl border ${checked ? 'bg-amber-400/15 border-amber-400/60' : 'bg-slate-900/70 border-slate-800'} flex items-center justify-between gap-3 cursor-pointer hover:border-slate-600 transition">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleCustomSongId('${s.id}')"
+                                class="w-4 h-4 accent-amber-400 rounded cursor-pointer shrink-0">
+                            <div class="min-w-0">
+                                <div class="text-sm font-bold text-white truncate">${escapeHtml(s.song)}</div>
+                                <div class="text-xs text-sky-300 truncate">${escapeHtml(s.movie)} <span class="text-slate-400">• ${escapeHtml(s.artist)}</span></div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-950 text-slate-400 shrink-0">${catLabels}</span>
+                    </label>
+                `;
+            }).join('');
+
+            document.getElementById('custom-selected-count').textContent = state.settings.customSongIds.length;
+        };
+
+        window.toggleCustomSongId = function(songId) {
+            const idx = state.settings.customSongIds.indexOf(songId);
+            if (idx >= 0) {
+                state.settings.customSongIds.splice(idx, 1);
+            } else {
+                state.settings.customSongIds.push(songId);
+            }
+            document.getElementById('custom-selected-count').textContent = state.settings.customSongIds.length;
+            renderCustomSongList();
+        };
+
+        window.toggleAllCustomSongs = function(selectAll) {
+            state.settings.customSongIds = selectAll ? DISNEY_SONGS.map(s => s.id) : [];
+            renderCustomSongList();
+        };
+
+        window.confirmCustomPlaylist = function() {
+            if (state.settings.customSongIds.length === 0) {
+                showToast("Sélectionnez au moins 1 chanson dans la playlist !", "error");
+                return;
+            }
+            state.settings.useCustomSelection = true;
+            const maxAvail = state.settings.customSongIds.length;
+            if (state.settings.requestedRounds > maxAvail) {
+                state.settings.requestedRounds = maxAvail;
+            }
+            closeCustomPlaylistModal();
+            refreshAllConfigPanels();
+            showToast(`Playlist personnalisée activée (${maxAvail} titres) !`, 'gold');
         };
 
         // --- UTILITAIRES D'INTERFACE ---
@@ -1365,25 +2053,17 @@
             }, 3200);
         }
 
-        window.selectRoundCount = function(count) {
-            state.selectedRounds = count;
-            document.querySelectorAll('.round-opt').forEach(btn => {
-                if (parseInt(btn.dataset.rounds) === count) {
-                    btn.className = 'round-opt px-3 py-1 rounded-xl text-sm font-bold bg-amber-400 text-slate-950 transition';
-                } else {
-                    btn.className = 'round-opt px-3 py-1 rounded-xl text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
-                }
-            });
-        };
-
-        window.selectEraFilter = function(era) {
-            state.selectedEra = era;
-        };
+        function formatScoreUnit(score, scoringMode = state.settings.scoringMode) {
+            if (scoringMode === 'fixed') {
+                return `${score} ${score > 1 ? 'pts' : 'pt'}`;
+            }
+            return `${score} pts`;
+        }
 
         function getPlayerName() {
             const input = document.getElementById('player-name-input').value.trim();
             if (!input) {
-                const defaults = ['Simba', 'Elsa', 'Aladdin', 'Ariel', 'Mulan', 'Stitch', 'Vaiana', 'Génie'];
+                const defaults = ['Simba', 'Elsa', 'Aladdin', 'Ariel', 'Mulan', 'Stitch', 'Vaiana', 'Génie', 'Kim'];
                 const randomName = defaults[Math.floor(Math.random() * defaults.length)];
                 document.getElementById('player-name-input').value = randomName;
                 return randomName;
@@ -1403,11 +2083,7 @@
         };
 
         window.confirmReturnHome = function() {
-            if (state.phase === 'playing' || state.phase === 'reveal') {
-                returnToHome();
-            } else {
-                returnToHome();
-            }
+            returnToHome();
         };
 
         window.returnToHome = function() {
@@ -1423,6 +2099,7 @@
             state.phase = 'idle';
             document.getElementById('header-room-badge').classList.add('hidden');
             document.getElementById('header-room-badge').classList.remove('flex');
+            renderConfigPanel('home-config-mount');
             showScreen('screen-home');
         };
 
@@ -1431,9 +2108,9 @@
             return str
                 .toLowerCase()
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") // Supprime accents
-                .replace(/['’\-_,;:!?.()"]/g, " ") // Ponctuation -> espace
-                .replace(/\b(le|la|les|l|un|une|des|du|de|d|the|a|an)\b/g, " ") // Articles courants
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/['’\-_,;:!?.()"]/g, " ")
+                .replace(/\b(le|la|les|l|un|une|des|du|de|d|et|the|a|an)\b/g, " ")
                 .replace(/\s+/g, " ")
                 .trim();
         }
@@ -1448,9 +2125,9 @@
                         matrix[i][j] = matrix[i - 1][j - 1];
                     } else {
                         matrix[i][j] = Math.min(
-                            matrix[i - 1][j - 1] + 1, // substitution
-                            matrix[i][j - 1] + 1,     // insertion
-                            matrix[i - 1][j] + 1      // suppression
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
                         );
                     }
                 }
@@ -1466,21 +2143,18 @@
                 const cleanTarget = normalizeText(target);
                 if (!cleanTarget) continue;
 
-                // Correspondance exacte après normalisation
                 if (cleanInput === cleanTarget) return true;
 
-                // Tolérance proportionnelle à la longueur (environ 25% de fautes autorisées)
                 const maxAllowedErrors = cleanTarget.length <= 4 ? 1 : Math.floor(cleanTarget.length * 0.28);
                 const dist = levenshteinDistance(cleanInput, cleanTarget);
                 if (dist <= maxAllowedErrors) return true;
 
-                // Vérification si l'utilisateur a écrit le titre principal dans une phrase plus longue
                 if (cleanTarget.length >= 6 && cleanInput.includes(cleanTarget)) return true;
             }
             return false;
         }
 
-        // --- MOTEUR AUDIO (API iTunes Search + Fallback Synthétiseur WebAudio) ---
+        // --- MOTEUR AUDIO STRICTEMENT VERSION FRANÇAISE (API iTunes + Fallback Synthétiseur) ---
         const audioEl = document.getElementById('disney-audio');
 
         window.updateVolume = function(val) {
@@ -1520,20 +2194,72 @@
             document.getElementById('vinyl-disc').classList.add('vinyl-paused');
         }
 
+        // Filtrage strict pour rejeter les versions anglaises ou karaoké et privilégier la VF
+        function selectStrictFrenchItunesTrack(results, songObj) {
+            if (!Array.isArray(results) || results.length === 0) return null;
+
+            const englishBlocklist = [
+                'english', 'soundtrack version', 'from "', 'from “', 'karaoke',
+                'instrumental', 'espanol', 'spanish', 'italiano', 'deutsch', 'german',
+                'let it go', 'a whole new world', 'under the sea', 'circle of life',
+                'can you feel the love', 'be our guest', 'part of your world',
+                'how far i', 'into the unknown', 'we don\'t talk about bruno',
+                'surface pressure', 'remember me', 'you\'ve got a friend',
+                'bare necessities', 'colors of the wind', 'go the distance',
+                'i\'ll make a man', 'you\'ll be in my heart', 'two worlds',
+                'be prepared', 'poor unfortunate souls', 'hellfire', 'mother knows best',
+                'shiny', 'friends on the other side', 'almost there', 'touch the sky'
+            ];
+
+            const normalizedSongTitle = normalizeText(songObj.song);
+
+            const scoredTracks = results
+                .filter(t => t && t.previewUrl)
+                .map(track => {
+                    const trackNameRaw = (track.trackName || '').toLowerCase();
+                    const collectionRaw = (track.collectionName || '').toLowerCase();
+                    const combinedRaw = `${trackNameRaw} ${collectionRaw}`;
+                    const trackNameNorm = normalizeText(track.trackName || '');
+
+                    let score = 0;
+
+                    // Bonus majeur si le titre français normalisé correspond
+                    if (trackNameNorm.includes(normalizedSongTitle) || normalizedSongTitle.includes(trackNameNorm)) {
+                        score += 50;
+                    }
+
+                    // Bonus si marqueurs français explicites
+                    if (combinedRaw.includes('français') || combinedRaw.includes('francais') || combinedRaw.includes('version française') || combinedRaw.includes('(vf)')) {
+                        score += 30;
+                    }
+
+                    // Pénalité forte si marqueurs anglais/étrangers détectés
+                    for (const badWord of englishBlocklist) {
+                        if (combinedRaw.includes(badWord)) {
+                            score -= 80;
+                        }
+                    }
+
+                    return { track, score };
+                })
+                .filter(item => item.score > -20) // Exclut les pistes clairement anglaises
+                .sort((a, b) => b.score - a.score);
+
+            return scoredTracks.length > 0 ? scoredTracks[0].track : null;
+        }
+
         async function fetchItunesTrack(songObj) {
             try {
-                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(songObj.itunesQuery)}&media=music&entity=song&country=FR&limit=3`;
+                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(songObj.itunesQuery)}&media=music&entity=song&country=FR&limit=8`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Erreur réseau iTunes');
                 const data = await response.json();
-                if (data.results && data.results.length > 0) {
-                    const track = data.results.find(t => t.previewUrl) || data.results[0];
-                    if (track && track.previewUrl) {
-                        return {
-                            previewUrl: track.previewUrl,
-                            artwork: track.artworkUrl100 ? track.artworkUrl100.replace('100x100', '300x300') : null
-                        };
-                    }
+                const frenchTrack = selectStrictFrenchItunesTrack(data.results, songObj);
+                if (frenchTrack && frenchTrack.previewUrl) {
+                    return {
+                        previewUrl: frenchTrack.previewUrl,
+                        artwork: frenchTrack.artworkUrl100 ? frenchTrack.artworkUrl100.replace('100x100', '300x300') : null
+                    };
                 }
             } catch (err) {
                 console.warn("Fallback audio activé pour :", songObj.song);
@@ -1546,7 +2272,7 @@
             document.getElementById('equalizer').classList.add('eq-playing');
             document.getElementById('vinyl-disc').classList.remove('vinyl-paused');
             document.getElementById('audio-status-label').innerHTML = `<span>Mélodie enchantée en cours...</span>`;
-            document.getElementById('audio-sub-label').textContent = `Extrait mélodique (aperçu iTunes indisponible)`;
+            document.getElementById('audio-sub-label').textContent = `Extrait mélodique (aperçu VF indisponible)`;
 
             if (!state.audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1588,7 +2314,7 @@
             manualBtn.classList.add('hidden');
             manualBtn.classList.remove('inline-flex');
 
-            document.getElementById('audio-status-label').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> <span>Chargement de l'extrait...</span>`;
+            document.getElementById('audio-status-label').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> <span>Chargement de la VF...</span>`;
             document.getElementById('audio-sub-label').textContent = "Préparez vos oreilles...";
 
             const trackData = await fetchItunesTrack(songObj);
@@ -1605,10 +2331,9 @@
                     await audioEl.play();
                     document.getElementById('equalizer').classList.add('eq-playing');
                     document.getElementById('vinyl-disc').classList.remove('vinyl-paused');
-                    document.getElementById('audio-status-label').innerHTML = `<span>Extrait musical en cours...</span>`;
-                    document.getElementById('audio-sub-label').textContent = "Devinez le titre et le film !";
+                    document.getElementById('audio-status-label').innerHTML = `<span>Version Française en cours...</span>`;
+                    document.getElementById('audio-sub-label').textContent = "Devinez le plus vite possible !";
                 } catch (autoplayErr) {
-                    // Autoplay bloqué par le navigateur
                     document.getElementById('audio-status-label').innerHTML = `<span class="text-amber-300">Son en pause</span>`;
                     document.getElementById('audio-sub-label').textContent = "Votre navigateur bloque la lecture automatique";
                     manualBtn.classList.remove('hidden');
@@ -1627,8 +2352,8 @@
                     manualBtn.classList.remove('inline-flex');
                     document.getElementById('equalizer').classList.add('eq-playing');
                     document.getElementById('vinyl-disc').classList.remove('vinyl-paused');
-                    document.getElementById('audio-status-label').innerHTML = `<span>Extrait musical en cours...</span>`;
-                    document.getElementById('audio-sub-label').textContent = "Devinez le titre et le film !";
+                    document.getElementById('audio-status-label').innerHTML = `<span>Version Française en cours...</span>`;
+                    document.getElementById('audio-sub-label').textContent = "Devinez le plus vite possible !";
                 }).catch(() => {
                     const currentSong = state.playlist[state.currentRoundIndex];
                     if (currentSong) startFallbackMelody(currentSong.notes);
@@ -1637,19 +2362,15 @@
         };
 
         // --- LOGIQUE DE JEU COMMUNE (SOLO & MULTIJOUEUR) ---
-        function buildShuffledPlaylist(count, era = 'all') {
-            let pool = DISNEY_SONGS;
-            if (era === '90s') {
-                pool = DISNEY_SONGS.filter(s => s.era === '90s');
-            } else if (era === 'modern') {
-                pool = DISNEY_SONGS.filter(s => s.era === 'modern');
-            }
+        function buildShuffledPlaylist(settingsObj = state.settings) {
+            const pool = getAvailableSongs(settingsObj);
+            const count = getEffectiveRoundCount(settingsObj);
             const copy = [...pool];
             for (let i = copy.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [copy[i], copy[j]] = [copy[j], copy[i]];
             }
-            return copy.slice(0, Math.min(count, copy.length));
+            return copy.slice(0, count);
         }
 
         function clearTimers() {
@@ -1661,34 +2382,75 @@
             state.revealInterval = null;
         }
 
-        function resetRoundUI() {
-            state.foundSong = false;
-            state.foundMovie = false;
-            state.roundPointsEarned = 0;
-
-            document.getElementById('answer-inputs-area').classList.remove('hidden');
-            document.getElementById('round-reveal-area').classList.add('hidden');
-
-            const guessInput = document.getElementById('guess-input');
-            guessInput.value = '';
-            guessInput.disabled = false;
-            guessInput.placeholder = "Tapez le titre de la chanson OU du film...";
-            setTimeout(() => guessInput.focus(), 100);
-
-            // Reset badges
+        function configureRoundAnswerFields() {
+            const answerMode = state.settings.answerMode; // 'both' | 'song' | 'movie'
+            const songWrapper = document.getElementById('song-input-wrapper');
+            const movieWrapper = document.getElementById('movie-input-wrapper');
+            const fieldsContainer = document.getElementById('fields-container');
+            const badgesGrid = document.getElementById('status-badges-grid');
             const songBadge = document.getElementById('badge-song-status');
-            songBadge.className = "p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 flex items-center gap-2.5 transition-all";
+            const movieBadge = document.getElementById('badge-movie-status');
+
+            const songInput = document.getElementById('guess-song-input');
+            const movieInput = document.getElementById('guess-movie-input');
+
+            songInput.value = '';
+            movieInput.value = '';
+            songInput.disabled = false;
+            movieInput.disabled = false;
+
+            if (answerMode === 'song') {
+                state.foundSong = false;
+                state.foundMovie = true; // Non requis
+                songWrapper.classList.remove('hidden');
+                movieWrapper.classList.add('hidden');
+                fieldsContainer.className = "grid grid-cols-1 gap-3";
+                songBadge.classList.remove('hidden');
+                movieBadge.classList.add('hidden');
+                badgesGrid.className = "grid grid-cols-1 gap-3";
+                setTimeout(() => songInput.focus(), 100);
+            } else if (answerMode === 'movie') {
+                state.foundSong = true; // Non requis
+                state.foundMovie = false;
+                songWrapper.classList.add('hidden');
+                movieWrapper.classList.remove('hidden');
+                fieldsContainer.className = "grid grid-cols-1 gap-3";
+                songBadge.classList.add('hidden');
+                movieBadge.classList.remove('hidden');
+                badgesGrid.className = "grid grid-cols-1 gap-3";
+                setTimeout(() => movieInput.focus(), 100);
+            } else {
+                state.foundSong = false;
+                state.foundMovie = false;
+                songWrapper.classList.remove('hidden');
+                movieWrapper.classList.remove('hidden');
+                fieldsContainer.className = "grid grid-cols-1 sm:grid-cols-2 gap-3";
+                songBadge.classList.remove('hidden');
+                movieBadge.classList.remove('hidden');
+                badgesGrid.className = "grid grid-cols-1 sm:grid-cols-2 gap-3";
+                setTimeout(() => songInput.focus(), 100);
+            }
+
+            // Reset apparence des badges visibles
+            songBadge.className = `${answerMode === 'movie' ? 'hidden' : 'flex'} p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 items-center gap-2.5 transition-all`;
             document.getElementById('icon-song-status').className = "w-7 h-7 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs shrink-0";
             document.getElementById('icon-song-status').innerHTML = `<i class="fa-solid fa-music"></i>`;
             document.getElementById('text-song-status').className = "text-xs sm:text-sm font-bold text-slate-300 truncate";
             document.getElementById('text-song-status').textContent = "À trouver...";
 
-            const movieBadge = document.getElementById('badge-movie-status');
-            movieBadge.className = "p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 flex items-center gap-2.5 transition-all";
+            movieBadge.className = `${answerMode === 'song' ? 'hidden' : 'flex'} p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 items-center gap-2.5 transition-all`;
             document.getElementById('icon-movie-status').className = "w-7 h-7 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs shrink-0";
             document.getElementById('icon-movie-status').innerHTML = `<i class="fa-solid fa-film"></i>`;
             document.getElementById('text-movie-status').className = "text-xs sm:text-sm font-bold text-slate-300 truncate";
             document.getElementById('text-movie-status').textContent = "À trouver...";
+        }
+
+        function resetRoundUI() {
+            state.roundPointsEarned = 0;
+            document.getElementById('answer-inputs-area').classList.remove('hidden');
+            document.getElementById('round-reveal-area').classList.add('hidden');
+            document.getElementById('btn-submit-guess').disabled = false;
+            configureRoundAnswerFields();
         }
 
         function startRound(roundIdx) {
@@ -1697,27 +2459,34 @@
             state.phase = 'playing';
             state.roundStartTime = Date.now();
 
+            const roundDuration = state.settings.roundDuration || 30;
             const songObj = state.playlist[roundIdx];
+
             document.getElementById('game-round-current').textContent = roundIdx + 1;
             document.getElementById('game-round-total').textContent = state.playlist.length;
-            document.getElementById('game-my-score').textContent = `${state.myTotalScore} pts`;
+            document.getElementById('game-my-score').textContent = formatScoreUnit(state.myTotalScore);
 
             resetRoundUI();
             playSongForRound(songObj);
             updateLeaderboardUI();
 
-            // Boucle du chrono (30 secondes)
             state.timerInterval = setInterval(() => {
                 const elapsed = (Date.now() - state.roundStartTime) / 1000;
-                const remaining = Math.max(0, ROUND_DURATION - elapsed);
+                const remaining = Math.max(0, roundDuration - elapsed);
 
                 document.getElementById('timer-text').textContent = `${Math.ceil(remaining)}s`;
-                document.getElementById('timer-bar').style.width = `${(remaining / ROUND_DURATION) * 100}%`;
+                document.getElementById('timer-bar').style.width = `${(remaining / roundDuration) * 100}%`;
 
-                // Calcul points potentiels affichés
-                const speedRatio = Math.max(0.3, remaining / ROUND_DURATION);
-                const maxPot = Math.round(500 * speedRatio) * 2;
-                document.getElementById('potential-points-hint').textContent = `+${maxPot} pts max`;
+                // Indication barème en direct
+                if (state.settings.scoringMode === 'fixed') {
+                    const maxFixed = state.settings.answerMode === 'both' ? 2 : 1;
+                    document.getElementById('potential-points-hint').textContent = `+1 pt / réponse (${maxFixed} max)`;
+                } else {
+                    const speedRatio = Math.max(0.3, remaining / roundDuration);
+                    const perItem = Math.round(150 + 350 * speedRatio);
+                    const mult = state.settings.answerMode === 'both' ? 2 : 1;
+                    document.getElementById('potential-points-hint').textContent = `+${perItem * mult} pts max`;
+                }
 
                 if (remaining <= 0) {
                     clearTimers();
@@ -1734,103 +2503,116 @@
             e.preventDefault();
             if (state.phase !== 'playing') return;
 
-            const inputEl = document.getElementById('guess-input');
-            const rawVal = inputEl.value.trim();
-            if (!rawVal) return;
+            const songInput = document.getElementById('guess-song-input');
+            const movieInput = document.getElementById('guess-movie-input');
+            const rawSongVal = songInput.value.trim();
+            const rawMovieVal = movieInput.value.trim();
+
+            if (!rawSongVal && !rawMovieVal) return;
 
             const songObj = state.playlist[state.currentRoundIndex];
+            const roundDuration = state.settings.roundDuration || 30;
             const elapsed = (Date.now() - state.roundStartTime) / 1000;
-            const remaining = Math.max(0, ROUND_DURATION - elapsed);
+            const remaining = Math.max(0, roundDuration - elapsed);
 
-            // Calcul des points selon la vitesse (entre 150 et 500 pts par élément trouvé)
-            const speedFactor = Math.max(0.3, remaining / ROUND_DURATION);
-            const pointsForItem = Math.round(150 + 350 * speedFactor);
+            // Calcul des points par bonne réponse selon le barème choisi
+            let pointsPerItem = 1;
+            if (state.settings.scoringMode === 'speed') {
+                const speedFactor = Math.max(0.3, remaining / roundDuration);
+                pointsPerItem = Math.round(150 + 350 * speedFactor);
+            }
 
             let newlyFoundSong = false;
             let newlyFoundMovie = false;
+            let wrongSong = false;
+            let wrongMovie = false;
 
-            // Vérifier Titre de la chanson
-            if (!state.foundSong) {
-                const songTargets = [songObj.song, ...(songObj.songAliases || [])];
-                if (isFuzzyMatch(rawVal, songTargets)) {
+            const songTargets = [songObj.song, ...(songObj.songAliases || [])];
+            const movieTargets = [songObj.movie, ...(songObj.movieAliases || [])];
+
+            // Vérification champ chanson
+            if (!state.foundSong && rawSongVal) {
+                if (isFuzzyMatch(rawSongVal, songTargets)) {
                     state.foundSong = true;
                     newlyFoundSong = true;
-                }
-            }
-
-            // Vérifier Titre du film
-            if (!state.foundMovie) {
-                const movieTargets = [songObj.movie, ...(songObj.movieAliases || [])];
-                if (isFuzzyMatch(rawVal, movieTargets)) {
+                } else if (state.settings.answerMode === 'both' && !state.foundMovie && isFuzzyMatch(rawSongVal, movieTargets)) {
+                    // Tolérance si le joueur a inversé les deux champs
                     state.foundMovie = true;
                     newlyFoundMovie = true;
+                } else {
+                    wrongSong = true;
                 }
             }
 
-            // Cas où le joueur écrit les deux d'un coup (ex: "Hakuna Matata Le Roi Lion")
-            if (!newlyFoundSong && !newlyFoundMovie && rawVal.includes(' ')) {
-                const words = rawVal.split(/\s+/);
-                for (let split = 1; split < words.length; split++) {
-                    const part1 = words.slice(0, split).join(' ');
-                    const part2 = words.slice(split).join(' ');
-                    if (!state.foundSong && (isFuzzyMatch(part1, [songObj.song, ...songObj.songAliases]) || isFuzzyMatch(part2, [songObj.song, ...songObj.songAliases]))) {
-                        state.foundSong = true;
-                        newlyFoundSong = true;
-                    }
-                    if (!state.foundMovie && (isFuzzyMatch(part1, [songObj.movie, ...songObj.movieAliases]) || isFuzzyMatch(part2, [songObj.movie, ...songObj.movieAliases]))) {
-                        state.foundMovie = true;
-                        newlyFoundMovie = true;
-                    }
+            // Vérification champ film/série
+            if (!state.foundMovie && rawMovieVal) {
+                if (isFuzzyMatch(rawMovieVal, movieTargets)) {
+                    state.foundMovie = true;
+                    newlyFoundMovie = true;
+                } else if (state.settings.answerMode === 'both' && !state.foundSong && isFuzzyMatch(rawMovieVal, songTargets)) {
+                    // Tolérance si le joueur a inversé les deux champs
+                    state.foundSong = true;
+                    newlyFoundSong = true;
+                } else {
+                    wrongMovie = true;
                 }
             }
 
             if (newlyFoundSong || newlyFoundMovie) {
                 let gained = 0;
                 if (newlyFoundSong) {
-                    gained += pointsForItem;
-                    markBadgeFound('song', songObj.song, pointsForItem);
+                    gained += pointsPerItem;
+                    markBadgeFound('song', songObj.song, pointsPerItem);
+                    songInput.value = songObj.song;
+                    songInput.disabled = true;
                 }
                 if (newlyFoundMovie) {
-                    gained += pointsForItem;
-                    markBadgeFound('movie', songObj.movie, pointsForItem);
+                    gained += pointsPerItem;
+                    markBadgeFound('movie', songObj.movie, pointsPerItem);
+                    movieInput.value = songObj.movie;
+                    movieInput.disabled = true;
                 }
 
-                // Bonus si les deux sont trouvés !
-                if (state.foundSong && state.foundMovie) {
-                    const comboBonus = 100;
-                    gained += comboBonus;
-                    showToast(`Bravo ! Tout trouvé (+${gained} pts dont bonus combo) !`, 'gold');
-                    inputEl.disabled = true;
-                    inputEl.placeholder = "Tout trouvé ! En attente de la fin de manche...";
-                } else {
-                    const missing = state.foundSong ? "le film Disney" : "le titre de la chanson";
-                    showToast(`Bien joué (+${gained} pts) ! Trouvez maintenant ${missing} !`, 'success');
-                    inputEl.placeholder = state.foundSong ? "Trouvez maintenant le FILM Disney..." : "Trouvez maintenant le TITRE de la chanson...";
+                // Bonus combo uniquement en mode rapide + mode "Les deux"
+                if (state.settings.answerMode === 'both' && state.foundSong && state.foundMovie && state.settings.scoringMode === 'speed') {
+                    gained += 100;
                 }
 
                 state.roundPointsEarned += gained;
                 state.myTotalScore += gained;
-                document.getElementById('game-my-score').textContent = `${state.myTotalScore} pts`;
-                inputEl.value = '';
+                document.getElementById('game-my-score').textContent = formatScoreUnit(state.myTotalScore);
 
-                // Synchroniser score en multijoueur
+                const allRequiredFound = state.foundSong && state.foundMovie;
+                if (allRequiredFound) {
+                    document.getElementById('btn-submit-guess').disabled = true;
+                    showToast(`Bravo ! Manche complétée (+${formatScoreUnit(gained)}) !`, 'gold');
+                } else {
+                    const missing = !state.foundSong ? "le titre de la chanson" : "le film ou la série";
+                    showToast(`Bien joué (+${formatScoreUnit(gained)}) ! Trouvez maintenant ${missing}.`, 'success');
+                    if (!state.foundSong) songInput.focus();
+                    if (!state.foundMovie) movieInput.focus();
+                }
+
                 if (state.mode === 'multi') {
                     await syncPlayerScoreToFirestore();
                 } else {
                     updateLeaderboardUI();
-                    // En solo, si les 2 sont trouvés, on passe rapidement à la révélation
-                    if (state.foundSong && state.foundMovie) {
+                    if (allRequiredFound) {
                         clearTimers();
-                        setTimeout(() => revealCurrentRound(), 900);
+                        setTimeout(() => revealCurrentRound(), 850);
                     }
                 }
-            } else {
-                // Mauvaise réponse -> secousse visuelle
-                inputEl.classList.add('animate-shake', 'border-rose-500');
-                setTimeout(() => {
-                    inputEl.classList.remove('animate-shake', 'border-rose-500');
-                }, 400);
-                inputEl.select();
+            }
+
+            if (wrongSong && !newlyFoundSong) {
+                songInput.classList.add('animate-shake', 'border-rose-500');
+                setTimeout(() => songInput.classList.remove('animate-shake', 'border-rose-500'), 400);
+                songInput.select();
+            }
+            if (wrongMovie && !newlyFoundMovie) {
+                movieInput.classList.add('animate-shake', 'border-rose-500');
+                setTimeout(() => movieInput.classList.remove('animate-shake', 'border-rose-500'), 400);
+                if (!wrongSong) movieInput.select();
             }
         };
 
@@ -1843,7 +2625,7 @@
             icon.className = "w-7 h-7 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center text-xs font-bold shrink-0";
             icon.innerHTML = `<i class="fa-solid fa-check"></i>`;
             text.className = "text-xs sm:text-sm font-extrabold text-emerald-300 truncate";
-            text.textContent = `${officialText} (+${pts})`;
+            text.textContent = `${officialText} (+${formatScoreUnit(pts)})`;
         }
 
         function revealCurrentRound() {
@@ -1859,16 +2641,21 @@
             document.getElementById('reveal-movie-title').textContent = songObj.movie;
             document.getElementById('reveal-artist').textContent = `Interprété par ${songObj.artist}`;
 
+            const catNames = songObj.categories
+                .map(cid => SONG_CATEGORIES.find(c => c.id === cid)?.label.split(' ')[0])
+                .filter(Boolean)
+                .join(' • ');
+            document.getElementById('reveal-category-badge').textContent = catNames || 'Disney VF';
+
             const summaryEl = document.getElementById('reveal-round-summary');
             if (state.roundPointsEarned > 0) {
                 summaryEl.className = "mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-xs font-bold text-emerald-300";
-                summaryEl.innerHTML = `<i class="fa-solid fa-sparkles"></i> Vous avez gagné +${state.roundPointsEarned} pts sur cette manche !`;
+                summaryEl.innerHTML = `<i class="fa-solid fa-sparkles"></i> Vous avez gagné +${formatScoreUnit(state.roundPointsEarned)} sur cette manche !`;
             } else {
                 summaryEl.className = "mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-700 text-xs font-bold text-slate-400";
-                summaryEl.innerHTML = `<i class="fa-regular fa-face-meh"></i> 0 pt sur cette manche`;
+                summaryEl.innerHTML = `<i class="fa-regular fa-face-meh"></i> ${formatScoreUnit(0)} sur cette manche`;
             }
 
-            // Bouton suivant visible uniquement en solo ou pour l'hôte en multi
             const nextBtn = document.getElementById('btn-next-round');
             if (state.mode === 'solo' || state.isHost) {
                 nextBtn.classList.remove('hidden');
@@ -1924,13 +2711,12 @@
 
             if (state.mode === 'solo' && state.myTotalScore > state.soloBestScore) {
                 state.soloBestScore = state.myTotalScore;
-                document.getElementById('solo-best-score').textContent = `${state.soloBestScore} pts`;
+                document.getElementById('solo-best-score').textContent = formatScoreUnit(state.soloBestScore);
             }
 
             showScreen('screen-podium');
             renderPodium();
 
-            // Confettis féeriques
             if (typeof confetti === 'function') {
                 confetti({
                     particleCount: 90,
@@ -1950,7 +2736,7 @@
                     id: 'solo-me',
                     name: state.playerName,
                     score: state.myTotalScore,
-                    foundBoth: state.foundSong && state.foundMovie,
+                    foundAll: state.foundSong && state.foundMovie,
                     isMe: true
                 }];
             } else if (state.roomData && state.roomData.players) {
@@ -1958,7 +2744,7 @@
                     id: uid,
                     name: p.name,
                     score: p.score || 0,
-                    foundBoth: p.foundSong && p.foundMovie,
+                    foundAll: p.foundSong && p.foundMovie,
                     isMe: currentUser && uid === currentUser.uid
                 }));
             }
@@ -1977,9 +2763,9 @@
                             <span class="text-sm font-bold truncate ${p.isMe ? 'text-white' : 'text-slate-200'}">
                                 ${escapeHtml(p.name)} ${p.isMe ? '<span class="text-[10px] text-sky-300">(Vous)</span>' : ''}
                             </span>
-                            ${p.foundBoth ? '<i class="fa-solid fa-circle-check text-emerald-400 text-xs" title="Tout trouvé !"></i>' : ''}
+                            ${p.foundAll ? '<i class="fa-solid fa-circle-check text-emerald-400 text-xs" title="Manche complétée !"></i>' : ''}
                         </div>
-                        <span class="font-mono font-extrabold text-sm text-amber-300 shrink-0">${p.score}</span>
+                        <span class="font-mono font-extrabold text-sm text-amber-300 shrink-0">${formatScoreUnit(p.score)}</span>
                     </div>
                 `;
             }).join('');
@@ -2028,10 +2814,19 @@
                                 <div class="text-xs text-slate-400">${idx === 0 ? 'Grand Maître Disney' : 'Explorateur Musical'}</div>
                             </div>
                         </div>
-                        <div class="font-mono text-xl font-black text-amber-300">${p.score} pts</div>
+                        <div class="font-mono text-xl font-black text-amber-300">${formatScoreUnit(p.score)}</div>
                     </div>
                 `;
             }).join('');
+
+            // Récapitulatif de la playlist jouée
+            const recapEl = document.getElementById('podium-playlist-recap');
+            recapEl.innerHTML = state.playlist.map((s, idx) => `
+                <div class="flex items-center justify-between gap-2 py-1 border-b border-slate-800/70 last:border-0">
+                    <span class="text-slate-300 truncate"><strong class="text-amber-400">#${idx + 1}</strong> ${escapeHtml(s.song)}</span>
+                    <span class="text-sky-300 font-semibold shrink-0">${escapeHtml(s.movie)}</span>
+                </div>
+            `).join('');
 
             const replayBtn = document.getElementById('btn-replay');
             if (state.mode === 'solo' || state.isHost) {
@@ -2051,10 +2846,16 @@
 
         // --- MODE SOLO ---
         window.startSoloGame = function() {
+            const available = getAvailableSongs();
+            if (available.length === 0) {
+                showToast("Sélectionnez au moins une catégorie ou une chanson !", "error");
+                return;
+            }
+
             state.mode = 'solo';
             state.playerName = getPlayerName();
             state.myTotalScore = 0;
-            state.playlist = buildShuffledPlaylist(state.selectedRounds, state.selectedEra);
+            state.playlist = buildShuffledPlaylist(state.settings);
 
             document.getElementById('header-room-badge').classList.add('hidden');
             document.getElementById('game-mode-tag').textContent = 'MODE SOLO';
@@ -2079,6 +2880,12 @@
         }
 
         window.createMultiplayerRoom = async function() {
+            const available = getAvailableSongs();
+            if (available.length === 0) {
+                showToast("Sélectionnez au moins une catégorie ou une chanson avant de créer une salle.", "error");
+                return;
+            }
+
             const btn = document.getElementById('btn-create-room');
             btn.disabled = true;
 
@@ -2095,9 +2902,8 @@
                 const initialRoom = {
                     code: code,
                     hostId: player.uid,
-                    status: 'lobby', // 'lobby' | 'playing' | 'reveal' | 'finished'
-                    totalRounds: state.selectedRounds,
-                    era: state.selectedEra,
+                    status: 'lobby',
+                    settings: JSON.parse(JSON.stringify(state.settings)),
                     currentRound: 0,
                     playlistIds: [],
                     players: {
@@ -2130,7 +2936,7 @@
                 showToast(`Salle ${code} créée ! Partagez ce code à vos amis.`, 'gold');
             } catch (err) {
                 console.error("Échec création salle :", err);
-                showRetryToast("Impossible d'ouvrir la salle. Vérifiez votre connexion.", () => window.createMultiplayerRoom());
+                showToast("Impossible d'ouvrir la salle. Vérifiez votre connexion.", "error");
             } finally {
                 btn.disabled = false;
             }
@@ -2191,7 +2997,6 @@
                     }
                 }
 
-                // Mode Direct P2P (multi-appareils via relais MQTT + BroadcastChannel)
                 updateSyncBadges('p2p');
                 const joinedState = await p2pTransport.joinRoom(codeInput, player.uid, playerData, handleRoomStateUpdate);
 
@@ -2208,7 +3013,7 @@
                 showToast(`Vous avez rejoint la salle ${codeInput} !`, 'success');
             } catch (err) {
                 console.error("Échec connexion salle :", err);
-                showRetryToast("Erreur lors de la connexion à la salle.", () => window.joinMultiplayerRoom());
+                showToast("Erreur lors de la connexion à la salle.", "error");
             } finally {
                 btn.disabled = false;
             }
@@ -2223,12 +3028,67 @@
             if (state.isHost) {
                 document.getElementById('lobby-host-controls').classList.remove('hidden');
                 document.getElementById('lobby-guest-wait').classList.add('hidden');
+                document.getElementById('lobby-host-config-mount').classList.remove('hidden');
+                document.getElementById('lobby-guest-rules-view').classList.add('hidden');
+                renderConfigPanel('lobby-host-config-mount');
             } else {
                 document.getElementById('lobby-host-controls').classList.add('hidden');
                 document.getElementById('lobby-guest-wait').classList.remove('hidden');
+                document.getElementById('lobby-host-config-mount').classList.add('hidden');
+                document.getElementById('lobby-guest-rules-view').classList.remove('hidden');
+                renderGuestRulesSummary(state.settings);
             }
 
             showScreen('screen-lobby');
+        }
+
+        function renderGuestRulesSummary(s) {
+            const effRounds = getEffectiveRoundCount(s);
+            const catCount = s.useCustomSelection
+                ? `${(s.customSongIds || []).length} titres choisis`
+                : `${(s.categories || []).length} catégorie(s)`;
+            const scoringLabel = s.scoringMode === 'fixed' ? '+1 pt / réponse' : 'Points selon vitesse';
+            const answerLabel = s.answerMode === 'song'
+                ? 'Chanson seule'
+                : s.answerMode === 'movie'
+                    ? 'Film / Série seul'
+                    : 'Chanson + Film/Série';
+
+            document.getElementById('lobby-quick-summary').textContent = `${effRounds} manches • ${s.roundDuration}s`;
+            document.getElementById('lobby-guest-rules-grid').innerHTML = `
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Sélection</div>
+                    <div class="font-extrabold text-amber-300 mt-0.5 truncate">${catCount}</div>
+                </div>
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Manches & Durée</div>
+                    <div class="font-extrabold text-sky-300 mt-0.5">${effRounds} × ${s.roundDuration}s</div>
+                </div>
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Barème</div>
+                    <div class="font-extrabold text-emerald-300 mt-0.5 truncate">${scoringLabel}</div>
+                </div>
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">À deviner</div>
+                    <div class="font-extrabold text-white mt-0.5 truncate">${answerLabel}</div>
+                </div>
+            `;
+        }
+
+        async function syncHostSettingsToRoom() {
+            if (!state.isHost || !state.roomCode) return;
+            const effRounds = getEffectiveRoundCount(state.settings);
+            document.getElementById('lobby-quick-summary').textContent = `${effRounds} manches • ${state.settings.roundDuration}s`;
+
+            const patch = {
+                settings: JSON.parse(JSON.stringify(state.settings)),
+                updatedAt: Date.now()
+            };
+            if (syncLayer === 'firebase' && db) {
+                await updateDoc(getRoomDocRef(state.roomCode), patch);
+            } else {
+                p2pTransport.updateHostRoom(patch);
+            }
         }
 
         let lastKnownStatus = null;
@@ -2239,11 +3099,16 @@
             state.roomData = data;
             state.isHost = (currentUser && data.hostId === currentUser.uid);
 
+            // Synchroniser les règles configurées par l'hôte vers tous les joueurs
+            if (data.settings && !state.isHost) {
+                state.settings = { ...state.settings, ...data.settings };
+                renderGuestRulesSummary(state.settings);
+            }
+
             if (currentUser && data.players && data.players[currentUser.uid]) {
                 state.myTotalScore = data.players[currentUser.uid].score || 0;
             }
 
-            // Mise à jour Lobby
             if (data.status === 'lobby') {
                 renderLobbyPlayers(data);
                 if (lastKnownStatus && lastKnownStatus !== 'lobby') {
@@ -2251,7 +3116,6 @@
                 }
             }
 
-            // Passage en jeu
             if (data.status === 'playing') {
                 document.getElementById('game-mode-tag').textContent = `SALLE ${data.code || state.roomCode}`;
                 document.getElementById('solo-best-box').classList.add('hidden');
@@ -2268,7 +3132,6 @@
                 }
                 updateLeaderboardUI();
 
-                // Si l'hôte détecte que TOUS les joueurs ont trouvé chanson + film, on révèle immédiatement
                 if (state.isHost && data.players) {
                     const allPlayers = Object.values(data.players);
                     if (allPlayers.length > 0 && allPlayers.every(p => p.foundSong && p.foundMovie)) {
@@ -2277,13 +3140,11 @@
                 }
             }
 
-            // Passage en révélation de manche
             if (data.status === 'reveal' && lastKnownStatus !== 'reveal') {
                 revealCurrentRound();
                 updateLeaderboardUI();
             }
 
-            // Fin de partie
             if (data.status === 'finished' && lastKnownStatus !== 'finished') {
                 finishGame();
             }
@@ -2313,12 +3174,15 @@
             const listEl = document.getElementById('lobby-players-list');
             const players = data.players ? Object.entries(data.players) : [];
             document.getElementById('lobby-player-count').textContent = players.length;
-            document.getElementById('lobby-rounds-info').textContent = data.totalRounds || 8;
+
+            const effRounds = getEffectiveRoundCount(data.settings || state.settings);
+            const dur = (data.settings || state.settings).roundDuration || 30;
+            document.getElementById('lobby-quick-summary').textContent = `${effRounds} manches • ${dur}s`;
 
             listEl.innerHTML = players.map(([uid, p]) => {
                 const isMe = currentUser && uid === currentUser.uid;
                 return `
-                    <div class="p-3.5 rounded-2xl bg-slate-950/80 border ${isMe ? 'border-amber-400/60' : 'border-slate-800'} flex items-center justify-between">
+                    <div class="p-3 rounded-2xl bg-slate-950/80 border ${isMe ? 'border-amber-400/60' : 'border-slate-800'} flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-black flex items-center justify-center uppercase">
                                 ${escapeHtml(p.name.charAt(0))}
@@ -2342,26 +3206,30 @@
 
         window.hostStartMultiplayerGame = async function() {
             if (!state.isHost || !state.roomCode) return;
-            const totalRounds = state.roomData?.totalRounds || state.selectedRounds;
-            const era = state.roomData?.era || state.selectedEra;
-            const shuffled = buildShuffledPlaylist(totalRounds, era);
+            const available = getAvailableSongs(state.settings);
+            if (available.length === 0) {
+                showToast("Sélectionnez au moins une catégorie ou une chanson !", "error");
+                return;
+            }
+
+            const shuffled = buildShuffledPlaylist(state.settings);
             const playlistIds = shuffled.map(s => s.id);
 
-            // Remise à zéro des scores des joueurs
             const resetPlayers = {};
             if (state.roomData?.players) {
                 for (const [uid, p] of Object.entries(state.roomData.players)) {
                     resetPlayers[uid] = {
                         ...p,
                         score: 0,
-                        foundSong: false,
-                        foundMovie: false
+                        foundSong: state.settings.answerMode === 'movie',
+                        foundMovie: state.settings.answerMode === 'song'
                     };
                 }
             }
 
             const patch = {
                 status: 'playing',
+                settings: JSON.parse(JSON.stringify(state.settings)),
                 currentRound: 0,
                 playlistIds: playlistIds,
                 players: resetPlayers,
@@ -2380,8 +3248,8 @@
             const resetRoundFlags = {};
             if (state.roomData?.players) {
                 for (const [uid, p] of Object.entries(state.roomData.players)) {
-                    resetRoundFlags[`players.${uid}.foundSong`] = false;
-                    resetRoundFlags[`players.${uid}.foundMovie`] = false;
+                    resetRoundFlags[`players.${uid}.foundSong`] = state.settings.answerMode === 'movie';
+                    resetRoundFlags[`players.${uid}.foundMovie`] = state.settings.answerMode === 'song';
                 }
             }
 
@@ -2466,8 +3334,15 @@
 
         // --- ANIMATION ÉTOILES SCINTILLANTES (CANVAS) ---
         function initStarfield() {
-            const canvas = document.getElementById('starfield');
+            let canvas = document.getElementById('starfield');
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.id = 'starfield';
+                canvas.className = 'fixed inset-0 pointer-events-none z-0';
+                document.body.prepend(canvas);
+            }
             const ctx = canvas.getContext('2d');
+            if (!ctx) return;
             let stars = [];
 
             function resize() {
@@ -2504,9 +3379,16 @@
             draw();
         }
 
-        window.addEventListener('load', () => {
+        function bootstrapApp() {
             initStarfield();
-        });
+            renderConfigPanel('home-config-mount');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrapApp);
+        } else {
+            bootstrapApp();
+        }
     </script>
 </body>
 </html>
