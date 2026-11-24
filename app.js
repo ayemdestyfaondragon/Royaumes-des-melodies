@@ -6,8 +6,7 @@ const metaCache = {};
 let loadSeq = 0;
 let broadcastChannel = null;
 let roomPollTimer = null;
-let firebasePollTimer = null;
-let relayPollTimer = null;
+let let relayPollTimer = null;
 
 let state = {
   mode: "local", // "local" | "remote"
@@ -30,8 +29,7 @@ let roomSystem = {
   clientId: "",
   roomName: "Salon Royal Disney",
   hostId: "",
-  firebaseBaseUrl: "",
-  members: [],
+    members: [],
   messages: [],
   updatedAt: 0
 };
@@ -102,17 +100,11 @@ const roomRosterList = document.getElementById("roomRosterList");
 const roomChatLog = document.getElementById("roomChatLog");
 const roomChatForm = document.getElementById("roomChatForm");
 const roomChatInput = document.getElementById("roomChatInput");
-const firebaseUrlInput = document.getElementById("firebaseUrlInput");
-const saveFirebaseBtn = document.getElementById("saveFirebaseBtn");
-const copyFirebaseRulesBtn = document.getElementById("copyFirebaseRulesBtn");
-const clearFirebaseBtn = document.getElementById("clearFirebaseBtn");
-const firebaseStatusPill = document.getElementById("firebaseStatusPill");
-const relayStatusPill = document.getElementById("relayStatusPill");
+const const saveconst copyconst clearconst const relayStatusPill = document.getElementById("relayStatusPill");
 const forceSyncNowBtn = document.getElementById("forceSyncNowBtn");
 const toggleAdvancedSyncBtn = document.getElementById("toggleAdvancedSyncBtn");
 const advancedSyncDrawer = document.getElementById("advancedSyncDrawer");
-const firebaseDiagMsg = document.getElementById("firebaseDiagMsg");
-
+const 
 const buzzPanel = document.getElementById("buzzPanel");
 const buzzBtn = document.getElementById("buzzBtn");
 const clearBuzzBtn = document.getElementById("clearBuzzBtn");
@@ -161,8 +153,7 @@ const guessFilmInput = document.getElementById("guessFilmInput");
 const guessFeedback = document.getElementById("guessFeedback");
 const roundAnswersList = document.getElementById("roundAnswersList");
 
-const RECOMMENDED_FIREBASE_RULES = JSON.stringify(
-  {
+const RECOMMENDED_  {
     rules: {
       royaumes_rooms: {
         $roomCode: {
@@ -421,8 +412,7 @@ function saveState(options = {}) {
       } catch (_) {}
     }
 
-    pushSnapshotToFirebase(snap);
-    publishRoomSnapshotToRelay(snap);
+    pushSnapshotTo    publishRoomSnapshotToRelay(snap);
   }
 }
 
@@ -432,11 +422,9 @@ function renderRoomPanel() {
   roomRolePill.textContent = hostMode ? "👑 Hôte de la room" : "👤 Joueur connecté";
   roomRolePill.className = hostMode ? "room-role-pill host" : "room-role-pill";
 
-  const fbActive = Boolean(getFirebaseBase());
-  if (roomConnectionBadge) {
+  const fbActive = Boolean(get  if (roomConnectionBadge) {
     roomConnectionBadge.textContent = fbActive
-      ? "• Synchro Firebase + Réseau"
-      : "• Synchro Réseau + Multi-onglets";
+      ? "• Synchro       : "• Synchro Réseau + Multi-onglets";
   }
 
   const selfMember = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
@@ -616,10 +604,7 @@ function stopRoomListeners() {
     clearInterval(roomPollTimer);
     roomPollTimer = null;
   }
-  if (firebasePollTimer) {
-    clearInterval(firebasePollTimer);
-    firebasePollTimer = null;
-  }
+  if (    clearInterval(      }
   if (relayPollTimer) {
     clearInterval(relayPollTimer);
     relayPollTimer = null;
@@ -652,11 +637,8 @@ function startRoomListeners() {
     } catch (_) {}
   }, 800);
 
-  if (getFirebaseBase()) {
-    firebasePollTimer = setInterval(async () => {
-      if (state.mode === "remote" && state.roomCode) {
-        const snap = await pullSnapshotFromFirebase(state.roomCode);
-        if (snap && (snap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+  if (get          if (state.mode === "remote" && state.roomCode) {
+        const snap = await pullSnapshotFrom        if (snap && (snap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
           applyRemotePayload(snap);
         }
       }
@@ -797,8 +779,7 @@ if (joinRoomBtn) {
       if (localRaw && localRaw.roomCode === code) loaded = localRaw;
     } catch (_) {}
 
-    const fbSnap = await pullSnapshotFromFirebase(code);
-    if (fbSnap && fbSnap.roomCode === code && (!loaded || (fbSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
+    const fbSnap = await pullSnapshotFrom    if (fbSnap && fbSnap.roomCode === code && (!loaded || (fbSnap.updatedAt || 0) >= (loaded.updatedAt || 0))) {
       loaded = fbSnap;
     }
 
@@ -915,8 +896,7 @@ if (forceSyncNowBtn) {
       return;
     }
     const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
-    const hashSnap = decodeRoomStateHash();
+    const fbSnap = await pullSnapshotFrom    const hashSnap = decodeRoomStateHash();
     const poolSnaps = [netSnap, fbSnap, hashSnap].filter(Boolean);
     const candidate = poolSnaps.length
       ? poolSnaps.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]
@@ -943,13 +923,7 @@ if (toggleAdvancedSyncBtn && advancedSyncDrawer) {
   });
 }
 
-if (saveFirebaseBtn) {
-  saveFirebaseBtn.addEventListener("click", async () => {
-    const raw = (firebaseUrlInput && firebaseUrlInput.value) || "";
-    const norm = smartNormalizeFirebaseUrl(raw);
-    roomSystem.firebaseBaseUrl = norm;
-    if (firebaseUrlInput && norm) firebaseUrlInput.value = norm + "/";
-    saveState({ skipBroadcast: true });
+if (save  save    const raw = (    const norm = smartNormalize    roomSystem.    if (    saveState({ skipBroadcast: true });
     startRoomListeners();
     renderRoomPanel();
     if (state.roomCode) {
@@ -959,27 +933,17 @@ if (saveFirebaseBtn) {
     setDiagStatus(
       "connected",
       "🌐 Synchro mise à jour",
-      `Cible active : ${getFirebaseBase() || getRelayBaseUrl()}`
-    );
+      `Cible active : ${get    );
   });
 }
 
-if (copyFirebaseRulesBtn) {
-  copyFirebaseRulesBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(RECOMMENDED_FIREBASE_RULES);
-      setDiagStatus("connected", "📋 Règles copiées", RECOMMENDED_FIREBASE_RULES);
-    } catch (_) {
-      setDiagStatus("", "🛡️ Règles RTDB", RECOMMENDED_FIREBASE_RULES);
-    }
+if (copy  copy    try {
+      await navigator.clipboard.writeText(RECOMMENDED_      setDiagStatus("connected", "📋 Règles copiées", RECOMMENDED_    } catch (_) {
+      setDiagStatus("", "🛡️ Règles RTDB", RECOMMENDED_    }
   });
 }
 
-if (clearFirebaseBtn) {
-  clearFirebaseBtn.addEventListener("click", () => {
-    roomSystem.firebaseBaseUrl = "";
-    if (firebaseUrlInput) firebaseUrlInput.value = "";
-    saveState({ skipBroadcast: true });
+if (clear  clear    roomSystem.    if (    saveState({ skipBroadcast: true });
     startRoomListeners();
     renderRoomPanel();
     setDiagStatus("connected", "🌐 Relais par défaut", `Relais actif : ${DEFAULT_RELAY_BASE}`);
@@ -1925,9 +1889,17 @@ renderAutoStatus();
 
 
 // Ensure simple link mode has no leftover external relay or console URLs
-roomSystem.firebaseBaseUrl = "";
-try {
+roomSystem.try {
   localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
+} catch (_) {}
+
+
+try {
+  const rawMeta = JSON.parse(localStorage.getItem(ROOM_META_KEY) || "{}");
+  if (rawMeta && typeof rawMeta === "object") {
+    delete rawMeta.firebaseBaseUrl;
+    localStorage.setItem(ROOM_META_KEY, JSON.stringify(rawMeta));
+  }
 } catch (_) {}
 
 // Initial boot
@@ -1937,9 +1909,7 @@ if (state.remotePseudo && remotePseudoInput) {
 if (roomNameInput && roomSystem.roomName) {
   roomNameInput.value = roomSystem.roomName;
 }
-if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
-  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
-}
+if (  }
 if (state.roomCode && roomCodeBadge) {
   roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
 }
@@ -1959,8 +1929,7 @@ if (state.mode === "remote" && state.roomCode) {
   (async () => {
     roomSystem.updatedAt = 0;
     const netSnap = await pullRoomSnapshotFromRelay(state.roomCode);
-    const fbSnap = await pullSnapshotFromFirebase(state.roomCode);
-    const candidate =
+    const fbSnap = await pullSnapshotFrom    const candidate =
       netSnap && fbSnap
         ? ((netSnap.updatedAt || 0) >= (fbSnap.updatedAt || 0) ? netSnap : fbSnap)
         : (netSnap || fbSnap);

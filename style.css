@@ -911,8 +911,7 @@ button.ghost:hover {
 }
 
 
-/* Synchro inter-appareils Firebase améliorée */
-.room-backend-header {
+/* Synchro inter-appareils .room-backend-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -943,4 +942,31 @@ button.ghost:hover {
   background: rgba(239, 68, 68, 0.16);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.4);
+}
+
+
+/* Affichage simple et épuré */
+.room-backend-box,
+#roomChatForm,
+#roomChatLog,
+#toggleAdvancedSyncBtn,
+#advancedSyncDrawer {
+  display: none !important;
+}
+
+.topbar {
+  padding: 0.7rem 1rem;
+  border-radius: 14px;
+}
+
+.stage-card,
+.panel,
+.player-card,
+.track-card {
+  border-radius: 14px;
+}
+
+.remote-box {
+  padding: 0.65rem 0.85rem;
+  gap: 0.5rem;
 }
