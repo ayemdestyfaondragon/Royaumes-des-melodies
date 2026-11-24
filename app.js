@@ -1,10 +1,11 @@
 const STORAGE_KEY = "royaumes_melodies_v6";
+const ROOM_META_KEY = "royaumes_room_system_v1";
 const metaCache = {};
 let loadSeq = 0;
 
-// Canal temps réel multi-onglets (même navigateur) + état partagé par code de salon
 let broadcastChannel = null;
 let roomPollTimer = null;
+let firebasePollTimer = null;
 
 let state = {
   mode: "local", // "local" | "remote"
@@ -19,17 +20,37 @@ let state = {
   currentTrackId: null,
   revealed: false,
   playedIds: [],
-  buzzes: [] // { pseudo, at, label }
+  buzzes: []
+};
+
+let roomSystem = {
+  clientId: "",
+  roomName: "Salon Royal Disney",
+  hostId: "",
+  firebaseBaseUrl: "",
+  members: [],
+  messages: [],
+  updatedAt: 0
 };
 
 try {
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
   if (saved && Array.isArray(saved.players) && saved.players.length) {
     state = { ...state, ...saved };
   }
 } catch (_) {}
 
-// Lecture éventuelle d'un code salon dans l'URL (?room=XXXX)
+try {
+  const savedRoomSys = JSON.parse(localStorage.getItem(ROOM_META_KEY) || "null");
+  if (savedRoomSys && typeof savedRoomSys === "object") {
+    roomSystem = { ...roomSystem, ...savedRoomSys };
+  }
+} catch (_) {}
+
+if (!roomSystem.clientId) {
+  roomSystem.clientId = "cli_" + Math.random().toString(36).slice(2, 10);
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const initialRoomParam = (urlParams.get("room") || "").trim().toUpperCase();
 if (initialRoomParam) {
@@ -37,47 +58,29 @@ if (initialRoomParam) {
   state.roomCode = initialRoomParam;
 }
 
-function roomStorageKey(code) {
-  return `royaumes_room_${String(code || "").toUpperCase()}`;
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (_) {}
-
-  if (state.mode === "remote" && state.roomCode) {
-    const payload = {
-      roomCode: state.roomCode,
-      players: state.players,
-      nextPlayerId: state.nextPlayerId,
-      roundNumber: state.roundNumber,
-      currentTrackId: state.currentTrackId,
-      revealed: state.revealed,
-      playedIds: state.playedIds,
-      buzzes: state.buzzes,
-      updatedAt: Date.now()
-    };
-    try {
-      localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(payload));
-    } catch (_) {}
-
-    if (broadcastChannel) {
-      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload });
-    }
-  }
-}
-
 const tabLocal = document.getElementById("tabLocal");
 const tabRemote = document.getElementById("tabRemote");
 const remoteBox = document.getElementById("remoteBox");
 const syncStatus = document.getElementById("syncStatus");
 const roomCodeBadge = document.getElementById("roomCodeBadge");
+const roomRolePill = document.getElementById("roomRolePill");
+const roomConnectionBadge = document.getElementById("roomConnectionBadge");
+const toggleReadyBtn = document.getElementById("toggleReadyBtn");
+const leaveRoomBtn = document.getElementById("leaveRoomBtn");
 const remotePseudoInput = document.getElementById("remotePseudoInput");
+const roomNameInput = document.getElementById("roomNameInput");
 const createRoomBtn = document.getElementById("createRoomBtn");
 const joinRoomInput = document.getElementById("joinRoomInput");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
 const copyInviteBtn = document.getElementById("copyInviteBtn");
+const roomTitleDisplay = document.getElementById("roomTitleDisplay");
+const roomCountLabel = document.getElementById("roomCountLabel");
+const roomRosterList = document.getElementById("roomRosterList");
+const roomChatLog = document.getElementById("roomChatLog");
+const roomChatForm = document.getElementById("roomChatForm");
+const roomChatInput = document.getElementById("roomChatInput");
+const firebaseUrlInput = document.getElementById("firebaseUrlInput");
+const saveFirebaseBtn = document.getElementById("saveFirebaseBtn");
 
 const buzzPanel = document.getElementById("buzzPanel");
 const buzzBtn = document.getElementById("buzzBtn");
@@ -118,7 +121,7 @@ const playedLabel = document.getElementById("playedLabel");
 const tracksList = document.getElementById("tracksList");
 
 function escapeHtml(str) {
-  return String(str)
+  return String(str || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -134,6 +137,32 @@ function generateRoomCode() {
   return code;
 }
 
+function roomStorageKey(code) {
+  return `royaumes_room_${String(code || "").toUpperCase()}`;
+}
+
+function normalizeFirebaseBase(raw) {
+  const trimmed = String(raw || "").trim().replace(/\/+$/, "");
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return "";
+  return trimmed;
+}
+
+function isCurrentUserHost() {
+  if (!state.roomCode || !roomSystem.hostId) return true;
+  return roomSystem.hostId === roomSystem.clientId;
+}
+
+function currentPseudo() {
+  const typed = remotePseudoInput ? remotePseudoInput.value.trim() : "";
+  if (typed) {
+    state.remotePseudo = typed;
+  }
+  if (!state.remotePseudo) {
+    state.remotePseudo = "Joueur_" + roomSystem.clientId.slice(-4);
+  }
+  return state.remotePseudo;
+}
+
 function ensurePlayerForPseudo(pseudo) {
   const clean = String(pseudo || "").trim();
   if (!clean) return;
@@ -143,7 +172,189 @@ function ensurePlayerForPseudo(pseudo) {
   }
 }
 
+function appendRoomSystemMessage(text) {
+  roomSystem.messages.push({
+    id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    sender: "Système",
+    text,
+    ts: Date.now(),
+    system: true
+  });
+  if (roomSystem.messages.length > 60) {
+    roomSystem.messages = roomSystem.messages.slice(-60);
+  }
+}
+
+function upsertSelfInRoom(options = {}) {
+  if (!state.roomCode) return;
+  const pseudo = currentPseudo();
+  if (!roomSystem.hostId && options.asHost) {
+    roomSystem.hostId = roomSystem.clientId;
+  }
+  const existing = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+  if (existing) {
+    existing.pseudo = pseudo;
+    if (typeof options.ready === "boolean") {
+      existing.ready = options.ready;
+    }
+  } else {
+    roomSystem.members.push({
+      clientId: roomSystem.clientId,
+      pseudo,
+      ready: Boolean(options.ready),
+      joinedAt: Date.now(),
+      isHost: roomSystem.hostId === roomSystem.clientId
+    });
+  }
+  roomSystem.members.forEach((m) => {
+    m.isHost = m.clientId === roomSystem.hostId;
+  });
+  ensurePlayerForPseudo(pseudo);
+}
+
+function buildFullRoomSnapshot() {
+  return {
+    roomCode: state.roomCode,
+    roomName: roomSystem.roomName || `Room ${state.roomCode}`,
+    hostId: roomSystem.hostId || roomSystem.clientId,
+    members: roomSystem.members,
+    messages: roomSystem.messages,
+    players: state.players,
+    nextPlayerId: state.nextPlayerId,
+    roundNumber: state.roundNumber,
+    currentTrackId: state.currentTrackId,
+    revealed: state.revealed,
+    playedIds: state.playedIds,
+    buzzes: state.buzzes,
+    updatedAt: Date.now()
+  };
+}
+
+async function pushSnapshotToFirebase(snapshot) {
+  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
+  if (!base || !snapshot || !snapshot.roomCode) return;
+  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(snapshot.roomCode)}.json`;
+  try {
+    await fetch(endpoint, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot)
+    });
+  } catch (_) {}
+}
+
+async function pullSnapshotFromFirebase() {
+  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
+  if (!base || !state.roomCode) return null;
+  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(state.roomCode)}.json`;
+  try {
+    const res = await fetch(endpoint, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveState(options = {}) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
+  } catch (_) {}
+
+  if (state.mode === "remote" && state.roomCode && !options.skipBroadcast) {
+    const snap = buildFullRoomSnapshot();
+    try {
+      localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(snap));
+    } catch (_) {}
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
+    }
+    pushSnapshotToFirebase(snap);
+  }
+}
+
+function renderRoomPanel() {
+  if (!roomRolePill) return;
+  const hostMode = isCurrentUserHost();
+  roomRolePill.textContent = hostMode ? "👑 Hôte de la room" : "👤 Joueur connecté";
+  roomRolePill.className = hostMode ? "room-role-pill host" : "room-role-pill";
+
+  const fbActive = Boolean(normalizeFirebaseBase(roomSystem.firebaseBaseUrl));
+  if (roomConnectionBadge) {
+    roomConnectionBadge.textContent = fbActive
+      ? "• Synchro Firebase active"
+      : "• Canal local / multi-onglets";
+  }
+
+  const selfMember = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+  if (toggleReadyBtn) {
+    const isReady = Boolean(selfMember && selfMember.ready);
+    toggleReadyBtn.textContent = isReady ? "✅ Prêt !" : "⏳ Se mettre prêt";
+  }
+
+  if (roomTitleDisplay) {
+    roomTitleDisplay.textContent = state.roomCode
+      ? `${roomSystem.roomName || "Room"} (${state.roomCode})`
+      : "Aucune room active";
+  }
+  if (roomCountLabel) {
+    roomCountLabel.textContent = `${roomSystem.members.length} joueur(s)`;
+  }
+
+  if (roomRosterList) {
+    if (!roomSystem.members.length) {
+      roomRosterList.innerHTML = `<div class="sync-note">Crée ou rejoins une room pour voir les joueurs connectés.</div>`;
+    } else {
+      roomRosterList.innerHTML = roomSystem.members
+        .map((m) => {
+          const canPromote = hostMode && m.clientId !== roomSystem.clientId;
+          return `
+            <div class="roster-item">
+              <span>${escapeHtml(m.pseudo)}</span>
+              <span class="roster-badges">
+                ${m.isHost ? `<span class="mini-tag host">👑 Hôte</span>` : `<span class="mini-tag">Joueur</span>`}
+                <span class="mini-tag ${m.ready ? "ready" : "not-ready"}">${m.ready ? "Prêt" : "En attente"}</span>
+                ${canPromote ? `<button type="button" class="ghost" style="padding:0.2rem 0.45rem;font-size:0.72rem;" onclick="promoteToHost('${escapeHtml(m.clientId)}')">Passer hôte</button>` : ""}
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  if (roomChatLog) {
+    if (!roomSystem.messages.length) {
+      roomChatLog.innerHTML = `<div class="sync-note">Aucun message dans la room pour l'instant.</div>`;
+    } else {
+      roomChatLog.innerHTML = roomSystem.messages
+        .map((msg) => {
+          if (msg.system) {
+            return `<div class="room-msg system">${escapeHtml(msg.text)}</div>`;
+          }
+          return `<div class="room-msg"><strong>${escapeHtml(msg.sender)} :</strong> ${escapeHtml(msg.text)}</div>`;
+        })
+        .join("");
+      roomChatLog.scrollTop = roomChatLog.scrollHeight;
+    }
+  }
+}
+
+window.promoteToHost = function (targetClientId) {
+  if (!isCurrentUserHost()) return;
+  roomSystem.hostId = targetClientId;
+  roomSystem.members.forEach((m) => {
+    m.isHost = m.clientId === roomSystem.hostId;
+  });
+  const target = roomSystem.members.find((m) => m.clientId === targetClientId);
+  appendRoomSystemMessage(`${target ? target.pseudo : "Un joueur"} est maintenant hôte de la room.`);
+  saveState();
+  renderRoomPanel();
+};
+
 function renderBuzzUI() {
+  if (!buzzPanel) return;
   if (state.mode !== "remote") {
     buzzPanel.style.display = "none";
     return;
@@ -169,8 +380,18 @@ function renderBuzzUI() {
 
 function applyRemotePayload(payload) {
   if (!payload || payload.roomCode !== state.roomCode) return;
+  if ((payload.updatedAt || 0) <= (roomSystem.updatedAt || 0) && payload.updatedAt !== 0) {
+    // Allow initial sync even if timestamps match
+  }
+
   const trackChanged = payload.currentTrackId && payload.currentTrackId !== state.currentTrackId;
   const revealChanged = payload.revealed !== state.revealed;
+
+  if (payload.roomName) roomSystem.roomName = payload.roomName;
+  if (payload.hostId) roomSystem.hostId = payload.hostId;
+  if (Array.isArray(payload.members)) roomSystem.members = payload.members;
+  if (Array.isArray(payload.messages)) roomSystem.messages = payload.messages;
+  if (payload.updatedAt) roomSystem.updatedAt = payload.updatedAt;
 
   state.players = Array.isArray(payload.players) && payload.players.length ? payload.players : state.players;
   state.nextPlayerId = payload.nextPlayerId || state.nextPlayerId;
@@ -180,9 +401,11 @@ function applyRemotePayload(payload) {
   state.playedIds = Array.isArray(payload.playedIds) ? payload.playedIds : state.playedIds;
   state.buzzes = Array.isArray(payload.buzzes) ? payload.buzzes : [];
 
+  saveState({ skipBroadcast: true });
   renderPlayers();
   renderList();
   renderBuzzUI();
+  renderRoomPanel();
 
   const currentTrack = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
   if (currentTrack) {
@@ -204,6 +427,10 @@ function startRoomListeners() {
     clearInterval(roomPollTimer);
     roomPollTimer = null;
   }
+  if (firebasePollTimer) {
+    clearInterval(firebasePollTimer);
+    firebasePollTimer = null;
+  }
 
   if (state.mode !== "remote" || !state.roomCode) return;
 
@@ -221,11 +448,22 @@ function startRoomListeners() {
       const raw = localStorage.getItem(roomStorageKey(state.roomCode));
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.updatedAt) {
+      if (parsed && parsed.updatedAt && parsed.updatedAt > roomSystem.updatedAt) {
         applyRemotePayload(parsed);
       }
     } catch (_) {}
   }, 800);
+
+  if (normalizeFirebaseBase(roomSystem.firebaseBaseUrl)) {
+    firebasePollTimer = setInterval(async () => {
+      if (state.mode === "remote" && state.roomCode) {
+        const snap = await pullSnapshotFromFirebase();
+        if (snap && snap.updatedAt && snap.updatedAt > roomSystem.updatedAt) {
+          applyRemotePayload(snap);
+        }
+      }
+    }, 1600);
+  }
 }
 
 function setMode(newMode) {
@@ -233,63 +471,109 @@ function setMode(newMode) {
   if (newMode === "remote") {
     if (!state.roomCode) {
       state.roomCode = generateRoomCode();
+      roomSystem.hostId = roomSystem.clientId;
+      roomSystem.roomName = (roomNameInput && roomNameInput.value.trim()) || `Room ${state.roomCode}`;
+      roomSystem.members = [];
+      roomSystem.messages = [];
+      upsertSelfInRoom({ asHost: true, ready: true });
+      appendRoomSystemMessage(`${currentPseudo()} a ouvert la room "${roomSystem.roomName}".`);
+    } else {
+      upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
     }
     tabLocal.classList.remove("active");
     tabRemote.classList.add("active");
     remoteBox.style.display = "flex";
-    syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
-    roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+    roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+    syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
     startRoomListeners();
+    saveState();
   } else {
     tabRemote.classList.remove("active");
     tabLocal.classList.add("active");
     remoteBox.style.display = "none";
     syncStatus.textContent = "Mode Local actif";
-    if (roomPollTimer) clearInterval(roomPollTimer);
+    if (roomPollTimer) {
+      clearInterval(roomPollTimer);
+      roomPollTimer = null;
+    }
+    if (firebasePollTimer) {
+      clearInterval(firebasePollTimer);
+      firebasePollTimer = null;
+    }
+    saveState({ skipBroadcast: true });
   }
+  renderPlayers();
   renderBuzzUI();
-  saveState();
+  renderRoomPanel();
 }
 
 tabLocal.addEventListener("click", () => setMode("local"));
 tabRemote.addEventListener("click", () => setMode("remote"));
 
 createRoomBtn.addEventListener("click", () => {
+  state.mode = "remote";
+  tabLocal.classList.remove("active");
+  tabRemote.classList.add("active");
+  remoteBox.style.display = "flex";
+
   state.roomCode = generateRoomCode();
-  const pseudo = remotePseudoInput.value.trim();
-  if (pseudo) {
-    state.remotePseudo = pseudo;
-    ensurePlayerForPseudo(pseudo);
-  }
-  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
-  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+  const customName = (roomNameInput && roomNameInput.value.trim()) || "";
+  roomSystem.roomName = customName || `Room ${state.roomCode}`;
+  roomSystem.hostId = roomSystem.clientId;
+  roomSystem.members = [];
+  roomSystem.messages = [];
+  roomSystem.updatedAt = Date.now();
+
+  upsertSelfInRoom({ asHost: true, ready: true });
+  appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
+
+  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+  syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
   startRoomListeners();
   saveState();
   renderPlayers();
   renderBuzzUI();
+  renderRoomPanel();
 });
 
-joinRoomBtn.addEventListener("click", () => {
+joinRoomBtn.addEventListener("click", async () => {
   const code = joinRoomInput.value.trim().toUpperCase();
   if (!code) return;
+
+  state.mode = "remote";
+  tabLocal.classList.remove("active");
+  tabRemote.classList.add("active");
+  remoteBox.style.display = "flex";
+
   state.roomCode = code;
-  const pseudo = remotePseudoInput.value.trim() || "Joueur distant";
-  state.remotePseudo = pseudo;
-  ensurePlayerForPseudo(pseudo);
-  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
-  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
+  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
+  syncStatus.textContent = `Mode Multi • Room ${state.roomCode}`;
   startRoomListeners();
 
+  let loaded = null;
   try {
-    const existing = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
-    if (existing) {
-      applyRemotePayload(existing);
-    }
+    loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
   } catch (_) {}
 
+  const fbSnap = await pullSnapshotFromFirebase();
+  if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) > (loaded.updatedAt || 0))) {
+    loaded = fbSnap;
+  }
+
+  if (loaded) {
+    applyRemotePayload(loaded);
+  } else {
+    roomSystem.hostId = roomSystem.clientId;
+    roomSystem.roomName = `Room ${code}`;
+  }
+
+  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
+  appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
   renderBuzzUI();
+  renderRoomPanel();
 });
 
 copyInviteBtn.addEventListener("click", async () => {
@@ -298,16 +582,97 @@ copyInviteBtn.addEventListener("click", async () => {
   const inviteUrl = `${baseUrl}?room=${encodeURIComponent(state.roomCode)}`;
   try {
     await navigator.clipboard.writeText(inviteUrl);
-    syncStatus.textContent = `Lien copié pour le salon ${state.roomCode} !`;
+    syncStatus.textContent = `Lien d'invitation copié (${state.roomCode}) !`;
   } catch (_) {
-    syncStatus.textContent = `Code salon : ${state.roomCode}`;
+    syncStatus.textContent = `Code room : ${state.roomCode}`;
   }
 });
 
+if (toggleReadyBtn) {
+  toggleReadyBtn.addEventListener("click", () => {
+    if (!state.roomCode) return;
+    upsertSelfInRoom();
+    const me = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
+    if (me) {
+      me.ready = !me.ready;
+      appendRoomSystemMessage(`${me.pseudo} est ${me.ready ? "prêt" : "en attente"}.`);
+    }
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderRoomPanel();
+  });
+}
+
+if (leaveRoomBtn) {
+  leaveRoomBtn.addEventListener("click", () => {
+    if (!state.roomCode) return;
+    const pseudo = currentPseudo();
+    appendRoomSystemMessage(`${pseudo} a quitté la room.`);
+    roomSystem.members = roomSystem.members.filter((m) => m.clientId !== roomSystem.clientId);
+    if (roomSystem.hostId === roomSystem.clientId && roomSystem.members.length > 0) {
+      roomSystem.hostId = roomSystem.members[0].clientId;
+      roomSystem.members.forEach((m) => {
+        m.isHost = m.clientId === roomSystem.hostId;
+      });
+      appendRoomSystemMessage(`${roomSystem.members[0].pseudo} devient le nouvel hôte.`);
+    }
+    roomSystem.updatedAt = Date.now();
+    saveState();
+
+    state.roomCode = "";
+    roomCodeBadge.textContent = "ROOM : ------";
+    syncStatus.textContent = "Mode Multi • Hors room";
+    saveState({ skipBroadcast: true });
+    renderRoomPanel();
+  });
+}
+
+if (roomChatForm) {
+  roomChatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!state.roomCode) return;
+    const text = (roomChatInput && roomChatInput.value.trim()) || "";
+    if (!text) return;
+    upsertSelfInRoom();
+    roomSystem.messages.push({
+      id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      sender: currentPseudo(),
+      text,
+      ts: Date.now(),
+      system: false
+    });
+    if (roomSystem.messages.length > 60) {
+      roomSystem.messages = roomSystem.messages.slice(-60);
+    }
+    roomChatInput.value = "";
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderRoomPanel();
+  });
+}
+
+if (saveFirebaseBtn) {
+  saveFirebaseBtn.addEventListener("click", async () => {
+    const clean = normalizeFirebaseBase(firebaseUrlInput && firebaseUrlInput.value);
+    roomSystem.firebaseBaseUrl = clean;
+    saveState({ skipBroadcast: true });
+    startRoomListeners();
+    renderRoomPanel();
+    if (clean && state.roomCode) {
+      const remoteSnap = await pullSnapshotFromFirebase();
+      if (remoteSnap && (remoteSnap.updatedAt || 0) > (roomSystem.updatedAt || 0)) {
+        applyRemotePayload(remoteSnap);
+      } else {
+        roomSystem.updatedAt = Date.now();
+        saveState();
+      }
+    }
+  });
+}
+
 buzzBtn.addEventListener("click", () => {
   if (!state.currentTrackId) return;
-  const pseudo = remotePseudoInput.value.trim() || state.remotePseudo || "Joueur distant";
-  state.remotePseudo = pseudo;
+  const pseudo = currentPseudo();
   ensurePlayerForPseudo(pseudo);
 
   const now = new Date();
@@ -316,6 +681,7 @@ buzzBtn.addEventListener("click", () => {
   if (!state.buzzes.some((b) => b.pseudo.toLowerCase() === pseudo.toLowerCase())) {
     state.buzzes.push({ pseudo, at: Date.now(), label });
   }
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
   renderBuzzUI();
@@ -323,13 +689,14 @@ buzzBtn.addEventListener("click", () => {
 
 clearBuzzBtn.addEventListener("click", () => {
   state.buzzes = [];
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderBuzzUI();
 });
 
 function makeFallbackArtwork(track) {
-  const title = encodeURIComponent(track.film.slice(0, 26));
-  const year = encodeURIComponent(String(track.annee));
+  const title = encodeURIComponent(String(track.film || "Disney").slice(0, 26));
+  const year = encodeURIComponent(String(track.annee || 2026));
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'>
     <defs>
       <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
@@ -453,6 +820,7 @@ window.addPoints = function (playerId, delta) {
   const p = state.players.find((pl) => pl.id === playerId);
   if (!p) return;
   p.score = Math.max(0, p.score + delta);
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
 };
@@ -460,6 +828,7 @@ window.addPoints = function (playerId, delta) {
 window.removePlayer = function (playerId) {
   if (state.players.length <= 1) return;
   state.players = state.players.filter((pl) => pl.id !== playerId);
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
 };
@@ -523,6 +892,7 @@ async function loadAndPlayTrack(track, options = {}) {
     if (!state.playedIds.includes(track.id)) {
       state.playedIds.push(track.id);
     }
+    roomSystem.updatedAt = Date.now();
     saveState();
   }
 
@@ -650,6 +1020,7 @@ revealBtn.addEventListener("click", () => {
   const track = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
   if (!track) return;
   state.revealed = !state.revealed;
+  roomSystem.updatedAt = Date.now();
   saveState();
   updateStageRevealUI(track);
 });
@@ -737,6 +1108,7 @@ addPlayerBtn.addEventListener("click", () => {
   if (!name) return;
   state.players.push({ id: state.nextPlayerId++, name, score: 0 });
   playerNameInput.value = "";
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
 });
@@ -747,6 +1119,7 @@ playerNameInput.addEventListener("keydown", (e) => {
 
 resetScoresBtn.addEventListener("click", () => {
   state.players.forEach((p) => (p.score = 0));
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderPlayers();
 });
@@ -754,6 +1127,7 @@ resetScoresBtn.addEventListener("click", () => {
 resetPlayedBtn.addEventListener("click", () => {
   state.playedIds = [];
   state.roundNumber = 0;
+  roomSystem.updatedAt = Date.now();
   saveState();
   renderList();
 });
@@ -761,11 +1135,17 @@ resetPlayedBtn.addEventListener("click", () => {
 searchInput.addEventListener("input", renderList);
 typeFilter.addEventListener("change", renderList);
 
-if (state.remotePseudo) {
+if (state.remotePseudo && remotePseudoInput) {
   remotePseudoInput.value = state.remotePseudo;
 }
-if (state.roomCode) {
-  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
+if (roomNameInput && roomSystem.roomName) {
+  roomNameInput.value = roomSystem.roomName;
+}
+if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
+  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
+}
+if (state.roomCode && roomCodeBadge) {
+  roomCodeBadge.textContent = `ROOM : ${state.roomCode}`;
 }
 
 coverImg.src = makeFallbackArtwork({ film: "Royaumes des Mélodies", annee: 2026 });
@@ -773,396 +1153,208 @@ setMode(state.mode === "remote" ? "remote" : "local");
 renderPlayers();
 renderList();
 renderBuzzUI();
-
-
-// =========================================================
-// SYSTÈME DE ROOMS (Hôte, Joueurs, Prêt, Chat, URL & Firebase)
-// =========================================================
-const ROOM_META_KEY = "royaumes_room_system_v1";
-
-let roomSystem = {
-  clientId: "",
-  roomName: "Salon Royal Disney",
-  hostId: "",
-  firebaseBaseUrl: "",
-  members: [], // { clientId, pseudo, ready, joinedAt, isHost }
-  messages: [], // { id, sender, text, ts, system }
-  lastAction: null // { type, payload, ts }
-};
-
-try {
-  const savedRoomSys = JSON.parse(localStorage.getItem(ROOM_META_KEY) || "null");
-  if (savedRoomSys && typeof savedRoomSys === "object") {
-    roomSystem = { ...roomSystem, ...savedRoomSys };
-  }
-} catch (_) {}
-
-if (!roomSystem.clientId) {
-  roomSystem.clientId = "cli_" + Math.random().toString(36).slice(2, 10);
-}
-
-const roomRolePill = document.getElementById("roomRolePill");
-const roomConnectionBadge = document.getElementById("roomConnectionBadge");
-const toggleReadyBtn = document.getElementById("toggleReadyBtn");
-const leaveRoomBtn = document.getElementById("leaveRoomBtn");
-const roomNameInput = document.getElementById("roomNameInput");
-const roomTitleDisplay = document.getElementById("roomTitleDisplay");
-const roomCountLabel = document.getElementById("roomCountLabel");
-const roomRosterList = document.getElementById("roomRosterList");
-const roomChatLog = document.getElementById("roomChatLog");
-const roomChatForm = document.getElementById("roomChatForm");
-const roomChatInput = document.getElementById("roomChatInput");
-const firebaseUrlInput = document.getElementById("firebaseUrlInput");
-const saveFirebaseBtn = document.getElementById("saveFirebaseBtn");
-
-function normalizeFirebaseBase(raw) {
-  const trimmed = String(raw || "").trim().replace(/\/+$/, "");
-  if (!trimmed) return "";
-  if (!/^https?:\/\//i.test(trimmed)) return "";
-  return trimmed;
-}
-
-function isCurrentUserHost() {
-  if (!state.roomCode) return true;
-  if (!roomSystem.hostId) return true;
-  return roomSystem.hostId === roomSystem.clientId;
-}
-
-function currentPseudo() {
-  const typed = (remotePseudoInput && remotePseudoInput.value.trim()) || "";
-  if (typed) {
-    state.remotePseudo = typed;
-  }
-  if (!state.remotePseudo) {
-    state.remotePseudo = "Joueur_" + roomSystem.clientId.slice(-4);
-  }
-  return state.remotePseudo;
-}
-
-function appendRoomSystemMessage(text) {
-  roomSystem.messages.push({
-    id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-    sender: "Système",
-    text,
-    ts: Date.now(),
-    system: true
-  });
-  if (roomSystem.messages.length > 60) {
-    roomSystem.messages = roomSystem.messages.slice(-60);
-  }
-}
-
-function upsertSelfInRoom(options = {}) {
-  if (!state.roomCode) return;
-  const pseudo = currentPseudo();
-  if (!roomSystem.hostId && options.asHost) {
-    roomSystem.hostId = roomSystem.clientId;
-  }
-  const existing = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
-  if (existing) {
-    existing.pseudo = pseudo;
-    existing.isHost = roomSystem.hostId === roomSystem.clientId;
-    if (typeof options.ready === "boolean") {
-      existing.ready = options.ready;
-    }
-  } else {
-    roomSystem.members.push({
-      clientId: roomSystem.clientId,
-      pseudo,
-      ready: Boolean(options.ready),
-      joinedAt: Date.now(),
-      isHost: roomSystem.hostId === roomSystem.clientId
-    });
-  }
-  roomSystem.members.forEach((m) => {
-    m.isHost = m.clientId === roomSystem.hostId;
-  });
-  ensurePlayerForPseudo(pseudo);
-}
-
-function buildFullRoomSnapshot() {
-  return {
-    roomCode: state.roomCode,
-    roomName: roomSystem.roomName || `Room ${state.roomCode}`,
-    hostId: roomSystem.hostId || roomSystem.clientId,
-    members: roomSystem.members,
-    messages: roomSystem.messages,
-    players: state.players,
-    nextPlayerId: state.nextPlayerId,
-    roundNumber: state.roundNumber,
-    currentTrackId: state.currentTrackId,
-    revealed: state.revealed,
-    playedIds: state.playedIds,
-    buzzes: state.buzzes,
-    updatedAt: Date.now()
-  };
-}
-
-async function pushSnapshotToFirebase(snapshot) {
-  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
-  if (!base || !snapshot || !snapshot.roomCode) return;
-  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(snapshot.roomCode)}.json`;
-  try {
-    await fetch(endpoint, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(snapshot)
-    });
-  } catch (_) {}
-}
-
-async function pullSnapshotFromFirebase() {
-  const base = normalizeFirebaseBase(roomSystem.firebaseBaseUrl);
-  if (!base || !state.roomCode) return null;
-  const endpoint = `${base}/royaumes_rooms/${encodeURIComponent(state.roomCode)}.json`;
-  try {
-    const res = await fetch(endpoint, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (_) {
-    return null;
-  }
-}
-
-function renderRoomPanel() {
-  if (!roomRolePill) return;
-  const hostMode = isCurrentUserHost();
-  roomRolePill.textContent = hostMode ? "👑 Hôte de la room" : "👤 Joueur connecté";
-  roomRolePill.className = hostMode ? "room-role-pill host" : "room-role-pill";
-
-  const fbActive = Boolean(normalizeFirebaseBase(roomSystem.firebaseBaseUrl));
-  roomConnectionBadge.textContent = fbActive
-    ? "• Synchro Firebase active"
-    : "• Synchro locale / multi-onglets";
-
-  const selfMember = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
-  if (toggleReadyBtn) {
-    const isReady = Boolean(selfMember && selfMember.ready);
-    toggleReadyBtn.textContent = isReady ? "✅ Prêt !" : "⏳ Se mettre prêt";
-  }
-
-  if (roomTitleDisplay) {
-    roomTitleDisplay.textContent = state.roomCode
-      ? `${roomSystem.roomName || "Room"} (${state.roomCode})`
-      : "Aucune room active";
-  }
-  if (roomCountLabel) {
-    roomCountLabel.textContent = `${roomSystem.members.length} joueur(s)`;
-  }
-
-  if (roomRosterList) {
-    if (!roomSystem.members.length) {
-      roomRosterList.innerHTML = `<div class="sync-note">Crée ou rejoins une room pour voir les joueurs connectés.</div>`;
-    } else {
-      roomRosterList.innerHTML = roomSystem.members
-        .map((m) => {
-          const canPromote = hostMode && m.clientId !== roomSystem.clientId;
-          return `
-            <div class="roster-item">
-              <span>${escapeHtml(m.pseudo)}</span>
-              <span class="roster-badges">
-                ${m.isHost ? `<span class="mini-tag host">👑 Hôte</span>` : `<span class="mini-tag">Joueur</span>`}
-                <span class="mini-tag ${m.ready ? "ready" : "not-ready"}">${m.ready ? "Prêt" : "En attente"}</span>
-                ${canPromote ? `<button type="button" class="ghost" style="padding:0.2rem 0.45rem;font-size:0.72rem;" onclick="promoteToHost('${escapeHtml(m.clientId)}')">Passer hôte</button>` : ""}
-              </span>
-            </div>
-          `;
-        })
-        .join("");
-    }
-  }
-
-  if (roomChatLog) {
-    if (!roomSystem.messages.length) {
-      roomChatLog.innerHTML = `<div class="sync-note">Aucun message dans la room pour l'instant.</div>`;
-    } else {
-      roomChatLog.innerHTML = roomSystem.messages
-        .map((msg) => {
-          if (msg.system) {
-            return `<div class="room-msg system">${escapeHtml(msg.text)}</div>`;
-          }
-          return `<div class="room-msg"><strong>${escapeHtml(msg.sender)} :</strong> ${escapeHtml(msg.text)}</div>`;
-        })
-        .join("");
-      roomChatLog.scrollTop = roomChatLog.scrollHeight;
-    }
-  }
-}
-
-window.promoteToHost = function (targetClientId) {
-  if (!isCurrentUserHost()) return;
-  roomSystem.hostId = targetClientId;
-  const target = roomSystem.members.find((m) => m.clientId === targetClientId);
-  appendRoomSystemMessage(`${target ? target.pseudo : "Un joueur"} est maintenant hôte de la room.`);
-  syncRoomNow();
-};
-
-function syncRoomNow() {
-  try {
-    localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
-  } catch (_) {}
-
-  saveState();
-  renderRoomPanel();
-
-  if (state.mode === "remote" && state.roomCode) {
-    const snap = buildFullRoomSnapshot();
-    try {
-      localStorage.setItem(roomStorageKey(state.roomCode), JSON.stringify(snap));
-    } catch (_) {}
-    if (broadcastChannel) {
-      broadcastChannel.postMessage({ type: "ROOM_SYNC", payload: snap });
-    }
-    pushSnapshotToFirebase(snap);
-  }
-}
-
-const origApplyRemotePayload = applyRemotePayload;
-applyRemotePayload = function (payload) {
-  if (!payload || payload.roomCode !== state.roomCode) return;
-  if (payload.roomName) roomSystem.roomName = payload.roomName;
-  if (payload.hostId) roomSystem.hostId = payload.hostId;
-  if (Array.isArray(payload.members)) roomSystem.members = payload.members;
-  if (Array.isArray(payload.messages)) roomSystem.messages = payload.messages;
-
-  origApplyRemotePayload(payload);
-  renderRoomPanel();
-};
-
-const origCreateClick = createRoomBtn.onclick;
-createRoomBtn.addEventListener("click", () => {
-  const customName = (roomNameInput && roomNameInput.value.trim()) || "";
-  roomSystem.roomName = customName || `Room ${state.roomCode}`;
-  roomSystem.hostId = roomSystem.clientId;
-  roomSystem.members = [];
-  roomSystem.messages = [];
-  upsertSelfInRoom({ asHost: true, ready: true });
-  appendRoomSystemMessage(`${currentPseudo()} a créé la room "${roomSystem.roomName}".`);
-  syncRoomNow();
-});
-
-joinRoomBtn.addEventListener("click", async () => {
-  const code = joinRoomInput.value.trim().toUpperCase();
-  if (!code) return;
-  state.roomCode = code;
-  roomCodeBadge.textContent = `SALON : ${state.roomCode}`;
-  syncStatus.textContent = `Mode Multi • Salon ${state.roomCode}`;
-  startRoomListeners();
-
-  let loaded = null;
-  try {
-    loaded = JSON.parse(localStorage.getItem(roomStorageKey(code)) || "null");
-  } catch (_) {}
-
-  const fbSnap = await pullSnapshotFromFirebase();
-  if (fbSnap && (!loaded || (fbSnap.updatedAt || 0) > (loaded.updatedAt || 0))) {
-    loaded = fbSnap;
-  }
-
-  if (loaded) {
-    applyRemotePayload(loaded);
-  } else {
-    roomSystem.hostId = roomSystem.clientId;
-    roomSystem.roomName = `Room ${code}`;
-  }
-
-  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-  appendRoomSystemMessage(`${currentPseudo()} a rejoint la room.`);
-  syncRoomNow();
-});
-
-if (toggleReadyBtn) {
-  toggleReadyBtn.addEventListener("click", () => {
-    if (!state.roomCode) return;
-    upsertSelfInRoom();
-    const me = roomSystem.members.find((m) => m.clientId === roomSystem.clientId);
-    if (me) {
-      me.ready = !me.ready;
-      appendRoomSystemMessage(`${me.pseudo} est ${me.ready ? "prêt" : "en attente"}.`);
-    }
-    syncRoomNow();
-  });
-}
-
-if (leaveRoomBtn) {
-  leaveRoomBtn.addEventListener("click", () => {
-    if (!state.roomCode) return;
-    const pseudo = currentPseudo();
-    appendRoomSystemMessage(`${pseudo} a quitté la room.`);
-    roomSystem.members = roomSystem.members.filter((m) => m.clientId !== roomSystem.clientId);
-    if (roomSystem.hostId === roomSystem.clientId && roomSystem.members.length > 0) {
-      roomSystem.hostId = roomSystem.members[0].clientId;
-      appendRoomSystemMessage(`${roomSystem.members[0].pseudo} devient le nouvel hôte.`);
-    }
-    syncRoomNow();
-    state.roomCode = "";
-    roomCodeBadge.textContent = "ROOM : ------";
-    syncStatus.textContent = "Mode Multi • Hors room";
-    saveState();
-    renderRoomPanel();
-  });
-}
-
-if (roomChatForm) {
-  roomChatForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (!state.roomCode) return;
-    const text = (roomChatInput && roomChatInput.value.trim()) || "";
-    if (!text) return;
-    upsertSelfInRoom();
-    roomSystem.messages.push({
-      id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-      sender: currentPseudo(),
-      text,
-      ts: Date.now(),
-      system: false
-    });
-    if (roomSystem.messages.length > 60) {
-      roomSystem.messages = roomSystem.messages.slice(-60);
-    }
-    roomChatInput.value = "";
-    syncRoomNow();
-  });
-}
-
-if (saveFirebaseBtn) {
-  saveFirebaseBtn.addEventListener("click", async () => {
-    const clean = normalizeFirebaseBase(firebaseUrlInput && firebaseUrlInput.value);
-    roomSystem.firebaseBaseUrl = clean;
-    try {
-      localStorage.setItem(ROOM_META_KEY, JSON.stringify(roomSystem));
-    } catch (_) {}
-    renderRoomPanel();
-    if (clean && state.roomCode) {
-      const remoteSnap = await pullSnapshotFromFirebase();
-      if (remoteSnap && (remoteSnap.updatedAt || 0) > Date.now() - 86400000) {
-        applyRemotePayload(remoteSnap);
-      } else {
-        syncRoomNow();
-      }
-    }
-  });
-}
-
-if (roomNameInput && roomSystem.roomName) {
-  roomNameInput.value = roomSystem.roomName;
-}
-if (firebaseUrlInput && roomSystem.firebaseBaseUrl) {
-  firebaseUrlInput.value = roomSystem.firebaseBaseUrl;
-}
-
-if (state.roomCode) {
-  upsertSelfInRoom({ asHost: !roomSystem.hostId, ready: false });
-  if (normalizeFirebaseBase(roomSystem.firebaseBaseUrl)) {
-    setInterval(async () => {
-      if (state.mode === "remote" && state.roomCode) {
-        const snap = await pullSnapshotFromFirebase();
-        if (snap && snap.updatedAt) {
-          applyRemotePayload(snap);
-        }
-      }
-    }, 1500);
-  }
-}
-
 renderRoomPanel();
+
+
+// =========================================================
+// ONGLET RÉPONSE (TITRE + DISNEY + POINTS + HISTORIQUE MANCHE)
+// =========================================================
+const tabGuessAnswer = document.getElementById("tabGuessAnswer");
+const tabRoundFeed = document.getElementById("tabRoundFeed");
+const guessFormView = document.getElementById("guessFormView");
+const roundFeedView = document.getElementById("roundFeedView");
+const guessAnswerForm = document.getElementById("guessAnswerForm");
+const guessTitleInput = document.getElementById("guessTitleInput");
+const guessFilmInput = document.getElementById("guessFilmInput");
+const guessFeedback = document.getElementById("guessFeedback");
+const roundAnswersList = document.getElementById("roundAnswersList");
+
+if (!Array.isArray(state.roundGuesses)) {
+  state.roundGuesses = [];
+}
+
+function normalizeAnswer(str) {
+  return String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isTitleMatch(inputVal, track) {
+  const clean = normalizeAnswer(inputVal);
+  if (!clean) return false;
+  const fr = normalizeAnswer(track.titre_fr);
+  const en = normalizeAnswer(track.titre_en);
+  return (
+    clean === fr ||
+    clean === en ||
+    (clean.length >= 4 && (fr.includes(clean) || en.includes(clean)))
+  );
+}
+
+function isFilmMatch(inputVal, track) {
+  const clean = normalizeAnswer(inputVal);
+  if (!clean) return false;
+  const film = normalizeAnswer(track.film);
+  const filmNoParen = normalizeAnswer(String(track.film || "").replace(/\([^)]*\)/g, ""));
+  return (
+    clean === film ||
+    clean === filmNoParen ||
+    (clean.length >= 3 && (film.includes(clean) || filmNoParen.includes(clean)))
+  );
+}
+
+function renderRoundGuesses() {
+  if (!roundAnswersList) return;
+  if (!state.roundGuesses.length) {
+    roundAnswersList.innerHTML = `<div class="sync-note">Aucune proposition enregistrée sur cette manche pour l'instant.</div>`;
+    return;
+  }
+  roundAnswersList.innerHTML = state.roundGuesses
+    .map(
+      (g) => `
+      <div class="round-answer-item">
+        <span>
+          <strong>${escapeHtml(g.playerName)}</strong> :
+          Titre « ${escapeHtml(g.titleGuess || "—")} » • Disney « ${escapeHtml(g.filmGuess || "—")} »
+        </span>
+        <span class="mini-tag ${g.pointsEarned > 0 ? "ready" : "not-ready"}">+${g.pointsEarned} pt(s)</span>
+      </div>
+    `
+    )
+    .join("");
+}
+
+if (tabGuessAnswer && tabRoundFeed) {
+  tabGuessAnswer.addEventListener("click", () => {
+    tabGuessAnswer.classList.add("active");
+    tabRoundFeed.classList.remove("active");
+    guessFormView.style.display = "block";
+    roundFeedView.style.display = "none";
+  });
+
+  tabRoundFeed.addEventListener("click", () => {
+    tabRoundFeed.classList.add("active");
+    tabGuessAnswer.classList.remove("active");
+    roundFeedView.style.display = "block";
+    guessFormView.style.display = "none";
+    renderRoundGuesses();
+  });
+}
+
+if (guessAnswerForm) {
+  guessAnswerForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const track = DISNEY_TRACKS.find((t) => t.id === state.currentTrackId);
+    if (!track) {
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback";
+        guessFeedback.textContent = "Lance d'abord une manche pour proposer un titre et un Disney.";
+      }
+      return;
+    }
+
+    const titleVal = (guessTitleInput && guessTitleInput.value.trim()) || "";
+    const filmVal = (guessFilmInput && guessFilmInput.value.trim()) || "";
+    if (!titleVal && !filmVal) {
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback";
+        guessFeedback.textContent = "Écris au moins le titre ou le Disney avant de valider.";
+      }
+      return;
+    }
+
+    const activePlayerName =
+      state.mode === "remote"
+        ? currentPseudo()
+        : (state.players[0] && state.players[0].name) || "Joueur 1";
+
+    ensurePlayerForPseudo(activePlayerName);
+    const targetPlayer =
+      state.players.find((p) => p.name.toLowerCase() === activePlayerName.toLowerCase()) ||
+      state.players[0];
+
+    const titleOk = isTitleMatch(titleVal, track);
+    const filmOk = isFilmMatch(filmVal, track);
+    const earned = (titleOk ? 1 : 0) + (filmOk ? 1 : 0);
+
+    if (targetPlayer && earned > 0) {
+      targetPlayer.score += earned;
+    }
+
+    state.roundGuesses.push({
+      playerName: activePlayerName,
+      titleGuess: titleVal,
+      filmGuess: filmVal,
+      titleOk,
+      filmOk,
+      pointsEarned: earned,
+      ts: Date.now()
+    });
+
+    if (earned === 2) {
+      state.revealed = true;
+      updateStageRevealUI(track);
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback ok";
+        guessFeedback.textContent = `🎉 Parfait ! ${activePlayerName} trouve le titre ET le Disney (+2 pts) : ${track.titre_fr} — ${track.film}.`;
+      }
+    } else if (titleOk) {
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback partial";
+        guessFeedback.textContent = `🎵 Titre exact (+1 pt) pour ${activePlayerName} ! Quel est le Disney ?`;
+      }
+    } else if (filmOk) {
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback partial";
+        guessFeedback.textContent = `🎬 Disney exact (+1 pt) pour ${activePlayerName} ! Quel est le titre de la chanson ?`;
+      }
+    } else {
+      if (guessFeedback) {
+        guessFeedback.className = "guess-feedback";
+        guessFeedback.textContent = `❌ Pas tout à fait pour ${activePlayerName} (+0 pt). Essaie encore ou révèle la réponse !`;
+      }
+    }
+
+    if (guessTitleInput) guessTitleInput.value = "";
+    if (guessFilmInput) guessFilmInput.value = "";
+
+    roomSystem.updatedAt = Date.now();
+    saveState();
+    renderPlayers();
+    renderRoundGuesses();
+  });
+}
+
+const origLoadAndPlayTrackForGuesses = loadAndPlayTrack;
+loadAndPlayTrack = async function (track, options = {}) {
+  if (!options.fromRemoteSync) {
+    state.roundGuesses = [];
+    if (guessFeedback) {
+      guessFeedback.className = "guess-feedback";
+      guessFeedback.textContent = "";
+    }
+  }
+  await origLoadAndPlayTrackForGuesses(track, options);
+  renderRoundGuesses();
+};
+
+const origApplyRemotePayloadForGuesses = applyRemotePayload;
+applyRemotePayload = function (payload) {
+  if (payload && Array.isArray(payload.roundGuesses)) {
+    state.roundGuesses = payload.roundGuesses;
+  }
+  origApplyRemotePayloadForGuesses(payload);
+  renderRoundGuesses();
+};
+
+const origBuildFullRoomSnapshotForGuesses = buildFullRoomSnapshot;
+buildFullRoomSnapshot = function () {
+  const snap = origBuildFullRoomSnapshotForGuesses();
+  snap.roundGuesses = state.roundGuesses || [];
+  return snap;
+};
+
+renderRoundGuesses();

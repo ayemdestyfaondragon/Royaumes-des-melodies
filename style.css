@@ -819,3 +819,93 @@ button.ghost:hover {
   flex-direction: column;
   gap: 0.55rem;
 }
+
+
+/* Onglet Réponse (Titre & Disney) */
+.answer-panel {
+  background: #090e1f;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.answer-tabs-bar {
+  display: inline-flex;
+  background: #050814;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 0.22rem;
+  gap: 0.25rem;
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.answer-tab {
+  background: transparent;
+  color: var(--muted);
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.answer-tab.active {
+  background: linear-gradient(135deg, #38bdf8, #7c3aed);
+  color: #fff;
+}
+
+.guess-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.55rem;
+}
+
+@media (max-width: 720px) {
+  .guess-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.guess-form input {
+  padding: 0.58rem 0.78rem;
+  font-size: 0.88rem;
+  min-width: 0;
+}
+
+.guess-feedback {
+  margin-top: 0.55rem;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--gold-light);
+}
+
+.guess-feedback.ok {
+  color: var(--ok);
+}
+
+.guess-feedback.partial {
+  color: var(--blue);
+}
+
+.round-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.round-answer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(22, 33, 62, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.83rem;
+  flex-wrap: wrap;
+}

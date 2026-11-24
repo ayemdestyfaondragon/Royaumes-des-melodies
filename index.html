@@ -140,7 +140,29 @@
             </a>
           </div>
 
-          <div id="buzzPanel" class="buzz-panel" style="display:none;">
+          <div id="answerTabPanel" class="answer-panel">
+            <div class="answer-tabs-bar" role="tablist">
+              <button type="button" class="answer-tab active" id="tabGuessAnswer">🎯 Onglet Réponse (Titre &amp; Disney)</button>
+              <button type="button" class="answer-tab" id="tabRoundFeed">📜 Propositions de la manche</button>
+            </div>
+
+            <div id="guessFormView" class="answer-tab-content">
+              <form id="guessAnswerForm" class="guess-form">
+                <input type="text" id="guessTitleInput" placeholder="Titre de la chanson (FR ou EN)..." autocomplete="off" />
+                <input type="text" id="guessFilmInput" placeholder="Film / Série Disney..." autocomplete="off" />
+                <button type="submit" class="gold" id="submitGuessBtn">✅ Valider la réponse</button>
+              </form>
+              <div id="guessFeedback" class="guess-feedback" aria-live="polite"></div>
+            </div>
+
+            <div id="roundFeedView" class="answer-tab-content" style="display:none;">
+              <div id="roundAnswersList" class="round-answers-list">
+                <div class="sync-note">Aucune proposition enregistrée sur cette manche pour l'instant.</div>
+              </div>
+            </div>
+          </div>
+
+                    <div id="buzzPanel" class="buzz-panel" style="display:none;">
             <div class="buzz-top">
               <div>
                 <strong style="color:var(--gold-light);">🔔 Buzzer à distance</strong>
@@ -152,7 +174,6 @@
             <div id="buzzFeed" class="buzz-feed"></div>
           </div>
         </div>
-      </div>
     </section>
 
     <section class="panel">
