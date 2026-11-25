@@ -21,10 +21,9 @@
         :root {
             --bg-deep: #070b1e;
             --bg-royal: #111b44;
-            --glass-bg: rgba(18, 28, 66, 0.72);
+            --glass-bg: rgba(18, 28, 66, 0.74);
             --glass-border: rgba(255, 255, 255, 0.14);
             --gold-primary: #fbbf24;
-            --gold-glow: rgba(251, 191, 36, 0.45);
         }
 
         * {
@@ -69,7 +68,7 @@
         }
 
         .glass-subcard {
-            background: rgba(10, 17, 42, 0.58);
+            background: rgba(10, 17, 42, 0.62);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 1rem;
         }
@@ -87,10 +86,6 @@
             transform: translateY(-2px);
             box-shadow: 0 12px 30px rgba(251, 191, 36, 0.5);
             filter: brightness(1.05);
-        }
-
-        .btn-magic:active:not(:disabled) {
-            transform: translateY(0);
         }
 
         .btn-magic:disabled {
@@ -118,7 +113,6 @@
             cursor: not-allowed;
         }
 
-        /* Animated audio equalizer bars */
         .eq-bar {
             width: 6px;
             border-radius: 9999px;
@@ -153,7 +147,6 @@
             animation: pulseGlow 2.4s infinite;
         }
 
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -179,14 +172,13 @@
     </style>
 </head>
 <body>
-    <!-- Animated starfield background -->
     <canvas id="starfield"></canvas>
 
-    <!-- Toast notification container -->
+    <!-- Toast Notifications -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-3 sm:px-0"></div>
 
     <div class="app-shell max-w-6xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
-        <!-- Top Header -->
+        <!-- Header -->
         <header class="glass-card px-4 sm:px-7 py-4 sm:py-5 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3.5 text-center md:text-left">
                 <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-500 to-rose-500 flex items-center justify-center text-slate-950 text-2xl sm:text-3xl shadow-lg shrink-0">
@@ -203,19 +195,17 @@
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-2.5">
-                <!-- Network status badge -->
                 <div id="network-status-badge" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="network-status-text">Relais temps réel prêt</span>
+                    <span id="network-status-text">Multijoueur prêt</span>
                 </div>
 
-                <!-- Add custom track button -->
-                <button id="btn-open-add-track" type="button" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-400/35 transition flex items-center gap-2 cursor-pointer">
-                    <i class="fa-solid fa-plus-circle"></i>
-                    <span>Ajouter un extrait</span>
+                <!-- Audio Debug & JSON Manager Button -->
+                <button id="btn-open-debug-manager" type="button" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/40 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-sliders text-amber-300"></i>
+                    <span>Gestion &amp; Debug Audio (JSON)</span>
                 </button>
 
-                <!-- Home / reset button when outside lobby -->
                 <button id="btn-home-nav" type="button" class="hidden px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/15 transition flex items-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-house"></i>
                     <span>Accueil</span>
@@ -226,9 +216,8 @@
         <!-- VIEW 1: LOBBY / CONFIGURATION -->
         <main id="view-lobby" class="space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Left Column: Mode, Player Name, Multiplayer Room -->
+                <!-- Left Column: Player, Mode, Multiplayer, Catalog Summary -->
                 <div class="lg:col-span-5 space-y-6">
-                    <!-- Player & Mode Card -->
                     <section class="glass-card p-5 sm:p-6 space-y-5">
                         <div class="flex items-center justify-between">
                             <h2 class="text-xl font-bold text-amber-300 flex items-center gap-2">
@@ -260,7 +249,7 @@
                         <!-- Solo Start Box -->
                         <div id="solo-box" class="space-y-3 pt-1">
                             <p class="text-xs text-slate-300 leading-relaxed">
-                                Jouez en solo à votre rythme avec vos paramètres personnalisés et votre propre score.
+                                Jouez en solo à votre rythme avec vos paramètres personnalisés et votre score en direct.
                             </p>
                             <button id="btn-start-solo" type="button" class="w-full py-3.5 px-5 text-base btn-magic flex items-center justify-center gap-2.5 cursor-pointer pulse-gold">
                                 <i class="fa-solid fa-play"></i>
@@ -280,7 +269,6 @@
                                 </button>
                             </div>
 
-                            <!-- Not in a room yet -->
                             <div id="multi-join-create" class="space-y-4">
                                 <button id="btn-create-room" type="button" class="w-full py-3 px-4 text-sm btn-magic flex items-center justify-center gap-2 cursor-pointer">
                                     <i class="fa-solid fa-door-open"></i>
@@ -302,7 +290,6 @@
                                 </div>
                             </div>
 
-                            <!-- Inside a room -->
                             <div id="multi-room-panel" class="hidden space-y-4 glass-subcard p-4">
                                 <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
                                     <div>
@@ -341,12 +328,12 @@
                         </div>
                     </section>
 
-                    <!-- Catalog Summary & Custom Tracks Card -->
+                    <!-- Catalog & Debug Quick Card -->
                     <section class="glass-card p-5 sm:p-6 space-y-4">
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-bold text-sky-300 flex items-center gap-2">
                                 <i class="fa-solid fa-compact-disc"></i>
-                                <span>Sélection d'extraits</span>
+                                <span>Catalogue &amp; Fichier JSON</span>
                             </h3>
                             <span id="pool-count-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
                                 0 extraits actifs
@@ -354,28 +341,28 @@
                         </div>
 
                         <p class="text-xs text-slate-300 leading-relaxed">
-                            Tous les titres sont adaptés en <strong>version française officielle</strong>. Ajoutez vos propres morceaux ou affinez la sélection manuellement.
+                            Écoutez et testez les extraits avant de jouer, corrigez un lien défectueux, ajoutez vos propres chansons ou importez/exportez <code class="text-amber-300 font-mono">songs.json</code>.
                         </p>
 
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <button id="btn-open-track-picker" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition flex items-center justify-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-list-check text-amber-300"></i>
-                                <span>Choisir les titres</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <button id="btn-open-debug-manager-2" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/35 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-headphones text-amber-300"></i>
+                                <span>Écouter / Debug Audio</span>
                             </button>
-                            <button id="btn-open-add-track-2" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition flex items-center justify-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-plus text-emerald-300"></i>
-                                <span>Créer un extrait</span>
+                            <button id="btn-open-track-picker" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-list-check text-emerald-300"></i>
+                                <span>Choisir les titres</span>
                             </button>
                         </div>
 
-                        <div id="custom-tracks-summary" class="text-xs text-slate-400 flex items-center justify-between pt-1">
-                            <span>Extraits personnalisés ajoutés : <strong id="custom-tracks-count" class="text-emerald-300">0</strong></span>
-                            <button id="btn-reset-custom-tracks" type="button" class="hidden text-rose-300 hover:underline cursor-pointer">Réinitialiser ajouts</button>
+                        <div id="catalog-source-indicator" class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-white/10">
+                            <span>Source : <strong id="catalog-source-label" class="text-emerald-300">Catalogue intégré + local</strong></span>
+                            <span id="catalog-total-label">0 titres</span>
                         </div>
                     </section>
                 </div>
 
-                <!-- Right Column: Room & Game Settings -->
+                <!-- Right Column: Game Settings -->
                 <div class="lg:col-span-7">
                     <section class="glass-card p-5 sm:p-6 space-y-6">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-4">
@@ -389,13 +376,12 @@
                                 </p>
                             </div>
                             <span id="host-badge" class="hidden px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-200 border border-purple-400/30">
-                                <i class="fa-solid fa-crown text-amber-300 mr-1"></i>Paramètres contrôlés par l'hôte
+                                <i class="fa-solid fa-crown text-amber-300 mr-1"></i>Contrôlé par l'hôte
                             </span>
                         </div>
 
-                        <!-- Rounds count + Clip duration -->
+                        <!-- Rounds & Duration -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <!-- Number of rounds -->
                             <div class="glass-subcard p-4 space-y-3">
                                 <div class="flex items-center justify-between">
                                     <label for="range-rounds" class="text-xs uppercase tracking-wider text-slate-300 font-bold">
@@ -403,7 +389,7 @@
                                     </label>
                                     <span id="label-rounds-value" class="font-mono text-lg font-bold text-amber-300">10</span>
                                 </div>
-                                <input id="range-rounds" type="range" min="1" max="107" value="10" class="w-full cursor-pointer">
+                                <input id="range-rounds" type="range" min="1" max="125" value="10" class="w-full cursor-pointer">
                                 <div class="flex flex-wrap gap-1.5">
                                     <button type="button" data-round-preset="5" class="round-preset px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/10 hover:bg-amber-400/25 text-slate-200 transition cursor-pointer">5</button>
                                     <button type="button" data-round-preset="10" class="round-preset px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/10 hover:bg-amber-400/25 text-slate-200 transition cursor-pointer">10</button>
@@ -413,7 +399,6 @@
                                 </div>
                             </div>
 
-                            <!-- Clip duration -->
                             <div class="glass-subcard p-4 space-y-3">
                                 <label class="text-xs uppercase tracking-wider text-slate-300 font-bold block">
                                     Durée d'un extrait
@@ -425,14 +410,13 @@
                                     <button type="button" data-duration="30" class="duration-btn py-2.5 rounded-xl text-sm font-bold border transition cursor-pointer bg-white/5 border-white/10 text-slate-300 hover:bg-white/10">30s</button>
                                 </div>
                                 <p class="text-[11px] text-slate-400">
-                                    Temps imparti pour trouver les réponses sur chaque extrait.
+                                    Temps imparti pour écrire vos réponses à chaque manche.
                                 </p>
                             </div>
                         </div>
 
-                        <!-- Scoring Mode + What to Guess -->
+                        <!-- Scoring & Target Fields -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <!-- Scoring mode -->
                             <div class="glass-subcard p-4 space-y-2.5">
                                 <label class="text-xs uppercase tracking-wider text-slate-300 font-bold block">
                                     Attribution des points
@@ -443,21 +427,20 @@
                                             <span><i class="fa-solid fa-gauge-high mr-1.5"></i>Selon le temps de réponse</span>
                                             <i class="fa-solid fa-check-circle text-amber-300"></i>
                                         </div>
-                                        <p class="text-[11px] text-slate-300 mt-0.5">Plus vous répondez vite, plus vous marquez de points (jusqu'à 500 pts / réponse + bonus duo).</p>
+                                        <p class="text-[11px] text-slate-300 mt-0.5">Score dégressif rapide (jusqu'à 500 pts / réponse + bonus duo).</p>
                                     </button>
                                     <button type="button" data-scoring="plus_one" class="scoring-btn w-full text-left p-3 rounded-xl border transition cursor-pointer bg-white/5 border-white/10 text-slate-300 hover:bg-white/10">
                                         <div class="font-bold text-sm flex items-center justify-between">
                                             <span><i class="fa-solid fa-plus-minus mr-1.5 text-emerald-300"></i>+1 point par réponse</span>
                                         </div>
-                                        <p class="text-[11px] text-slate-400 mt-0.5">+1 pt pour la chanson trouvée, +1 pt pour le film/série trouvé.</p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">+1 pt pour la chanson, +1 pt pour le film ou la série.</p>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Target fields to guess -->
                             <div class="glass-subcard p-4 space-y-2.5">
                                 <label class="text-xs uppercase tracking-wider text-slate-300 font-bold block">
-                                    Réponses à trouver
+                                    Réponses à deviner
                                 </label>
                                 <div class="space-y-2">
                                     <button type="button" data-target="both" class="target-btn w-full text-left p-2.5 px-3 rounded-xl border text-xs sm:text-sm font-semibold transition cursor-pointer bg-sky-500/20 border-sky-400 text-white flex items-center justify-between">
@@ -474,7 +457,7 @@
                             </div>
                         </div>
 
-                        <!-- Categories separated by Animation vs Live-Action -->
+                        <!-- Categories: Animation vs Live-Action -->
                         <div class="space-y-4">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <label class="text-xs uppercase tracking-wider text-slate-300 font-bold">
@@ -488,7 +471,6 @@
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Animation group -->
                                 <div class="glass-subcard p-4 space-y-2.5 border-l-4 border-l-amber-400">
                                     <div class="flex items-center justify-between">
                                         <h4 class="font-bold text-sm text-amber-300 flex items-center gap-2">
@@ -500,7 +482,6 @@
                                     <div id="category-list-animation" class="space-y-1.5"></div>
                                 </div>
 
-                                <!-- Live-action group -->
                                 <div class="glass-subcard p-4 space-y-2.5 border-l-4 border-l-emerald-400">
                                     <div class="flex items-center justify-between">
                                         <h4 class="font-bold text-sm text-emerald-300 flex items-center gap-2">
@@ -520,9 +501,8 @@
 
         <!-- VIEW 2: ACTIVE GAME ARENA -->
         <main id="view-game" class="hidden space-y-6">
-            <!-- Round Top Status Bar -->
             <section class="glass-card px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2.5">
                     <span class="px-3.5 py-1.5 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 font-bold text-sm">
                         Manche <span id="game-round-current">1</span> / <span id="game-round-total">10</span>
                     </span>
@@ -534,7 +514,6 @@
                     </span>
                 </div>
 
-                <!-- Timer -->
                 <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                     <div class="flex items-center gap-2">
                         <i class="fa-regular fa-clock text-amber-300"></i>
@@ -547,7 +526,6 @@
             </section>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Main Player & Answer Inputs -->
                 <div class="lg:col-span-8 space-y-6">
                     <!-- Spoiler-free Audio Player Card -->
                     <section class="glass-card p-6 sm:p-8 text-center space-y-5">
@@ -556,7 +534,6 @@
                             <span>Aucun indice affiché pendant l'écoute — tendez l'oreille !</span>
                         </div>
 
-                        <!-- Equalizer -->
                         <div id="audio-equalizer" class="h-16 flex items-center justify-center gap-2">
                             <span class="eq-bar"></span>
                             <span class="eq-bar"></span>
@@ -569,10 +546,9 @@
                         </div>
 
                         <p id="audio-status-label" class="text-sm font-semibold text-sky-200">
-                            Recherche de l'extrait audio en cours...
+                            Chargement de l'extrait audio...
                         </p>
 
-                        <!-- Audio Controls (Play/Pause fallback + Volume) -->
                         <div class="flex flex-wrap items-center justify-center gap-4 pt-1">
                             <button id="btn-toggle-play" type="button" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-semibold border border-white/15 transition flex items-center gap-2 cursor-pointer">
                                 <i id="icon-play-pause" class="fa-solid fa-pause"></i>
@@ -585,7 +561,6 @@
                             </div>
                         </div>
 
-                        <!-- Hidden HTML5 Audio element -->
                         <audio id="disney-audio-player" preload="auto"></audio>
                     </section>
 
@@ -620,7 +595,7 @@
                                 </div>
                             </div>
 
-                            <!-- Box 2: Movie / Series Title -->
+                            <!-- Box 2: Film / Series Title -->
                             <div id="box-media-answer" class="glass-subcard p-4 space-y-3 border border-white/10 transition">
                                 <div class="flex items-center justify-between">
                                     <label for="input-answer-media" class="text-sm font-bold text-sky-300 flex items-center gap-2">
@@ -641,7 +616,6 @@
                             </div>
                         </div>
 
-                        <!-- Manual end-round / next button in Solo -->
                         <div id="solo-round-actions" class="hidden pt-2 flex justify-end">
                             <button id="btn-solo-skip-reveal" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 transition cursor-pointer">
                                 Révéler / Passer cette manche
@@ -649,7 +623,7 @@
                         </div>
                     </section>
 
-                    <!-- Round Reveal Banner (shown only after round ends) -->
+                    <!-- Round Reveal Banner -->
                     <section id="round-reveal-card" class="hidden glass-card p-6 border-2 border-amber-400/50 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <span class="text-xs uppercase tracking-wider font-bold text-amber-300">
@@ -673,7 +647,7 @@
                         <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
                             <a id="reveal-yt-link" href="#" target="_blank" rel="noopener noreferrer" class="text-xs text-amber-300 hover:underline flex items-center gap-1.5">
                                 <i class="fa-brands fa-youtube text-rose-400 text-sm"></i>
-                                <span>Écouter la version française complète</span>
+                                <span>Rechercher la version française sur YouTube</span>
                             </a>
 
                             <button id="btn-next-round" type="button" class="px-5 py-2.5 text-sm btn-magic flex items-center gap-2 cursor-pointer">
@@ -695,7 +669,7 @@
                                 <i class="fa-solid fa-trophy"></i>
                                 <span>Classement</span>
                             </h3>
-                            <span id="scoreboard-mode-label" class="text-xs text-slate-400">En direct</span>
+                            <span class="text-xs text-slate-400">En direct</span>
                         </div>
                         <ul id="live-scoreboard-list" class="space-y-2.5"></ul>
                     </section>
@@ -703,7 +677,7 @@
             </div>
         </main>
 
-        <!-- VIEW 3: FINAL PODIUM / SUMMARY -->
+        <!-- VIEW 3: FINAL PODIUM -->
         <main id="view-podium" class="hidden">
             <section class="glass-card p-6 sm:p-10 text-center space-y-8">
                 <div class="space-y-2">
@@ -732,65 +706,182 @@
         </main>
     </div>
 
-    <!-- MODAL 1: ADD CUSTOM TRACK -->
-    <div id="modal-add-track" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-card max-w-lg w-full p-6 space-y-4 relative">
+    <!-- MODAL 1: AUDIO DEBUGGER & SONGS.JSON MANAGER -->
+    <div id="modal-debug-manager" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div class="glass-card max-w-6xl w-full max-h-[92vh] flex flex-col p-4 sm:p-6 space-y-4">
+            <!-- Modal Header -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div>
+                    <h3 class="text-xl sm:text-2xl font-bold text-amber-300 flex items-center gap-2">
+                        <i class="fa-solid fa-wave-square"></i>
+                        <span>Gestionnaire &amp; Débogueur Audio (<code class="text-sky-300">songs.json</code>)</span>
+                    </h3>
+                    <p class="text-xs text-slate-300">
+                        Testez chaque extrait en direct, vérifiez la piste trouvée par iTunes, corrigez un lien cassé ou exportez/importez <code class="text-amber-200">songs.json</code>.
+                    </p>
+                </div>
+                <button id="btn-close-debug-manager" type="button" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Toolbar: JSON Export/Import, Add Song, Scan Broken Links -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 bg-slate-950/60 p-3 rounded-2xl border border-white/10">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-debug-add-song" type="button" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-magic flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Ajouter une chanson</span>
+                    </button>
+
+                    <button id="btn-debug-scan-all" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/35 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-stethoscope"></i>
+                        <span id="btn-scan-label">Tester les extraits affichés</span>
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-export-json" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/35 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Exporter songs.json</span>
+                    </button>
+
+                    <label class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-400/15 hover:bg-amber-400/25 text-amber-200 border border-amber-400/35 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Importer songs.json</span>
+                        <input id="input-import-json" type="file" accept=".json,application/json" class="hidden">
+                    </label>
+
+                    <button id="btn-reset-catalog-default" type="button" title="Restaurer le catalogue par défaut" class="px-3 py-2 rounded-xl text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-400/30 cursor-pointer">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Debug Mini-Player Bar -->
+            <div class="glass-subcard p-3 flex flex-col sm:flex-row items-center justify-between gap-3 border border-sky-400/25">
+                <div class="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                    <button id="btn-debug-stop-audio" type="button" class="w-9 h-9 rounded-xl bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 flex items-center justify-center shrink-0 cursor-pointer" title="Arrêter l'écoute">
+                        <i class="fa-solid fa-stop"></i>
+                    </button>
+                    <div class="min-w-0 flex-1">
+                        <p id="debug-now-playing-title" class="text-xs font-bold text-white truncate">Aucune pré-écoute active — cliquez sur « Écouter » sur une ligne</p>
+                        <p id="debug-now-playing-meta" class="text-[11px] text-slate-400 truncate">Statut : en attente</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-64">
+                    <div class="flex-1 h-2 rounded-full bg-slate-900 overflow-hidden">
+                        <div id="debug-audio-progress" class="h-full bg-gradient-to-r from-sky-400 to-amber-400 transition-all duration-150" style="width: 0%"></div>
+                    </div>
+                    <span id="debug-audio-time" class="font-mono text-[11px] text-slate-300 w-10 text-right">00s</span>
+                </div>
+            </div>
+
+            <!-- Search & Status Filter -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                <input id="debug-search-input" type="text" placeholder="Filtrer par titre VF, film, série ou catégorie..." class="flex-1 min-w-[220px] px-3.5 py-2 rounded-xl bg-slate-950/75 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400">
+                <select id="debug-filter-status" class="px-3 py-2 rounded-xl bg-slate-950/85 border border-white/15 text-white text-xs">
+                    <option value="all">Tous les statuts</option>
+                    <option value="ok">Audio OK</option>
+                    <option value="error">Cassés / Secours synthé</option>
+                    <option value="custom">Personnalisés / Corrigés</option>
+                </select>
+                <span id="debug-count-badge" class="text-xs font-semibold text-amber-300 px-2">0 titres</span>
+            </div>
+
+            <!-- Songs Table / List -->
+            <div id="debug-songs-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EDIT / FIX SINGLE SONG & ALTERNATIVE ITUNES PICKER -->
+    <div id="modal-edit-song" class="hidden fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div class="glass-card max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-white/10 pb-3">
-                <h3 class="text-xl font-bold text-amber-300 flex items-center gap-2">
-                    <i class="fa-solid fa-circle-plus"></i>
-                    <span>Ajouter un extrait Disney (VF)</span>
+                <h3 id="edit-song-modal-title" class="text-lg sm:text-xl font-bold text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-wrench"></i>
+                    <span>Corriger / Éditer l'extrait</span>
                 </h3>
-                <button id="btn-close-add-track" type="button" class="text-slate-400 hover:text-white text-lg cursor-pointer">
+                <button id="btn-close-edit-song" type="button" class="text-slate-400 hover:text-white text-lg cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <form id="form-add-track" class="space-y-3.5">
-                <div>
-                    <label for="custom-track-song" class="block text-xs font-semibold text-slate-300 mb-1">Titre de la chanson (en français) *</label>
-                    <input id="custom-track-song" type="text" required placeholder="Ex. Libérée, délivrée" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/75 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
-                </div>
+            <form id="form-edit-song" class="space-y-3.5">
+                <input type="hidden" id="edit-song-id">
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label for="custom-track-media" class="block text-xs font-semibold text-slate-300 mb-1">Film ou Série *</label>
-                        <input id="custom-track-media" type="text" required placeholder="Ex. La Reine des Neiges" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/75 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
+                        <label for="edit-song-titre-fr" class="block text-xs font-semibold text-slate-300 mb-1">Titre de la chanson (VF) *</label>
+                        <input id="edit-song-titre-fr" type="text" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
                     </div>
                     <div>
-                        <label for="custom-track-year" class="block text-xs font-semibold text-slate-300 mb-1">Année</label>
-                        <input id="custom-track-year" type="number" min="1928" max="2030" value="2013" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/75 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
+                        <label for="edit-song-film" class="block text-xs font-semibold text-slate-300 mb-1">Film ou Série *</label>
+                        <input id="edit-song-film" type="text" required class="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label for="edit-song-annee" class="block text-xs font-semibold text-slate-300 mb-1">Année</label>
+                        <input id="edit-song-annee" type="number" min="1928" max="2030" value="2010" class="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="edit-song-category" class="block text-xs font-semibold text-slate-300 mb-1">Catégorie</label>
+                        <select id="edit-song-category" class="w-full px-3.5 py-2 rounded-xl bg-slate-950/85 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400"></select>
                     </div>
                 </div>
 
                 <div>
-                    <label for="custom-track-category" class="block text-xs font-semibold text-slate-300 mb-1">Catégorie</label>
-                    <select id="custom-track-category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/85 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400"></select>
+                    <label for="edit-song-search-query" class="block text-xs font-semibold text-slate-300 mb-1">
+                        Requête de recherche iTunes (pour cibler la VF exacte)
+                    </label>
+                    <div class="flex gap-2">
+                        <input id="edit-song-search-query" type="text" placeholder="Ex. Libérée délivrée Anaïs Delva Reine des Neiges" class="flex-1 px-3.5 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400">
+                        <button id="btn-search-itunes-alternatives" type="button" class="px-3.5 py-2 rounded-xl text-xs font-bold btn-royal shrink-0 cursor-pointer">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>Chercher sur iTunes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alternative iTunes results list -->
+                <div id="itunes-alternatives-box" class="hidden glass-subcard p-3 space-y-2 border border-sky-400/30">
+                    <p class="text-[11px] font-semibold text-sky-300">
+                        Pré-écoutez les résultats iTunes et cliquez sur « Choisir » pour verrouiller l'extrait :
+                    </p>
+                    <div id="itunes-alternatives-list" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></div>
                 </div>
 
                 <div>
-                    <label for="custom-track-audio-url" class="block text-xs font-semibold text-slate-300 mb-1">URL audio MP3 / preview optionnelle (sinon recherche auto ou mélodie)</label>
-                    <input id="custom-track-audio-url" type="url" placeholder="https://exemple.com/extrait.mp3" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/75 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-400">
+                    <label for="edit-song-audio-url" class="block text-xs font-semibold text-slate-300 mb-1">
+                        Lien audio direct verrouillé (.m4a / .mp3 / previewUrl)
+                    </label>
+                    <input id="edit-song-audio-url" type="url" placeholder="https://audio-ssl.itunes.apple.com/..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-emerald-200 font-mono text-xs focus:outline-none focus:border-amber-400">
                 </div>
 
-                <div class="flex justify-end gap-2.5 pt-2">
-                    <button id="btn-cancel-add-track" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer">
-                        Annuler
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
+                    <button id="btn-delete-song" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border border-rose-400/35 cursor-pointer">
+                        <i class="fa-solid fa-trash mr-1"></i>Supprimer du catalogue
                     </button>
-                    <button type="submit" class="px-5 py-2 text-sm btn-magic cursor-pointer">
-                        <i class="fa-solid fa-check mr-1.5"></i>Enregistrer l'extrait
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="btn-cancel-edit-song" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-5 py-2 text-xs sm:text-sm btn-magic cursor-pointer">
+                            <i class="fa-solid fa-check mr-1"></i>Enregistrer
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL 2: TRACK PICKER -->
+    <!-- MODAL 3: MANUAL TRACK PICKER -->
     <div id="modal-track-picker" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="glass-card max-w-3xl w-full max-h-[85vh] flex flex-col p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-white/10 pb-3">
                 <div>
                     <h3 class="text-xl font-bold text-amber-300">Sélection manuelle des titres</h3>
-                    <p class="text-xs text-slate-400">Cochez ou décochez précisément les morceaux de votre partie</p>
+                    <p class="text-xs text-slate-400">Cochez précisément les chansons incluses dans votre partie</p>
                 </div>
                 <button id="btn-close-track-picker" type="button" class="text-slate-400 hover:text-white text-lg cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
@@ -818,136 +909,140 @@
 
     <script>
         /**
-         * Complete user DISNEY_TRACKS dataset (107 tracks) adapted strictly to French official versions
-         * and properly separated into Animation vs Live-Action categories.
+         * Default 100% French-version Disney & Pixar catalog (Animation + Live-Action)
+         * Can be exported/imported as songs.json or auto-loaded from ./songs.json
          */
-        const RAW_DISNEY_TRACKS = [
-            { id: 1, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Un jour mon prince viendra", titre_en: "Someday My Prince Will Come", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Un+jour+mon+prince+viendra+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale" },
-            { id: 2, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Heigh-Ho", titre_en: "Heigh-Ho", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Heigh-Ho+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale" },
-            { id: 3, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Siffler en travaillant", titre_en: "Whistle While You Work", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Siffler+en+travaillant+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale" },
-            { id: 4, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Je souhaite", titre_en: "I'm Wishing", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+souhaite+Blanche-Neige+et+les+Sept+Nains+Disney+bande+originale" },
-            { id: 5, film: "Pinocchio", annee: 1940, titre_fr: "Quand on prie la bonne étoile", titre_en: "When You Wish Upon a Star", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Quand+on+prie+la+bonne+%C3%A9toile+Pinocchio+Disney+bande+originale" },
-            { id: 6, film: "Pinocchio", annee: 1940, titre_fr: "Sans aucun lien me retenant", titre_en: "I've Got No Strings", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Sans+aucun+lien+me+retenant+Pinocchio+Disney+bande+originale" },
-            { id: 7, film: "Fantasia", annee: 1940, titre_fr: "L'Apprenti sorcier", titre_en: "The Sorcerer's Apprentice", type: "Instrumental", yt_fallback: "https://www.youtube.com/results?search_query=L%27Apprenti+sorcier+Fantasia+Disney+bande+originale" },
-            { id: 8, film: "Dumbo", annee: 1941, titre_fr: "Mon tout petit", titre_en: "Baby Mine", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Mon+tout+petit+Dumbo+Disney+bande+originale" },
-            { id: 9, film: "Dumbo", annee: 1941, titre_fr: "Les Éléphants roses", titre_en: "Pink Elephants on Parade", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Les+%C3%89l%C3%A9phants+roses+Dumbo+Disney+bande+originale" },
-            { id: 10, film: "Bambi", annee: 1942, titre_fr: "La Chanson de la pluie", titre_en: "Little April Shower", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=La+Chanson+de+la+pluie+Bambi+Disney+bande+originale" },
-            { id: 11, film: "Cendrillon", annee: 1950, titre_fr: "Salagadoula", titre_en: "Bibbidi-Bobbidi-Boo", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Salagadoula+Cendrillon+Disney+bande+originale" },
-            { id: 12, film: "Cendrillon", annee: 1950, titre_fr: "Tendre rêve", titre_en: "A Dream Is a Wish Your Heart Makes", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Tendre+r%C3%AAve+Cendrillon+Disney+bande+originale" },
-            { id: 13, film: "Cendrillon", annee: 1950, titre_fr: "C'est ça l'amour", titre_en: "So This Is Love", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=C%27est+%C3%A7a+l%27amour+Cendrillon+Disney+bande+originale" },
-            { id: 14, film: "Alice au pays des merveilles", annee: 1951, titre_fr: "Joyeux non-anniversaire", titre_en: "The Unbirthday Song", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Joyeux+non-anniversaire+Alice+au+pays+des+merveilles+Disney+bande+originale" },
-            { id: 15, film: "Alice au pays des merveilles", annee: 1951, titre_fr: "Dans le monde de mes rêves", titre_en: "In a World of My Own", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Dans+le+monde+de+mes+r%C3%AAves+Alice+au+pays+des+merveilles+Disney+bande+originale" },
-            { id: 16, film: "Peter Pan", annee: 1953, titre_fr: "Tu t'envoles", titre_en: "You Can Fly!", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Tu+t%27envoles+Peter+Pan+Disney+bande+originale" },
-            { id: 17, film: "Peter Pan", annee: 1953, titre_fr: "La Deuxième Étoile à droite", titre_en: "The Second Star to the Right", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=La+Deuxi%C3%A8me+%C3%89toile+%C3%A0+droite+Peter+Pan+Disney+bande+originale" },
-            { id: 18, film: "La Belle et le Clochard", annee: 1955, titre_fr: "Bella Notte", titre_en: "Bella Notte", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Bella+Notte+La+Belle+et+le+Clochard+Disney+bande+originale" },
-            { id: 19, film: "La Belle et le Clochard", annee: 1955, titre_fr: "Nous sommes deux siamois", titre_en: "The Siamese Cat Song", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Nous+sommes+deux+siamois+La+Belle+et+le+Clochard+Disney+bande+originale" },
-            { id: 20, film: "La Belle au bois dormant", annee: 1959, titre_fr: "J'en ai rêvé", titre_en: "Once Upon a Dream", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=J%27en+ai+r%C3%AAv%C3%A9+La+Belle+au+bois+dormant+Disney+bande+originale" },
-            { id: 21, film: "Les 101 Dalmatiens", annee: 1961, titre_fr: "Cruella De Vil", titre_en: "Cruella De Vil", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Cruella+De+Vil+Les+101+Dalmatiens+Disney+bande+originale" },
-            { id: 22, film: "Merlin l'Enchanteur", annee: 1963, titre_fr: "Higitus Figitus", titre_en: "Higitus Figitus", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Higitus+Figitus+Merlin+l%27Enchanteur+Disney+bande+originale" },
-            { id: 23, film: "Merlin l'Enchanteur", annee: 1963, titre_fr: "C'est ça qui fait tourner le monde", titre_en: "That's What Makes the World Go Round", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=C%27est+%C3%A7a+qui+fait+tourner+le+monde+Merlin+l%27Enchanteur+Disney+bande+originale" },
-            { id: 24, film: "Mary Poppins", annee: 1964, titre_fr: "Supercalifragilisticexpialidocious", titre_en: "Supercalifragilisticexpialidocious", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Supercalifragilisticexpialidocious+Mary+Poppins+Disney+bande+originale+VF" },
-            { id: 25, film: "Mary Poppins", annee: 1964, titre_fr: "Cheminée", titre_en: "Chim Chim Cher-ee", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Chemin%C3%A9e+Mary+Poppins+Disney+bande+originale+VF" },
-            { id: 26, film: "Mary Poppins", annee: 1964, titre_fr: "Un morceau de sucre", titre_en: "A Spoonful of Sugar", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Un+morceau+de+sucre+Mary+Poppins+Disney+bande+originale+VF" },
-            { id: 27, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Il en faut peu pour être heureux", titre_en: "The Bare Necessities", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Il+en+faut+peu+pour+%C3%AAtre+heureux+Le+Livre+de+la+jungle+Disney+bande+originale" },
-            { id: 28, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Être un homme comme vous", titre_en: "I Wan'na Be Like You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=%C3%8Atre+un+homme+comme+vous+Le+Livre+de+la+jungle+Disney+bande+originale" },
-            { id: 29, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Aie confiance", titre_en: "Trust in Me", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Aie+confiance+Le+Livre+de+la+jungle+Disney+bande+originale" },
-            { id: 30, film: "Les Aristochats", annee: 1970, titre_fr: "Tout le monde veut devenir un cat", titre_en: "Ev'rybody Wants to Be a Cat", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Tout+le+monde+veut+devenir+un+cat+Les+Aristochats+Disney+bande+originale" },
-            { id: 31, film: "Les Aristochats", annee: 1970, titre_fr: "Les Aristochats", titre_en: "The Aristocats", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Les+Aristochats+Les+Aristochats+Disney+bande+originale" },
-            { id: 32, film: "Robin des Bois", annee: 1973, titre_fr: "Quel beau jour vraiment", titre_en: "Oo-De-Lally", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Quel+beau+jour+vraiment+Robin+des+Bois+Disney+bande+originale" },
-            { id: 33, film: "Robin des Bois", annee: 1973, titre_fr: "Un ami fidèle", titre_en: "Not in Nottingham", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Un+ami+fid%C3%A8le+Robin+des+Bois+Disney+bande+originale" },
-            { id: 34, film: "Les Aventures de Bernard et Bianca", annee: 1977, titre_fr: "Quelqu'un viendra", titre_en: "Someone's Waiting for You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Quelqu%27un+viendra+Les+Aventures+de+Bernard+et+Bianca+Disney+bande+originale" },
-            { id: 35, film: "Rox et Rouky", annee: 1981, titre_fr: "Amis pour la vie", titre_en: "Best of Friends", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Amis+pour+la+vie+Rox+et+Rouky+Disney+bande+originale" },
-            { id: 36, film: "La Bande à Picsou (Série)", annee: 1987, titre_fr: "La Bande à Picsou (Générique)", titre_en: "DuckTales Theme", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=La+Bande+%C3%A0+Picsou+%28G%C3%A9n%C3%A9rique%29+La+Bande+%C3%A0+Picsou+%28S%C3%A9rie%29+Disney+bande+originale" },
-            { id: 37, film: "Oliver et Compagnie", annee: 1988, titre_fr: "Mais pourquoi m'en faire", titre_en: "Why Should I Worry", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Mais+pourquoi+m%27en+faire+Oliver+et+Compagnie+Disney+bande+originale" },
-            { id: 38, film: "La Petite Sirène", annee: 1989, titre_fr: "Partir là-bas", titre_en: "Part of Your World", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Partir+l%C3%A0-bas+La+Petite+Sir%C3%A8ne+Disney+bande+originale" },
-            { id: 39, film: "La Petite Sirène", annee: 1989, titre_fr: "Sous l'océan", titre_en: "Under the Sea", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Sous+l%27oc%C3%A9an+La+Petite+Sir%C3%A8ne+Disney+bande+originale" },
-            { id: 40, film: "La Petite Sirène", annee: 1989, titre_fr: "Embrasse-la", titre_en: "Kiss the Girl", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Embrasse-la+La+Petite+Sir%C3%A8ne+Disney+bande+originale" },
-            { id: 41, film: "La Petite Sirène", annee: 1989, titre_fr: "Pauvres âmes en perdition", titre_en: "Poor Unfortunate Souls", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Pauvres+%C3%A2mes+en+perdition+La+Petite+Sir%C3%A8ne+Disney+bande+originale" },
-            { id: 42, film: "La Belle et la Bête", annee: 1991, titre_fr: "Histoire éternelle", titre_en: "Beauty and the Beast", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Histoire+%C3%A9ternelle+La+Belle+et+la+B%C3%AAte+Disney+bande+originale" },
-            { id: 43, film: "La Belle et la Bête", annee: 1991, titre_fr: "C'est la fête", titre_en: "Be Our Guest", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=C%27est+la+f%C3%AAte+La+Belle+et+la+B%C3%AAte+Disney+bande+originale" },
-            { id: 44, film: "La Belle et la Bête", annee: 1991, titre_fr: "Belle", titre_en: "Belle", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Belle+La+Belle+et+la+B%C3%AAte+Disney+bande+originale" },
-            { id: 45, film: "La Belle et la Bête", annee: 1991, titre_fr: "Gaston", titre_en: "Gaston", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Gaston+La+Belle+et+la+B%C3%AAte+Disney+bande+originale" },
-            { id: 46, film: "Aladdin", annee: 1992, titre_fr: "Ce rêve bleu", titre_en: "A Whole New World", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Ce+r%C3%AAve+bleu+Aladdin+Disney+bande+originale" },
-            { id: 47, film: "Aladdin", annee: 1992, titre_fr: "Je suis ton meilleur ami", titre_en: "Friend Like Me", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+suis+ton+meilleur+ami+Aladdin+Disney+bande+originale" },
-            { id: 48, film: "Aladdin", annee: 1992, titre_fr: "Prince Ali", titre_en: "Prince Ali", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Prince+Ali+Aladdin+Disney+bande+originale" },
-            { id: 49, film: "Aladdin", annee: 1992, titre_fr: "Nuits d'Arabie", titre_en: "Arabian Nights", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Nuits+d%27Arabie+Aladdin+Disney+bande+originale" },
-            { id: 50, film: "Aladdin", annee: 1992, titre_fr: "Je vole", titre_en: "One Jump Ahead", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+vole+Aladdin+Disney+bande+originale" },
-            { id: 51, film: "L'Étrange Noël de monsieur Jack", annee: 1993, titre_fr: "Bienvenue à Halloween", titre_en: "This Is Halloween", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Bienvenue+%C3%A0+Halloween+L%27%C3%89trange+No%C3%ABl+de+monsieur+Jack+Disney+bande+originale" },
-            { id: 52, film: "L'Étrange Noël de monsieur Jack", annee: 1993, titre_fr: "Que vois-je ?", titre_en: "What's This?", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Que+vois-je+%3F+L%27%C3%89trange+No%C3%ABl+de+monsieur+Jack+Disney+bande+originale" },
-            { id: 53, film: "Le Roi Lion", annee: 1994, titre_fr: "L'Histoire de la vie", titre_en: "Circle of Life", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=L%27Histoire+de+la+vie+Le+Roi+Lion+Disney+bande+originale" },
-            { id: 54, film: "Le Roi Lion", annee: 1994, titre_fr: "Je voudrais déjà être roi", titre_en: "I Just Can't Wait to Be King", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+voudrais+d%C3%A9j%C3%A0+%C3%AAtre+roi+Le+Roi+Lion+Disney+bande+originale" },
-            { id: 55, film: "Le Roi Lion", annee: 1994, titre_fr: "Soyez prêts", titre_en: "Be Prepared", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Soyez+pr%C3%AAts+Le+Roi+Lion+Disney+bande+originale" },
-            { id: 56, film: "Le Roi Lion", annee: 1994, titre_fr: "Hakuna Matata", titre_en: "Hakuna Matata", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Hakuna+Matata+Le+Roi+Lion+Disney+bande+originale" },
-            { id: 57, film: "Le Roi Lion", annee: 1994, titre_fr: "L'Amour brille sous les étoiles", titre_en: "Can You Feel the Love Tonight", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=L%27Amour+brille+sous+les+%C3%A9toiles+Le+Roi+Lion+Disney+bande+originale" },
-            { id: 58, film: "Pocahontas", annee: 1995, titre_fr: "L'Air du vent", titre_en: "Colors of the Wind", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=L%27Air+du+vent+Pocahontas+Disney+bande+originale" },
-            { id: 59, film: "Pocahontas", annee: 1995, titre_fr: "Au détour de la rivière", titre_en: "Just Around the Riverbend", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Au+d%C3%A9tour+de+la+rivi%C3%A8re+Pocahontas+Disney+bande+originale" },
-            { id: 60, film: "Pocahontas", annee: 1995, titre_fr: "Sauvages", titre_en: "Savages", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Sauvages+Pocahontas+Disney+bande+originale" },
-            { id: 61, film: "Dingo et Max", annee: 1995, titre_fr: "D'œil à œil", titre_en: "I2I", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=D%27oeil+%C3%A0+oeil+Dingo+et+Max+Disney+bande+originale+VF" },
-            { id: 62, film: "Dingo et Max", annee: 1995, titre_fr: "Sous les projecteurs", titre_en: "Stand Out", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Sous+les+projecteurs+Dingo+et+Max+Disney+bande+originale+VF" },
-            { id: 63, film: "Toy Story", annee: 1995, titre_fr: "Je suis ton ami", titre_en: "You've Got a Friend in Me", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+suis+ton+ami+Toy+Story+Disney+bande+originale" },
-            { id: 64, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Infernal", titre_en: "Hellfire", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Infernal+Le+Bossu+de+Notre-Dame+Disney+bande+originale" },
-            { id: 65, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Les Cloches de Notre-Dame", titre_en: "The Bells of Notre Dame", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Les+Cloches+de+Notre-Dame+Le+Bossu+de+Notre-Dame+Disney+bande+originale" },
-            { id: 66, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Rien qu'un jour", titre_en: "Out There", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Rien+qu%27un+jour+Le+Bossu+de+Notre-Dame+Disney+bande+originale" },
-            { id: 67, film: "Hercule", annee: 1997, titre_fr: "De zéro en héros", titre_en: "Zero to Hero", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=De+z%C3%A9ro+en+h%C3%A9ros+Hercule+Disney+bande+originale" },
-            { id: 68, film: "Hercule", annee: 1997, titre_fr: "Je veux savoir", titre_en: "Go the Distance", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+veux+savoir+Hercule+Disney+bande+originale" },
-            { id: 69, film: "Hercule", annee: 1997, titre_fr: "Ne parle pas d'eux", titre_en: "I Won't Say (I'm in Love)", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Ne+parle+pas+d%27eux+Hercule+Disney+bande+originale" },
-            { id: 70, film: "Hercule", annee: 1997, titre_fr: "Le Monde qui est le mien", titre_en: "I Can Go the Distance", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Le+Monde+qui+est+le+mien+Hercule+Disney+bande+originale" },
-            { id: 71, film: "Anastasia", annee: 1997, titre_fr: "Loin du froid de décembre", titre_en: "Once Upon a December", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Loin+du+froid+de+d%C3%A9cembre+Anastasia+bande+originale" },
-            { id: 72, film: "Anastasia", annee: 1997, titre_fr: "Voyage dans le temps", titre_en: "Journey to the Past", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Voyage+dans+le+temps+Anastasia+bande+originale" },
-            { id: 73, film: "Mulan", annee: 1998, titre_fr: "Réflexion", titre_en: "Reflection", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=R%C3%A9flexion+Mulan+Disney+bande+originale" },
-            { id: 74, film: "Mulan", annee: 1998, titre_fr: "Comme un homme", titre_en: "I'll Make a Man Out of You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Comme+un+homme+Mulan+Disney+bande+originale" },
-            { id: 75, film: "Mulan", annee: 1998, titre_fr: "Honneur à tous", titre_en: "Honor to Us All", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Honneur+%C3%A0+tous+Mulan+Disney+bande+originale" },
-            { id: 76, film: "Le Roi Lion 2 : L'Honneur de la tribu", annee: 1998, titre_fr: "Il vit en toi", titre_en: "He Lives in You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Il+vit+en+toi+Le+Roi+Lion+2+Disney+bande+originale" },
-            { id: 77, film: "Le Roi Lion 2 : L'Honneur de la tribu", annee: 1998, titre_fr: "Mon chant d'espoir", titre_en: "My Lullaby", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Mon+chant+d%27espoir+Le+Roi+Lion+2+Disney+bande+originale" },
-            { id: 78, film: "Le Roi Lion 2 : L'Honneur de la tribu", annee: 1998, titre_fr: "L'Amour nous guidera", titre_en: "Love Will Find a Way", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=L%27Amour+nous+guidera+Le+Roi+Lion+2+Disney+bande+originale" },
-            { id: 79, film: "Le Roi Lion 2 : L'Honneur de la tribu", annee: 1998, titre_fr: "Nous sommes un", titre_en: "We Are One", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Nous+sommes+un+Le+Roi+Lion+2+Disney+bande+originale" },
-            { id: 80, film: "Le Roi Lion 2 : L'Honneur de la tribu", annee: 1998, titre_fr: "Trahison", titre_en: "Not One of Us", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Trahison+Le+Roi+Lion+2+Disney+bande+originale" },
-            { id: 81, film: "Tarzan", annee: 1999, titre_fr: "Toujours dans mon cœur", titre_en: "You'll Be in My Heart", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Toujours+dans+mon+c%C5%93ur+Tarzan+Disney+bande+originale" },
-            { id: 82, film: "Tarzan", annee: 1999, titre_fr: "Deux mondes", titre_en: "Two Worlds", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Deux+mondes+Tarzan+Disney+bande+originale" },
-            { id: 83, film: "Tarzan", annee: 1999, titre_fr: "Enfants de l'homme", titre_en: "Son of Man", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Enfants+de+l%27homme+Tarzan+Disney+bande+originale" },
-            { id: 84, film: "Toy Story 2", annee: 1999, titre_fr: "Quand elle m'aimait bien", titre_en: "When She Loved Me", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Quand+elle+m%27aimait+bien+Toy+Story+2+Disney+bande+originale" },
-            { id: 85, film: "Kuzco, l'empereur mégalo", annee: 2000, titre_fr: "Parfait monde", titre_en: "Perfect World", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Parfait+monde+Kuzco+Disney+bande+originale" },
-            { id: 86, film: "Atlantide, l'empire perdu", annee: 2001, titre_fr: "Où est ton cœur", titre_en: "Where the Dream Takes You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=O%C3%B9+est+ton+c%C5%93ur+Atlantide+Disney+bande+originale" },
-            { id: 87, film: "Monstres & Cie", annee: 2001, titre_fr: "Si je n'ai pas toi", titre_en: "If I Didn't Have You", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Si+je+n%27ai+pas+toi+Monstres+et+Cie+Disney+bande+originale" },
-            { id: 88, film: "Lilo & Stitch", annee: 2002, titre_fr: "Tourbillon hawaïen", titre_en: "Hawaiian Roller Coaster Ride", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Lilo+et+Stitch+chanson+version+francaise+Disney" },
-            { id: 89, film: "Lilo & Stitch", annee: 2002, titre_fr: "He Mele No Lilo", titre_en: "He Mele No Lilo", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=He+Mele+No+Lilo+Lilo+et+Stitch+Disney+bande+originale" },
-            { id: 90, film: "La Planète au trésor", annee: 2002, titre_fr: "Un homme libre", titre_en: "I'm Still Here", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Un+homme+libre+La+Plan%C3%A8te+au+tr%C3%A9sor+Disney+bande+originale" },
-            { id: 91, film: "Frère des ours", annee: 2003, titre_fr: "Bienvenue", titre_en: "Welcome", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Bienvenue+Fr%C3%A8re+des+ours+Disney+bande+originale" },
-            { id: 92, film: "Frère des ours", annee: 2003, titre_fr: "Un autre monde", titre_en: "On My Way", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Un+autre+monde+Fr%C3%A8re+des+ours+Disney+bande+originale" },
-            { id: 93, film: "Frère des ours", annee: 2003, titre_fr: "Je m'en vais", titre_en: "No Way Out", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+m%27en+vais+Fr%C3%A8re+des+ours+Disney+bande+originale" },
-            { id: 94, film: "Le Roi Lion 3 : Hakuna Matata", annee: 2004, titre_fr: "Creuse un tunnel", titre_en: "Digga Tunnah", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Creuse+un+tunnel+Le+Roi+Lion+3+Disney+bande+originale" },
-            { id: 95, film: "Cars", annee: 2006, titre_fr: "La Route est longue", titre_en: "Life Is a Highway", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=La+Route+est+longue+Cars+Disney+bande+originale+VF" },
-            { id: 96, film: "High School Musical", annee: 2006, titre_fr: "Ensemble", titre_en: "Breaking Free", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Ensemble+High+School+Musical+version+francaise" },
-            { id: 97, film: "High School Musical", annee: 2006, titre_fr: "Tous ensemble", titre_en: "We're All in This Together", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Tous+ensemble+High+School+Musical+version+francaise" },
-            { id: 98, film: "High School Musical 2", annee: 2007, titre_fr: "J'y crois", titre_en: "Bet On It", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=High+School+Musical+2+chanson+version+francaise" },
-            { id: 99, film: "Il était une fois", annee: 2007, titre_fr: "Comment savoir", titre_en: "That's How You Know", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Comment+savoir+Il+%C3%A9tait+une+fois+Disney+bande+originale" },
-            { id: 100, film: "Phinéas et Ferb (Série)", annee: 2007, titre_fr: "Générique Phinéas et Ferb", titre_en: "Today Is Gonna Be a Great Day", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=G%C3%A9n%C3%A9rique+Phin%C3%A9as+et+Ferb+version+francaise" },
-            { id: 101, film: "Ratatouille", annee: 2007, titre_fr: "Le Festin", titre_en: "Le Festin", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Le+Festin+Ratatouille+Disney+bande+originale" },
-            { id: 102, film: "Camp Rock", annee: 2008, titre_fr: "C'est moi", titre_en: "This Is Me", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=C%27est+moi+Camp+Rock+version+francaise" },
-            { id: 103, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "Au bout de mes rêves", titre_en: "Almost There", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Au+bout+de+mes+r%C3%AAves+La+Princesse+et+la+Grenouille+Disney+bande+originale" },
-            { id: 104, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "De l'autre côté", titre_en: "Friends on the Other Side", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=De+l%27autre+c%C3%B4t%C3%A9+La+Princesse+et+la+Grenouille+Disney+bande+originale" },
-            { id: 105, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "En famille", titre_en: "Dig a Little Deeper", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=En+famille+La+Princesse+et+la+Grenouille+Disney+bande+originale" },
-            { id: 106, film: "Raiponce", annee: 2010, titre_fr: "Je veux y croire", titre_en: "I See the Light", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=Je+veux+y+croire+Raiponce+Disney+bande+originale" },
-            { id: 107, film: "Raiponce", annee: 2010, titre_fr: "Où est la vraie vie ?", titre_en: "When Will My Life Begin?", type: "Chanson", yt_fallback: "https://www.youtube.com/results?search_query=O%C3%B9+est+la+vraie+vie+Raiponce+Disney+bande+originale" }
+        const DEFAULT_DISNEY_TRACKS = [
+            { id: 1, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Un jour mon prince viendra", category: "anim_classics", searchQuery: "Un jour mon prince viendra Blanche-Neige Disney" },
+            { id: 2, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Heigh-Ho", category: "anim_classics", searchQuery: "Heigh-Ho Blanche-Neige et les Sept Nains" },
+            { id: 3, film: "Blanche-Neige et les Sept Nains", annee: 1937, titre_fr: "Siffler en travaillant", category: "anim_classics", searchQuery: "Siffler en travaillant Blanche-Neige" },
+            { id: 4, film: "Pinocchio", annee: 1940, titre_fr: "Quand on prie la bonne étoile", category: "anim_classics", searchQuery: "Quand on prie la bonne étoile Pinocchio" },
+            { id: 5, film: "Pinocchio", annee: 1940, titre_fr: "Sans aucun lien me retenant", category: "anim_classics", searchQuery: "Sans aucun lien me retenant Pinocchio" },
+            { id: 6, film: "Dumbo", annee: 1941, titre_fr: "Mon tout petit", category: "anim_classics", searchQuery: "Mon tout petit Dumbo Disney" },
+            { id: 7, film: "Dumbo", annee: 1941, titre_fr: "Les Éléphants roses", category: "anim_classics", searchQuery: "Les Éléphants roses Dumbo" },
+            { id: 8, film: "Bambi", annee: 1942, titre_fr: "La Chanson de la pluie", category: "anim_classics", searchQuery: "La Chanson de la pluie Bambi" },
+            { id: 9, film: "Cendrillon", annee: 1950, titre_fr: "Salagadoula", category: "anim_classics", searchQuery: "Salagadoula Cendrillon Disney" },
+            { id: 10, film: "Cendrillon", annee: 1950, titre_fr: "Tendre rêve", category: "anim_classics", searchQuery: "Tendre rêve Cendrillon Disney" },
+            { id: 11, film: "Cendrillon", annee: 1950, titre_fr: "C'est ça l'amour", category: "anim_classics", searchQuery: "C'est ça l'amour Cendrillon" },
+            { id: 12, film: "Alice au pays des merveilles", annee: 1951, titre_fr: "Joyeux non-anniversaire", category: "anim_classics", searchQuery: "Joyeux non-anniversaire Alice au pays des merveilles" },
+            { id: 13, film: "Alice au pays des merveilles", annee: 1951, titre_fr: "Dans le monde de mes rêves", category: "anim_classics", searchQuery: "Dans le monde de mes rêves Alice" },
+            { id: 14, film: "Peter Pan", annee: 1953, titre_fr: "Tu t'envoles", category: "anim_classics", searchQuery: "Tu t'envoles Peter Pan Disney" },
+            { id: 15, film: "Peter Pan", annee: 1953, titre_fr: "La Deuxième Étoile à droite", category: "anim_classics", searchQuery: "La Deuxième Étoile à droite Peter Pan" },
+            { id: 16, film: "La Belle et le Clochard", annee: 1955, titre_fr: "Bella Notte", category: "anim_classics", searchQuery: "Bella Notte La Belle et le Clochard" },
+            { id: 17, film: "La Belle et le Clochard", annee: 1955, titre_fr: "Nous sommes deux siamois", category: "anim_classics", searchQuery: "Nous sommes deux siamois La Belle et le Clochard" },
+            { id: 18, film: "La Belle au bois dormant", annee: 1959, titre_fr: "J'en ai rêvé", category: "anim_classics", searchQuery: "J'en ai rêvé La Belle au bois dormant" },
+            { id: 19, film: "Les 101 Dalmatiens", annee: 1961, titre_fr: "Cruella De Vil", category: "anim_classics", searchQuery: "Cruella De Vil Les 101 Dalmatiens" },
+            { id: 20, film: "Merlin l'Enchanteur", annee: 1963, titre_fr: "Higitus Figitus", category: "anim_classics", searchQuery: "Higitus Figitus Merlin l'Enchanteur" },
+            { id: 21, film: "Mary Poppins", annee: 1964, titre_fr: "Supercalifragilisticexpialidocious", category: "live_films", searchQuery: "Supercalifragilisticexpialidocious Mary Poppins" },
+            { id: 22, film: "Mary Poppins", annee: 1964, titre_fr: "Cheminée", category: "live_films", searchQuery: "Cheminée Mary Poppins Disney" },
+            { id: 23, film: "Mary Poppins", annee: 1964, titre_fr: "Un morceau de sucre", category: "live_films", searchQuery: "Un morceau de sucre Mary Poppins" },
+            { id: 24, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Il en faut peu pour être heureux", category: "anim_classics", searchQuery: "Il en faut peu pour être heureux Le Livre de la jungle" },
+            { id: 25, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Être un homme comme vous", category: "anim_classics", searchQuery: "Être un homme comme vous Le Livre de la jungle" },
+            { id: 26, film: "Le Livre de la jungle", annee: 1967, titre_fr: "Aie confiance", category: "anim_classics", searchQuery: "Aie confiance Le Livre de la jungle" },
+            { id: 27, film: "Les Aristochats", annee: 1970, titre_fr: "Tout le monde veut devenir un cat", category: "anim_classics", searchQuery: "Tout le monde veut devenir un cat Les Aristochats" },
+            { id: 28, film: "Les Aristochats", annee: 1970, titre_fr: "Les Aristochats", category: "anim_classics", searchQuery: "Les Aristochats Maurice Chevalier" },
+            { id: 29, film: "Robin des Bois", annee: 1973, titre_fr: "Quel beau jour vraiment", category: "anim_classics", searchQuery: "Quel beau jour vraiment Robin des Bois" },
+            { id: 30, film: "Les Aventures de Bernard et Bianca", annee: 1977, titre_fr: "Quelqu'un viendra", category: "anim_classics", searchQuery: "Quelqu'un viendra Bernard et Bianca" },
+            { id: 31, film: "Rox et Rouky", annee: 1981, titre_fr: "Amis pour la vie", category: "anim_classics", searchQuery: "Amis pour la vie Rox et Rouky" },
+            { id: 32, film: "La Bande à Picsou", annee: 1987, titre_fr: "La Bande à Picsou (Générique)", category: "anim_series", searchQuery: "La Bande à Picsou générique français" },
+            { id: 33, film: "Oliver et Compagnie", annee: 1988, titre_fr: "Mais pourquoi m'en faire", category: "anim_classics", searchQuery: "Mais pourquoi m'en faire Oliver et Compagnie" },
+            { id: 34, film: "La Petite Sirène", annee: 1989, titre_fr: "Partir là-bas", category: "anim_golden", searchQuery: "Partir là-bas La Petite Sirène" },
+            { id: 35, film: "La Petite Sirène", annee: 1989, titre_fr: "Sous l'océan", category: "anim_golden", searchQuery: "Sous l'océan Henri Salvador La Petite Sirène" },
+            { id: 36, film: "La Petite Sirène", annee: 1989, titre_fr: "Embrasse-la", category: "anim_golden", searchQuery: "Embrasse-la Henri Salvador La Petite Sirène" },
+            { id: 37, film: "La Petite Sirène", annee: 1989, titre_fr: "Pauvres âmes en perdition", category: "anim_golden", searchQuery: "Pauvres âmes en perdition La Petite Sirène" },
+            { id: 38, film: "La Belle et la Bête", annee: 1991, titre_fr: "Histoire éternelle", category: "anim_golden", searchQuery: "Histoire éternelle La Belle et la Bête" },
+            { id: 39, film: "La Belle et la Bête", annee: 1991, titre_fr: "C'est la fête", category: "anim_golden", searchQuery: "C'est la fête La Belle et la Bête" },
+            { id: 40, film: "La Belle et la Bête", annee: 1991, titre_fr: "Belle", category: "anim_golden", searchQuery: "Belle La Belle et la Bête Disney" },
+            { id: 41, film: "La Belle et la Bête", annee: 1991, titre_fr: "Gaston", category: "anim_golden", searchQuery: "Gaston La Belle et la Bête Disney" },
+            { id: 42, film: "Aladdin", annee: 1992, titre_fr: "Ce rêve bleu", category: "anim_golden", searchQuery: "Ce rêve bleu Karine Costa Paolo Domingo Aladdin" },
+            { id: 43, film: "Aladdin", annee: 1992, titre_fr: "Je suis ton meilleur ami", category: "anim_golden", searchQuery: "Je suis ton meilleur ami Richard Darbois Aladdin" },
+            { id: 44, film: "Aladdin", annee: 1992, titre_fr: "Prince Ali", category: "anim_golden", searchQuery: "Prince Ali Richard Darbois Aladdin" },
+            { id: 45, film: "Aladdin", annee: 1992, titre_fr: "Nuits d'Arabie", category: "anim_golden", searchQuery: "Nuits d'Arabie Aladdin Disney" },
+            { id: 46, film: "Aladdin", annee: 1992, titre_fr: "Je vole", category: "anim_golden", searchQuery: "Je vole Aladdin Paolo Domingo" },
+            { id: 47, film: "L'Étrange Noël de monsieur Jack", annee: 1993, titre_fr: "Bienvenue à Halloween", category: "anim_golden", searchQuery: "Bienvenue à Halloween L'Étrange Noël de monsieur Jack" },
+            { id: 48, film: "L'Étrange Noël de monsieur Jack", annee: 1993, titre_fr: "Que vois-je ?", category: "anim_golden", searchQuery: "Que vois-je L'Étrange Noël de monsieur Jack" },
+            { id: 49, film: "Le Roi Lion", annee: 1994, titre_fr: "L'Histoire de la vie", category: "anim_golden", searchQuery: "L'Histoire de la vie Debbie Davis Le Roi Lion" },
+            { id: 50, film: "Le Roi Lion", annee: 1994, titre_fr: "Je voudrais déjà être roi", category: "anim_golden", searchQuery: "Je voudrais déjà être roi Le Roi Lion" },
+            { id: 51, film: "Le Roi Lion", annee: 1994, titre_fr: "Soyez prêts", category: "anim_golden", searchQuery: "Soyez prêts Jean Piat Le Roi Lion" },
+            { id: 52, film: "Le Roi Lion", annee: 1994, titre_fr: "Hakuna Matata", category: "anim_golden", searchQuery: "Hakuna Matata Le Roi Lion" },
+            { id: 53, film: "Le Roi Lion", annee: 1994, titre_fr: "L'Amour brille sous les étoiles", category: "anim_golden", searchQuery: "L'Amour brille sous les étoiles Le Roi Lion" },
+            { id: 54, film: "Pocahontas", annee: 1995, titre_fr: "L'Air du vent", category: "anim_golden", searchQuery: "L'Air du vent Laura Mayne Pocahontas" },
+            { id: 55, film: "Pocahontas", annee: 1995, titre_fr: "Au détour de la rivière", category: "anim_golden", searchQuery: "Au détour de la rivière Pocahontas" },
+            { id: 56, film: "Pocahontas", annee: 1995, titre_fr: "Sauvages", category: "anim_golden", searchQuery: "Sauvages Pocahontas Disney" },
+            { id: 57, film: "Toy Story", annee: 1995, titre_fr: "Je suis ton ami", category: "anim_pixar", searchQuery: "Je suis ton ami Charlélie Couture Toy Story" },
+            { id: 58, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Infernal", category: "anim_golden", searchQuery: "Infernal Jean Piat Le Bossu de Notre-Dame" },
+            { id: 59, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Les Cloches de Notre-Dame", category: "anim_golden", searchQuery: "Les Cloches de Notre-Dame Le Bossu de Notre-Dame" },
+            { id: 60, film: "Le Bossu de Notre-Dame", annee: 1996, titre_fr: "Rien qu'un jour", category: "anim_golden", searchQuery: "Rien qu'un jour Francis Lalanne Le Bossu de Notre-Dame" },
+            { id: 61, film: "Hercule", annee: 1997, titre_fr: "De zéro en héros", category: "anim_golden", searchQuery: "De zéro en héros Hercule Disney" },
+            { id: 62, film: "Hercule", annee: 1997, titre_fr: "Je veux savoir", category: "anim_golden", searchQuery: "Je veux savoir Emmanuel Dahl Hercule" },
+            { id: 63, film: "Hercule", annee: 1997, titre_fr: "Ne parle pas d'eux", category: "anim_golden", searchQuery: "Ne parle pas d'eux Mimi Félixine Hercule" },
+            { id: 64, film: "Anastasia", annee: 1997, titre_fr: "Loin du froid de décembre", category: "anim_golden", searchQuery: "Loin du froid de décembre Anastasia" },
+            { id: 65, film: "Mulan", annee: 1998, titre_fr: "Réflexion", category: "anim_golden", searchQuery: "Réflexion Marie Galey Mulan" },
+            { id: 66, film: "Mulan", annee: 1998, titre_fr: "Comme un homme", category: "anim_golden", searchQuery: "Comme un homme Patrick Fiori Mulan" },
+            { id: 67, film: "Mulan", annee: 1998, titre_fr: "Honneur à tous", category: "anim_golden", searchQuery: "Honneur à tous Mulan Disney" },
+            { id: 68, film: "Le Roi Lion 2", annee: 1998, titre_fr: "Il vit en toi", category: "anim_golden", searchQuery: "Il vit en toi Le Roi Lion 2" },
+            { id: 69, film: "Le Roi Lion 2", annee: 1998, titre_fr: "Mon chant d'espoir", category: "anim_golden", searchQuery: "Mon chant d'espoir Le Roi Lion 2" },
+            { id: 70, film: "Le Roi Lion 2", annee: 1998, titre_fr: "L'Amour nous guidera", category: "anim_golden", searchQuery: "L'Amour nous guidera Le Roi Lion 2" },
+            { id: 71, film: "Tarzan", annee: 1999, titre_fr: "Toujours dans mon cœur", category: "anim_golden", searchQuery: "Toujours dans mon cœur Phil Collins Tarzan" },
+            { id: 72, film: "Tarzan", annee: 1999, titre_fr: "Deux mondes", category: "anim_golden", searchQuery: "Deux mondes Phil Collins Tarzan" },
+            { id: 73, film: "Tarzan", annee: 1999, titre_fr: "Enfants de l'homme", category: "anim_golden", searchQuery: "Enfants de l'homme Phil Collins Tarzan" },
+            { id: 74, film: "Toy Story 2", annee: 1999, titre_fr: "Quand elle m'aimait bien", category: "anim_pixar", searchQuery: "Quand elle m'aimait bien Toy Story 2" },
+            { id: 75, film: "Kuzco, l'empereur mégalo", annee: 2000, titre_fr: "Parfait monde", category: "anim_modern", searchQuery: "Parfait monde Kuzco Disney" },
+            { id: 76, film: "Atlantide, l'empire perdu", annee: 2001, titre_fr: "Où est ton cœur", category: "anim_modern", searchQuery: "Où est ton cœur Lena Ka Atlantide" },
+            { id: 77, film: "Monstres & Cie", annee: 2001, titre_fr: "Si je n'ai pas toi", category: "anim_pixar", searchQuery: "Si je n'ai pas toi Monstres et Cie" },
+            { id: 78, film: "La Planète au trésor", annee: 2002, titre_fr: "Un homme libre", category: "anim_modern", searchQuery: "Un homme libre David Hallyday La Planète au trésor" },
+            { id: 79, film: "Frère des ours", annee: 2003, titre_fr: "Bienvenue", category: "anim_modern", searchQuery: "Bienvenue Phil Collins Frère des ours" },
+            { id: 80, film: "Frère des ours", annee: 2003, titre_fr: "Un autre monde", category: "anim_modern", searchQuery: "Un autre monde Phil Collins Frère des ours" },
+            { id: 81, film: "Frère des ours", annee: 2003, titre_fr: "Je m'en vais", category: "anim_modern", searchQuery: "Je m'en vais Phil Collins Frère des ours" },
+            { id: 82, film: "Cars", annee: 2006, titre_fr: "La Route est longue", category: "anim_pixar", searchQuery: "La Route est longue Cars Disney" },
+            { id: 83, film: "High School Musical", annee: 2006, titre_fr: "Ensemble", category: "live_films", searchQuery: "Ensemble High School Musical" },
+            { id: 84, film: "High School Musical", annee: 2006, titre_fr: "Tous ensemble", category: "live_films", searchQuery: "Tous ensemble High School Musical" },
+            { id: 85, film: "Hannah Montana", annee: 2006, titre_fr: "Le Meilleur des deux mondes", category: "live_series", searchQuery: "Le Meilleur des deux mondes Hannah Montana" },
+            { id: 86, film: "High School Musical 2", annee: 2007, titre_fr: "J'y crois", category: "live_films", searchQuery: "J'y crois High School Musical 2" },
+            { id: 87, film: "Il était une fois", annee: 2007, titre_fr: "Comment savoir", category: "live_films", searchQuery: "Comment savoir Il était une fois Disney" },
+            { id: 88, film: "Phinéas et Ferb", annee: 2007, titre_fr: "Générique Phinéas et Ferb", category: "anim_series", searchQuery: "Générique Phinéas et Ferb" },
+            { id: 89, film: "Ratatouille", annee: 2007, titre_fr: "Le Festin", category: "anim_pixar", searchQuery: "Le Festin Camille Ratatouille" },
+            { id: 90, film: "Camp Rock", annee: 2008, titre_fr: "C'est moi", category: "live_films", searchQuery: "C'est moi Camp Rock Sheryfa Luna" },
+            { id: 91, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "Au bout de mes rêves", category: "anim_modern", searchQuery: "Au bout de mes rêves China Moses La Princesse et la Grenouille" },
+            { id: 92, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "De l'autre côté", category: "anim_modern", searchQuery: "De l'autre côté Frantz Confiac La Princesse et la Grenouille" },
+            { id: 93, film: "La Princesse et la Grenouille", annee: 2009, titre_fr: "En famille", category: "anim_modern", searchQuery: "En famille La Princesse et la Grenouille" },
+            { id: 94, film: "Raiponce", annee: 2010, titre_fr: "Je veux y croire", category: "anim_modern", searchQuery: "Je veux y croire Maeva Méline Raiponce" },
+            { id: 95, film: "Raiponce", annee: 2010, titre_fr: "Où est la vraie vie ?", category: "anim_modern", searchQuery: "Où est la vraie vie Maeva Méline Raiponce" },
+            { id: 96, film: "Raiponce", annee: 2010, titre_fr: "N'écoute que moi", category: "anim_modern", searchQuery: "N'écoute que moi Sophie Delmas Raiponce" },
+            { id: 97, film: "Rebelle", annee: 2012, titre_fr: "Vers le ciel", category: "anim_pixar", searchQuery: "Vers le ciel Maeva Méline Rebelle" },
+            { id: 98, film: "Violetta", annee: 2012, titre_fr: "Dans mon monde", category: "live_series", searchQuery: "Dans mon monde Violetta" },
+            { id: 99, film: "La Reine des Neiges", annee: 2013, titre_fr: "Libérée, délivrée", category: "anim_modern", searchQuery: "Libérée, délivrée Anaïs Delva La Reine des Neiges" },
+            { id: 100, film: "La Reine des Neiges", annee: 2013, titre_fr: "Je voudrais un bonhomme de neige", category: "anim_modern", searchQuery: "Je voudrais un bonhomme de neige La Reine des Neiges" },
+            { id: 101, film: "La Reine des Neiges", annee: 2013, titre_fr: "Le Renouveau", category: "anim_modern", searchQuery: "Le Renouveau Emmylou Homs La Reine des Neiges" },
+            { id: 102, film: "La Reine des Neiges", annee: 2013, titre_fr: "En été", category: "anim_modern", searchQuery: "En été Dany Boon La Reine des Neiges" },
+            { id: 103, film: "La Reine des Neiges", annee: 2013, titre_fr: "L'amour est un cadeau", category: "anim_modern", searchQuery: "L'amour est un cadeau La Reine des Neiges" },
+            { id: 104, film: "Descendants", annee: 2015, titre_fr: "Pourris jusqu'au cœur", category: "live_films", searchQuery: "Pourris jusqu'au cœur Descendants" },
+            { id: 105, film: "Zootopie", annee: 2016, titre_fr: "Try Everything", category: "anim_modern", searchQuery: "Try Everything Shakira Zootopie" },
+            { id: 106, film: "Vaiana", annee: 2016, titre_fr: "Le Bleu lumière", category: "anim_modern", searchQuery: "Le Bleu lumière Cerise Calixte Vaiana" },
+            { id: 107, film: "Vaiana", annee: 2016, titre_fr: "Pour les hommes", category: "anim_modern", searchQuery: "Pour les hommes Anthony Kavanagh Vaiana" },
+            { id: 108, film: "Vaiana", annee: 2016, titre_fr: "L'Explorateur", category: "anim_modern", searchQuery: "L'Explorateur Vaiana" },
+            { id: 109, film: "Coco", annee: 2017, titre_fr: "Ne m'oublie pas", category: "anim_pixar", searchQuery: "Ne m'oublie pas Coco Disney" },
+            { id: 110, film: "Coco", annee: 2017, titre_fr: "Un poco loco", category: "anim_pixar", searchQuery: "Un poco loco Coco Disney" },
+            { id: 111, film: "La Reine des Neiges 2", annee: 2019, titre_fr: "Dans un autre monde", category: "anim_modern", searchQuery: "Dans un autre monde Charlotte Hervieux La Reine des Neiges 2" },
+            { id: 112, film: "La Reine des Neiges 2", annee: 2019, titre_fr: "Je te cherche", category: "anim_modern", searchQuery: "Je te cherche Charlotte Hervieux La Reine des Neiges 2" },
+            { id: 113, film: "Encanto", annee: 2021, titre_fr: "Ne parlons pas de Bruno", category: "anim_modern", searchQuery: "Ne parlons pas de Bruno Encanto" },
+            { id: 114, film: "Encanto", annee: 2021, titre_fr: "Sous les apparences", category: "anim_modern", searchQuery: "Sous les apparences Encanto" },
+            { id: 115, film: "Encanto", annee: 2021, titre_fr: "La Famille Madrigal", category: "anim_modern", searchQuery: "La Famille Madrigal Camille Timmerman Encanto" }
         ];
 
         const CATEGORIES = [
             { id: "anim_classics", label: "Grands Classiques Animés (1937–1988)", medium: "animation", icon: "fa-star" },
             { id: "anim_golden", label: "Âge d'Or / Renaissance Animée (1989–1999)", medium: "animation", icon: "fa-crown" },
             { id: "anim_modern", label: "Ère Moderne Animée (2000–2024)", medium: "animation", icon: "fa-wand-magic-sparkles" },
-            { id: 100 && "anim_pixar", label: "Pixar (Animation 3D)", medium: "animation", icon: "fa-lamp" },
+            { id: "anim_pixar", label: "Pixar (Animation 3D)", medium: "animation", icon: "fa-lamp" },
             { id: "anim_series", label: "Séries Animées", medium: "animation", icon: "fa-tv" },
             { id: "live_films", label: "Films en Prises de vues réelles & Comédies musicales", medium: "live", icon: "fa-video" },
             { id: "live_series", label: "Séries en Prises de vues réelles / Disney Channel", medium: "live", icon: "fa-bolt" }
         ];
 
-        const PIXAR_FILMS = new Set([
-            "toy story", "toy story 2", "monstres & cie", "cars", "ratatouille"
-        ]);
-
-        const LIVE_ACTION_MEDIA = new Set([
-            "mary poppins", "high school musical", "high school musical 2", "il etait une fois", "camp rock"
-        ]);
+        const STORAGE_CATALOG_KEY = "disney_blindtest_songs_catalog_v2";
+        const debugStatusMap = {}; // trackId -> { status: 'ok'|'error'|'synth'|'untested', resolvedLabel: string, previewUrl: string }
+        const itunesCache = new Map();
 
         function normalizeStr(str) {
             return (str || "")
@@ -962,87 +1057,89 @@
                 .trim();
         }
 
-        function classifyTrackCategory(track) {
-            const normFilm = normalizeStr(track.film);
-            if (LIVE_ACTION_MEDIA.has(normFilm)) {
-                return "live_films";
-            }
-            if (normFilm.includes("serie") || normFilm.includes("disney channel")) {
-                return "anim_series";
-            }
-            if (PIXAR_FILMS.has(normFilm)) {
-                return "anim_pixar";
-            }
-            if (track.annee <= 1988) {
-                return "anim_classics";
-            }
-            if (track.annee <= 1999) {
-                return "anim_golden";
-            }
-            return "anim_modern";
-        }
-
-        function buildCatalogTrack(raw) {
-            const category = raw.category || classifyTrackCategory(raw);
+        function sanitizeTrack(raw, fallbackIdx = 0) {
+            const validCat = CATEGORIES.some(c => c.id === raw.category) ? raw.category : "anim_modern";
             return {
-                id: raw.id,
-                film: raw.film,
-                annee: raw.annee || 1995,
-                titre_fr: raw.titre_fr,
-                titre_en: raw.titre_en || raw.titre_fr,
-                type: raw.type || "Chanson",
-                category,
-                audioUrl: raw.audioUrl || null,
-                isCustom: Boolean(raw.isCustom),
-                yt_fallback: raw.yt_fallback || `https://www.youtube.com/results?search_query=${encodeURIComponent(raw.titre_fr + " " + raw.film + " Disney version francaise")}`
+                id: raw.id ?? (Date.now() + fallbackIdx),
+                titre_fr: String(raw.titre_fr || raw.title || "Titre inconnu").trim(),
+                film: String(raw.film || raw.media || "Disney").trim(),
+                annee: Number(raw.annee || raw.year) || 2000,
+                category: validCat,
+                searchQuery: String(raw.searchQuery || `${raw.titre_fr || ""} ${raw.film || ""} Disney`).trim(),
+                audioUrl: raw.audioUrl ? String(raw.audioUrl).trim() : null,
+                isCustomOrEdited: Boolean(raw.isCustomOrEdited),
+                yt_fallback: raw.yt_fallback || `https://www.youtube.com/results?search_query=${encodeURIComponent((raw.titre_fr || "") + " " + (raw.film || "") + " Disney version francaise")}`
             };
         }
 
-        // Load custom tracks from localStorage
-        const STORAGE_CUSTOM_TRACKS_KEY = "disney_blindtest_custom_tracks_v1";
-        function loadCustomTracks() {
+        let catalogTracks = [];
+        let catalogSourceDescription = "Catalogue intégré";
+
+        function saveCatalogToStorage() {
             try {
-                const raw = localStorage.getItem(STORAGE_CUSTOM_TRACKS_KEY);
-                if (!raw) return [];
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed.map(t => buildCatalogTrack({ ...t, isCustom: true })) : [];
+                localStorage.setItem(STORAGE_CATALOG_KEY, JSON.stringify(catalogTracks));
             } catch (e) {
-                return [];
+                console.warn("Erreur sauvegarde localStorage:", e);
             }
         }
 
-        function saveCustomTracks(customList) {
+        async function initializeCatalog() {
+            // 1. Check localStorage first
+            let loadedFromStorage = false;
             try {
-                localStorage.setItem(STORAGE_CUSTOM_TRACKS_KEY, JSON.stringify(customList));
-            } catch (e) {
-                console.warn("Impossible de sauvegarder les extraits personnalisés :", e);
+                const rawLocal = localStorage.getItem(STORAGE_CATALOG_KEY);
+                if (rawLocal) {
+                    const parsed = JSON.parse(rawLocal);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        catalogTracks = parsed.map((t, i) => sanitizeTrack(t, i));
+                        catalogSourceDescription = "Sauvegarde locale / JSON";
+                        loadedFromStorage = true;
+                    }
+                }
+            } catch (e) {}
+
+            if (!loadedFromStorage) {
+                catalogTracks = DEFAULT_DISNEY_TRACKS.map((t, i) => sanitizeTrack(t, i));
+                catalogSourceDescription = "Catalogue intégré (115 VF)";
             }
+
+            // 2. Also attempt to auto-load ./songs.json if placed alongside index.html
+            try {
+                const resp = await fetch("./songs.json", { cache: "no-store" });
+                if (resp.ok) {
+                    const jsonData = await resp.json();
+                    const list = Array.isArray(jsonData) ? jsonData : (Array.isArray(jsonData.tracks) ? jsonData.tracks : null);
+                    if (list && list.length > 0 && !loadedFromStorage) {
+                        catalogTracks = list.map((t, i) => sanitizeTrack(t, i));
+                        catalogSourceDescription = "Fichier songs.json externe";
+                        saveCatalogToStorage();
+                    }
+                }
+            } catch (e) {
+                // Silent ignore when running via file:// or without external songs.json
+            }
+
+            refreshSettingsUI();
         }
 
-        let customTracks = loadCustomTracks();
-        function getAllTracks() {
-            return [...RAW_DISNEY_TRACKS.map(buildCatalogTrack), ...customTracks];
-        }
-
-        // Immediate player identity (never blocks multiplayer)
         const playerId = "p_" + Math.random().toString(36).substring(2, 9);
 
         const state = {
-            mode: "solo", // "solo" | "multi"
+            mode: "solo",
             playerName: "",
             settings: {
                 roundsCount: 10,
-                clipDuration: 20, // seconds: 10, 15, 20, 30
-                scoringMode: "speed", // "speed" | "plus_one"
-                targetMode: "both", // "both" | "song" | "media"
+                clipDuration: 20,
+                scoringMode: "speed",
+                targetMode: "both",
                 categories: CATEGORIES.map(c => c.id),
-                selectedTrackIds: null // null = all tracks matching categories; array = explicit user selection
+                selectedTrackIds: null
             },
             room: {
                 code: null,
                 isHost: false,
-                players: {}, // playerId -> { id, name, score, isHost, roundPoints }
-                phase: "lobby", // "lobby" | "playing" | "reveal" | "finished"
+                players: {},
+                phase: "lobby",
                 roundIndex: 0,
                 deck: [],
                 roundStartTime: 0
@@ -1063,11 +1160,11 @@
             soloScore: 0
         };
 
-        // Multiplayer relay manager (MQTT over WS + BroadcastChannel)
+        // Multiplayer relay (MQTT over WS + BroadcastChannel)
         let mqttClient = null;
         let mqttConnected = false;
         let currentTopic = null;
-        const broadcastChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("disney_blindtest_rooms_v1") : null;
+        const broadcastChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("disney_blindtest_rooms_v2") : null;
 
         function updateNetworkBadge(statusText, ok = true) {
             const badge = document.getElementById("network-status-badge");
@@ -1140,7 +1237,7 @@
         }
 
         function subscribeToRoomTopic(code) {
-            currentTopic = `disney/blindtest/v1/room/${code.toUpperCase()}`;
+            currentTopic = `disney/blindtest/v2/room/${code.toUpperCase()}`;
             if (mqttClient && mqttConnected) {
                 mqttClient.subscribe(currentTopic, { qos: 0 });
             }
@@ -1202,7 +1299,7 @@
             }, 3200);
         }
 
-        // Typo-tolerant matching algorithm (Levenshtein distance + token normalization)
+        // Typo-tolerant matching (Levenshtein + normalization)
         function levenshtein(a, b) {
             const m = a.length;
             const n = b.length;
@@ -1241,7 +1338,6 @@
             for (const target of candidates) {
                 if (rawGuess === target) return true;
 
-                // Allow substring match when guess is substantial and shares strong overlap
                 if (rawGuess.length >= 4 && target.includes(rawGuess)) {
                     const ratio = rawGuess.length / target.length;
                     if (ratio >= 0.55 || rawGuess.split(" ").length >= 2) {
@@ -1249,7 +1345,6 @@
                     }
                 }
 
-                // Typo tolerance via Levenshtein distance
                 const dist = levenshtein(rawGuess, target);
                 const maxLen = Math.max(rawGuess.length, target.length);
                 const allowedErrors = maxLen <= 5 ? 1 : maxLen <= 10 ? 2 : Math.floor(maxLen * 0.28);
@@ -1261,15 +1356,89 @@
             return false;
         }
 
-        // Eligible tracks pool based on categories and manual selection
+        // Strict iTunes French Audio Resolver (filters out English, Karaoke, Instrumental covers)
+        const ENGLISH_BLOCKLIST = [
+            "english version", "original motion picture soundtrack", "instrumental",
+            "karaoke", "lullaby", "piano cover", "music box", "ringtone",
+            "let it go", "whole new world", "circle of life", "part of your world",
+            "be our guest", "under the sea", "can you feel the love", "how far i ll go",
+            "into the unknown", "we don t talk about bruno", "colors of the wind"
+        ];
+
+        async function searchItunesCandidates(queryText, limit = 10) {
+            const cacheKey = `${queryText}__${limit}`;
+            if (itunesCache.has(cacheKey)) {
+                return itunesCache.get(cacheKey);
+            }
+            const url = `https://itunes.apple.com/search?term=${encodeURIComponent(queryText)}&media=music&entity=song&country=FR&lang=fr_fr&limit=${limit}`;
+            const res = await fetch(url);
+            if (!res.ok) return [];
+            const data = await res.json();
+            const results = Array.isArray(data.results) ? data.results.filter(r => Boolean(r.previewUrl)) : [];
+            itunesCache.set(cacheKey, results);
+            return results;
+        }
+
+        function scoreItunesCandidate(item, track) {
+            const tName = normalizeStr(item.trackName || "");
+            const cName = normalizeStr(item.collectionName || "");
+            const combined = `${tName} ${cName}`;
+            const normTarget = normalizeStr(track.titre_fr);
+
+            for (const bad of ENGLISH_BLOCKLIST) {
+                if (combined.includes(bad)) return -100;
+            }
+
+            let score = 0;
+            if (tName.includes(normTarget) || normTarget.includes(tName)) score += 45;
+            if (cName.includes("disney") || cName.includes("pixar") || cName.includes("bande originale") || cName.includes("francaise")) score += 25;
+            if (cName.includes(normalizeStr(track.film))) score += 20;
+            return score;
+        }
+
+        async function resolveTrackAudio(track) {
+            if (track.audioUrl) {
+                return {
+                    url: track.audioUrl,
+                    source: "custom_url",
+                    resolvedLabel: "Lien audio verrouillé / personnalisé"
+                };
+            }
+
+            try {
+                const query = track.searchQuery || `${track.titre_fr} ${track.film} Disney`;
+                const candidates = await searchItunesCandidates(query, 10);
+                if (candidates.length > 0) {
+                    const ranked = candidates
+                        .map(item => ({ item, score: scoreItunesCandidate(item, track) }))
+                        .sort((a, b) => b.score - a.score);
+
+                    const winner = ranked[0];
+                    if (winner && winner.score > -50 && winner.item.previewUrl) {
+                        return {
+                            url: winner.item.previewUrl,
+                            source: "itunes",
+                            resolvedLabel: `${winner.item.trackName} — ${winner.item.artistName} (${winner.item.collectionName || "iTunes FR"})`
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            return {
+                url: null,
+                source: "synth",
+                resolvedLabel: "Aucun extrait iTunes VF trouvé (secours synthétiseur)"
+            };
+        }
+
+        // Eligible tracks & settings sync
         function getEligibleTracks() {
-            const all = getAllTracks();
             if (Array.isArray(state.settings.selectedTrackIds)) {
                 const selectedSet = new Set(state.settings.selectedTrackIds);
-                return all.filter(t => selectedSet.has(t.id));
+                return catalogTracks.filter(t => selectedSet.has(t.id));
             }
             const catSet = new Set(state.settings.categories);
-            return all.filter(t => catSet.has(t.category));
+            return catalogTracks.filter(t => catSet.has(t.category));
         }
 
         function syncRoundsLimitToPool() {
@@ -1283,9 +1452,7 @@
             if (poolBadge) {
                 poolBadge.textContent = `${pool.length} extrait${pool.length > 1 ? "s" : ""} actif${pool.length > 1 ? "s" : ""}`;
             }
-            if (maxHint) {
-                maxHint.textContent = pool.length;
-            }
+            if (maxHint) maxHint.textContent = pool.length;
             if (rangeEl) {
                 rangeEl.max = maxAvailable;
                 if (state.settings.roundsCount > maxAvailable) {
@@ -1299,9 +1466,13 @@
             if (labelRounds) {
                 labelRounds.textContent = pool.length === 0 ? "0" : state.settings.roundsCount;
             }
+
+            const srcLabel = document.getElementById("catalog-source-label");
+            const totalLabel = document.getElementById("catalog-total-label");
+            if (srcLabel) srcLabel.textContent = catalogSourceDescription;
+            if (totalLabel) totalLabel.textContent = `${catalogTracks.length} titres`;
         }
 
-        // Render categories separated into Animation vs Live-Action
         function renderCategories() {
             const animContainer = document.getElementById("category-list-animation");
             const liveContainer = document.getElementById("category-list-live");
@@ -1310,11 +1481,10 @@
             animContainer.innerHTML = "";
             liveContainer.innerHTML = "";
 
-            const allTracks = getAllTracks();
             const isLockedByGuest = state.mode === "multi" && state.room.code && !state.room.isHost;
 
             CATEGORIES.forEach(cat => {
-                const count = allTracks.filter(t => t.category === cat.id).length;
+                const count = catalogTracks.filter(t => t.category === cat.id).length;
                 const checked = state.settings.categories.includes(cat.id);
 
                 const item = document.createElement("label");
@@ -1334,7 +1504,6 @@
                 const checkbox = item.querySelector("input");
                 checkbox.addEventListener("change", () => {
                     if (isLockedByGuest) return;
-                    // Switching category checkboxes resets explicit manual override
                     state.settings.selectedTrackIds = null;
                     if (checkbox.checked) {
                         if (!state.settings.categories.includes(cat.id)) {
@@ -1355,22 +1524,15 @@
                 }
             });
 
-            // Populate custom track category select
-            const customCatSelect = document.getElementById("custom-track-category");
-            if (customCatSelect && customCatSelect.options.length === 0) {
+            // Populate category dropdown inside Edit/Add modal
+            const editCatSelect = document.getElementById("edit-song-category");
+            if (editCatSelect && editCatSelect.options.length === 0) {
                 CATEGORIES.forEach(cat => {
                     const opt = document.createElement("option");
                     opt.value = cat.id;
                     opt.textContent = `${cat.medium === "live" ? "[Prises de vues réelles]" : "[Animation]"} ${cat.label}`;
-                    customCatSelect.appendChild(opt);
+                    editCatSelect.appendChild(opt);
                 });
-            }
-
-            const customCountEl = document.getElementById("custom-tracks-count");
-            const resetCustomBtn = document.getElementById("btn-reset-custom-tracks");
-            if (customCountEl) customCountEl.textContent = customTracks.length;
-            if (resetCustomBtn) {
-                resetCustomBtn.classList.toggle("hidden", customTracks.length === 0);
             }
         }
 
@@ -1434,7 +1596,7 @@
             }
         }
 
-        // Multiplayer room actions
+        // Multiplayer room management
         function getPlayerName() {
             const input = document.getElementById("input-player-name");
             const val = (input ? input.value : "").trim();
@@ -1465,12 +1627,7 @@
                 code,
                 isHost: true,
                 players: {
-                    [playerId]: {
-                        id: playerId,
-                        name,
-                        score: 0,
-                        isHost: true
-                    }
+                    [playerId]: { id: playerId, name, score: 0, isHost: true }
                 },
                 phase: "lobby",
                 roundIndex: 0,
@@ -1507,12 +1664,7 @@
                 code,
                 isHost: false,
                 players: {
-                    [playerId]: {
-                        id: playerId,
-                        name,
-                        score: 0,
-                        isHost: false
-                    }
+                    [playerId]: { id: playerId, name, score: 0, isHost: false }
                 },
                 phase: "lobby",
                 roundIndex: 0,
@@ -1526,22 +1678,14 @@
 
             publishRoomMessage({
                 type: "player_join",
-                player: {
-                    id: playerId,
-                    name,
-                    score: 0,
-                    isHost: false
-                }
+                player: { id: playerId, name, score: 0, isHost: false }
             });
             showToast(`Connexion à la salle ${code}...`, "info");
         }
 
         function leaveRoom() {
             if (!state.room.code) return;
-            publishRoomMessage({
-                type: "player_leave",
-                playerId
-            });
+            publishRoomMessage({ type: "player_leave", playerId });
             state.room = {
                 code: null,
                 isHost: false,
@@ -1667,7 +1811,7 @@
             }
         }
 
-        // Deck builder & game lifecycle
+        // Game lifecycle
         function shuffleArray(arr) {
             const copy = [...arr];
             for (let i = copy.length - 1; i > 0; i--) {
@@ -1685,6 +1829,7 @@
         }
 
         function startSoloGame() {
+            stopDebugPreviewAudio();
             const deck = buildRoundDeck();
             if (deck.length === 0) {
                 showToast("Aucun extrait disponible avec ces filtres. Cochez au moins une catégorie !", "error");
@@ -1701,6 +1846,7 @@
 
         function startMultiplayerGameAsHost() {
             if (!state.room.isHost) return;
+            stopDebugPreviewAudio();
             const deck = buildRoundDeck();
             if (deck.length === 0) {
                 showToast("Aucun extrait disponible avec ces filtres.", "error");
@@ -1732,7 +1878,6 @@
             }
         }
 
-        // Audio playback (iTunes FR search + Web Audio melody fallback)
         function stopRoundMediaAndTimer() {
             if (state.round.timerInterval) {
                 clearInterval(state.round.timerInterval);
@@ -1747,8 +1892,7 @@
                 try { state.round.synthStopFn(); } catch (e) {}
                 state.round.synthStopFn = null;
             }
-            const eq = document.getElementById("audio-equalizer");
-            if (eq) eq.classList.remove("eq-playing");
+            document.getElementById("audio-equalizer")?.classList.remove("eq-playing");
         }
 
         function playFallbackSynthMelody(seedNum) {
@@ -1802,65 +1946,37 @@
             if (audioEl) audioEl.volume = volume;
             if (statusLabel) statusLabel.textContent = "Lecture de l'extrait en cours...";
 
-            if (track.audioUrl && audioEl) {
-                audioEl.src = track.audioUrl;
+            const resolved = await resolveTrackAudio(track);
+            if (!state.round.active) return;
+
+            if (resolved.url && audioEl) {
+                audioEl.src = resolved.url;
                 try {
                     await audioEl.play();
                     eq?.classList.add("eq-playing");
                     updatePlayPauseIcon(true);
+                    if (statusLabel) statusLabel.textContent = "Extrait audio en cours de lecture";
                     return;
-                } catch (e) {}
-            }
-
-            // Query iTunes Search API targeting French versions
-            try {
-                const query = encodeURIComponent(`${track.titre_fr} ${track.film} Disney`);
-                const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&country=FR&lang=fr_fr&limit=8`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const results = Array.isArray(data.results) ? data.results : [];
-                    // Prefer French-labeled or official soundtrack previews and avoid explicit karaoke/instrumental unless track is instrumental
-                    const best = results.find(item => {
-                        if (!item.previewUrl) return false;
-                        const tName = normalizeStr(item.trackName || "");
-                        const cName = normalizeStr(item.collectionName || "");
-                        const isKaraoke = tName.includes("karaoke") || cName.includes("karaoke");
-                        if (isKaraoke) return false;
-                        return cName.includes("disney") || tName.includes(normalizeStr(track.titre_fr).slice(0, 6));
-                    }) || results.find(item => Boolean(item.previewUrl));
-
-                    if (best && best.previewUrl && audioEl && state.round.active) {
-                        audioEl.src = best.previewUrl;
-                        await audioEl.play();
-                        eq?.classList.add("eq-playing");
-                        updatePlayPauseIcon(true);
-                        if (statusLabel) statusLabel.textContent = "Extrait audio en cours de lecture";
-                        return;
-                    }
+                } catch (e) {
+                    if (statusLabel) statusLabel.textContent = "Cliquez sur Lecture si l'audio est bloqué par votre navigateur";
+                    updatePlayPauseIcon(false);
+                    return;
                 }
-            } catch (err) {}
-
-            // Fallback melodic synthesizer if network/preview unavailable
-            if (state.round.active) {
-                state.round.synthStopFn = playFallbackSynthMelody(track.id);
-                eq?.classList.add("eq-playing");
-                updatePlayPauseIcon(true);
-                if (statusLabel) statusLabel.textContent = "Synthèse mélodique active (extrait externe indisponible)";
             }
+
+            state.round.synthStopFn = playFallbackSynthMelody(track.id);
+            eq?.classList.add("eq-playing");
+            updatePlayPauseIcon(true);
+            if (statusLabel) statusLabel.textContent = "Synthèse mélodique active (aucun extrait externe trouvé)";
         }
 
         function updatePlayPauseIcon(isPlaying) {
             const icon = document.getElementById("icon-play-pause");
             const label = document.getElementById("label-play-pause");
-            if (icon) {
-                icon.className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
-            }
-            if (label) {
-                label.textContent = isPlaying ? "Pause" : "Lecture";
-            }
+            if (icon) icon.className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+            if (label) label.textContent = isPlaying ? "Pause" : "Lecture";
         }
 
-        // Round management
         function startRound(index) {
             stopRoundMediaAndTimer();
 
@@ -1885,7 +2001,6 @@
             state.round.bonusPoints = 0;
             state.round.timeLeft = duration;
 
-            // Header pills
             document.getElementById("game-round-current").textContent = index + 1;
             document.getElementById("game-round-total").textContent = deck.length;
             document.getElementById("game-mode-pill").textContent = state.mode === "multi"
@@ -1895,7 +2010,6 @@
                 ? "Points selon le temps"
                 : "+1 pt par réponse";
 
-            // Configure visible answer boxes according to targetMode
             const targetMode = state.settings.targetMode;
             const boxSong = document.getElementById("box-song-answer");
             const boxMedia = document.getElementById("box-media-answer");
@@ -1905,7 +2019,6 @@
             boxSong.classList.toggle("hidden", !showSong);
             boxMedia.classList.toggle("hidden", !showMedia);
 
-            // Reset inputs & states
             const inputSong = document.getElementById("input-answer-song");
             const inputMedia = document.getElementById("input-answer-media");
             const btnSong = document.getElementById("btn-submit-song");
@@ -1936,7 +2049,6 @@
             renderLiveScoreboard();
             updateTimerDisplay();
 
-            // Countdown loop
             state.round.timerInterval = setInterval(() => {
                 if (!state.round.active) return;
                 const elapsed = (Date.now() - state.room.roundStartTime) / 1000;
@@ -1952,7 +2064,6 @@
                 }
             }, 200);
 
-            // Focus first active input
             if (showSong) {
                 inputSong.focus();
             } else if (showMedia) {
@@ -2030,7 +2141,6 @@
             }
         }
 
-        // Manual submission for Song Title (does NOT lock or hide Media Title box)
         function handleManualSongSubmit() {
             if (!state.round.active || state.round.songFound || !state.round.track) return;
             const input = document.getElementById("input-answer-song");
@@ -2062,7 +2172,6 @@
                 refreshRoundPointsLabel();
                 checkDuoBonusIfNeeded();
 
-                // Focus the other field if still available
                 if (state.settings.targetMode === "both" && !state.round.mediaFound) {
                     document.getElementById("input-answer-media")?.focus();
                 }
@@ -2072,7 +2181,6 @@
             }
         }
 
-        // Manual submission for Film / Series Title (does NOT lock or hide Song Title box)
         function handleManualMediaSubmit() {
             if (!state.round.active || state.round.mediaFound || !state.round.track) return;
             const input = document.getElementById("input-answer-media");
@@ -2104,7 +2212,6 @@
                 refreshRoundPointsLabel();
                 checkDuoBonusIfNeeded();
 
-                // Focus the other field if still available
                 if (state.settings.targetMode === "both" && !state.round.songFound) {
                     document.getElementById("input-answer-song")?.focus();
                 }
@@ -2142,9 +2249,7 @@
                 ? `${catObj.medium === "live" ? "Prises de vues réelles" : "Animation"} • ${catObj.label}`
                 : "Disney VF";
 
-            const ytLink = document.getElementById("reveal-yt-link");
-            ytLink.href = track.yt_fallback;
-
+            document.getElementById("reveal-yt-link").href = track.yt_fallback;
             document.getElementById("round-reveal-card").classList.remove("hidden");
 
             const isLast = state.room.roundIndex + 1 >= state.room.deck.length;
@@ -2167,11 +2272,10 @@
             const nextIdx = state.room.roundIndex + 1;
             if (state.mode === "multi") {
                 if (!state.room.isHost) return;
+                publishRoomMessage({ type: "next_round", roundIndex: nextIdx });
                 if (nextIdx < state.room.deck.length) {
-                    publishRoomMessage({ type: "next_round", roundIndex: nextIdx });
                     startRound(nextIdx);
                 } else {
-                    publishRoomMessage({ type: "next_round", roundIndex: nextIdx });
                     finishGame();
                 }
             } else {
@@ -2265,57 +2369,450 @@
                 .replace(/"/g, "&quot;");
         }
 
-        // Modals: Add Custom Track & Track Picker
-        function openAddTrackModal() {
-            document.getElementById("modal-add-track").classList.remove("hidden");
-            document.getElementById("custom-track-song").focus();
+        // =========================================================================
+        // AUDIO DEBUGGER & SONGS.JSON MANAGER
+        // =========================================================================
+        let debugPreviewAudio = new Audio();
+        let debugActiveTrackId = null;
+        let debugSynthStop = null;
+        let isScanningBatch = false;
+
+        debugPreviewAudio.addEventListener("timeupdate", () => {
+            const bar = document.getElementById("debug-audio-progress");
+            const timeLabel = document.getElementById("debug-audio-time");
+            if (debugPreviewAudio.duration && !isNaN(debugPreviewAudio.duration)) {
+                const pct = (debugPreviewAudio.currentTime / debugPreviewAudio.duration) * 100;
+                if (bar) bar.style.width = `${pct}%`;
+                if (timeLabel) timeLabel.textContent = `${Math.floor(debugPreviewAudio.currentTime)}s`;
+            }
+        });
+
+        debugPreviewAudio.addEventListener("ended", () => {
+            debugActiveTrackId = null;
+            renderDebugSongsList();
+        });
+
+        function stopDebugPreviewAudio() {
+            debugPreviewAudio.pause();
+            debugPreviewAudio.removeAttribute("src");
+            if (typeof debugSynthStop === "function") {
+                try { debugSynthStop(); } catch (e) {}
+                debugSynthStop = null;
+            }
+            debugActiveTrackId = null;
+            const bar = document.getElementById("debug-audio-progress");
+            const timeLabel = document.getElementById("debug-audio-time");
+            if (bar) bar.style.width = "0%";
+            if (timeLabel) timeLabel.textContent = "00s";
         }
 
-        function closeAddTrackModal() {
-            document.getElementById("modal-add-track").classList.add("hidden");
-            document.getElementById("form-add-track").reset();
-            document.getElementById("custom-track-year").value = "2013";
-        }
-
-        function handleAddTrackSubmit(e) {
-            e.preventDefault();
-            const song = document.getElementById("custom-track-song").value.trim();
-            const media = document.getElementById("custom-track-media").value.trim();
-            const year = Number(document.getElementById("custom-track-year").value) || 2000;
-            const category = document.getElementById("custom-track-category").value;
-            const audioUrl = document.getElementById("custom-track-audio-url").value.trim() || null;
-
-            if (!song || !media) {
-                showToast("Renseignez au moins le titre de la chanson et le film/série.", "warn");
+        async function previewTrackInDebugger(track) {
+            if (debugActiveTrackId === track.id) {
+                stopDebugPreviewAudio();
+                document.getElementById("debug-now-playing-title").textContent = "Pré-écoute arrêtée";
+                document.getElementById("debug-now-playing-meta").textContent = "Statut : en pause";
+                renderDebugSongsList();
                 return;
             }
 
-            const newTrack = buildCatalogTrack({
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                titre_fr: song,
-                titre_en: song,
-                film: media,
-                annee: year,
-                category,
-                audioUrl,
-                isCustom: true
-            });
+            stopDebugPreviewAudio();
+            debugActiveTrackId = track.id;
+            document.getElementById("debug-now-playing-title").textContent = `Recherche : ${track.titre_fr} (${track.film})...`;
+            document.getElementById("debug-now-playing-meta").textContent = "Interrogation iTunes FR...";
+            renderDebugSongsList();
 
-            customTracks.push(newTrack);
-            saveCustomTracks(customTracks);
+            const resolved = await resolveTrackAudio(track);
+            if (debugActiveTrackId !== track.id) return;
 
-            if (Array.isArray(state.settings.selectedTrackIds)) {
-                state.settings.selectedTrackIds.push(newTrack.id);
-            } else if (!state.settings.categories.includes(category)) {
-                state.settings.categories.push(category);
+            if (resolved.url) {
+                debugStatusMap[track.id] = {
+                    status: "ok",
+                    resolvedLabel: resolved.resolvedLabel,
+                    previewUrl: resolved.url
+                };
+                debugPreviewAudio.src = resolved.url;
+                debugPreviewAudio.volume = Number(document.getElementById("audio-volume-slider")?.value || 0.75);
+                try {
+                    await debugPreviewAudio.play();
+                    document.getElementById("debug-now-playing-title").textContent = `▶ ${track.titre_fr} — ${track.film}`;
+                    document.getElementById("debug-now-playing-meta").textContent = `Source OK : ${resolved.resolvedLabel}`;
+                } catch (err) {
+                    debugStatusMap[track.id].status = "error";
+                    document.getElementById("debug-now-playing-meta").textContent = "Erreur de lecture audio du navigateur";
+                }
+            } else {
+                debugStatusMap[track.id] = {
+                    status: "error",
+                    resolvedLabel: resolved.resolvedLabel,
+                    previewUrl: null
+                };
+                debugSynthStop = playFallbackSynthMelody(track.id);
+                document.getElementById("debug-now-playing-title").textContent = `⚠ Secours synthé : ${track.titre_fr}`;
+                document.getElementById("debug-now-playing-meta").textContent = resolved.resolvedLabel;
             }
-
-            closeAddTrackModal();
-            refreshSettingsUI();
-            broadcastSettingsIfHost();
-            showToast(`Extrait "${song}" ajouté au catalogue !`, "success");
+            renderDebugSongsList();
         }
 
+        function getFilteredDebugTracks() {
+            const q = normalizeStr(document.getElementById("debug-search-input")?.value || "");
+            const statusFilter = document.getElementById("debug-filter-status")?.value || "all";
+
+            return catalogTracks.filter(track => {
+                if (q) {
+                    const hay = normalizeStr(`${track.titre_fr} ${track.film} ${track.category} ${track.searchQuery}`);
+                    if (!hay.includes(q)) return false;
+                }
+                const st = debugStatusMap[track.id]?.status || (track.audioUrl ? "ok" : "untested");
+                if (statusFilter === "ok" && st !== "ok") return false;
+                if (statusFilter === "error" && st !== "error") return false;
+                if (statusFilter === "custom" && !track.isCustomOrEdited && !track.audioUrl) return false;
+                return true;
+            });
+        }
+
+        function renderDebugSongsList() {
+            const listEl = document.getElementById("debug-songs-list");
+            const countBadge = document.getElementById("debug-count-badge");
+            if (!listEl) return;
+
+            const filtered = getFilteredDebugTracks();
+            if (countBadge) {
+                countBadge.textContent = `${filtered.length} / ${catalogTracks.length} titres`;
+            }
+
+            listEl.innerHTML = "";
+            filtered.forEach(track => {
+                const isPlaying = debugActiveTrackId === track.id;
+                const info = debugStatusMap[track.id];
+                const catObj = CATEGORIES.find(c => c.id === track.category);
+
+                let statusBadge = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300">Non testé</span>`;
+                if (track.audioUrl) {
+                    statusBadge = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"><i class="fa-solid fa-lock mr-1"></i>URL Verrouillée</span>`;
+                } else if (info?.status === "ok") {
+                    statusBadge = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"><i class="fa-solid fa-check mr-1"></i>Audio OK</span>`;
+                } else if (info?.status === "error") {
+                    statusBadge = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40"><i class="fa-solid fa-triangle-exclamation mr-1"></i>À corriger</span>`;
+                }
+
+                const resolvedLine = info?.resolvedLabel
+                    ? `<p class="text-[11px] text-sky-300/90 truncate mt-0.5"><i class="fa-solid fa-headphones-simple mr-1"></i>${escapeHtml(info.resolvedLabel)}</p>`
+                    : `<p class="text-[11px] text-slate-400 truncate mt-0.5">Requête : <span class="font-mono text-slate-300">${escapeHtml(track.searchQuery)}</span></p>`;
+
+                const row = document.createElement("div");
+                row.className = `glass-subcard p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border transition ${
+                    isPlaying ? "border-amber-400 bg-amber-400/10" : "border-white/10"
+                }`;
+
+                row.innerHTML = `
+                    <div class="min-w-0 flex-1 space-y-0.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-bold text-sm text-amber-200">${escapeHtml(track.titre_fr)}</span>
+                            <span class="text-xs text-slate-300">— ${escapeHtml(track.film)} (${track.annee})</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
+                            <span class="px-2 py-0.5 rounded bg-white/5">${catObj ? catObj.label : track.category}</span>
+                        </div>
+                        ${resolvedLine}
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button type="button" class="btn-row-play px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                            isPlaying ? "bg-rose-500 text-white" : "bg-sky-500/25 hover:bg-sky-500/40 text-sky-100 border border-sky-400/35"
+                        }">
+                            <i class="fa-solid ${isPlaying ? "fa-stop" : "fa-play"}"></i>
+                            <span>${isPlaying ? "Stop" : "Écouter"}</span>
+                        </button>
+
+                        <button type="button" class="btn-row-edit px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/35 flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-wrench"></i>
+                            <span>Corriger</span>
+                        </button>
+                    </div>
+                `;
+
+                row.querySelector(".btn-row-play").addEventListener("click", () => previewTrackInDebugger(track));
+                row.querySelector(".btn-row-edit").addEventListener("click", () => openEditSongModal(track));
+
+                listEl.appendChild(row);
+            });
+        }
+
+        async function scanFilteredTracksAudio() {
+            if (isScanningBatch) {
+                isScanningBatch = false;
+                document.getElementById("btn-scan-label").textContent = "Tester les extraits affichés";
+                return;
+            }
+            const targets = getFilteredDebugTracks();
+            if (targets.length === 0) return;
+
+            isScanningBatch = true;
+            const btnLabel = document.getElementById("btn-scan-label");
+            let okCount = 0;
+            let errCount = 0;
+
+            for (let i = 0; i < targets.length; i++) {
+                if (!isScanningBatch) break;
+                const t = targets[i];
+                if (btnLabel) btnLabel.textContent = `Arrêter le scan (${i + 1}/${targets.length})...`;
+                const resolved = await resolveTrackAudio(t);
+                if (resolved.url) {
+                    okCount++;
+                    debugStatusMap[t.id] = {
+                        status: "ok",
+                        resolvedLabel: resolved.resolvedLabel,
+                        previewUrl: resolved.url
+                    };
+                } else {
+                    errCount++;
+                    debugStatusMap[t.id] = {
+                        status: "error",
+                        resolvedLabel: resolved.resolvedLabel,
+                        previewUrl: null
+                    };
+                }
+                if (i % 3 === 0 || i === targets.length - 1) {
+                    renderDebugSongsList();
+                }
+            }
+
+            isScanningBatch = false;
+            if (btnLabel) btnLabel.textContent = "Tester les extraits affichés";
+            renderDebugSongsList();
+            showToast(`Diagnostic terminé : ${okCount} OK, ${errCount} à vérifier.`, errCount > 0 ? "warn" : "success");
+        }
+
+        function openDebugManagerModal() {
+            document.getElementById("modal-debug-manager").classList.remove("hidden");
+            renderDebugSongsList();
+        }
+
+        function closeDebugManagerModal() {
+            isScanningBatch = false;
+            stopDebugPreviewAudio();
+            document.getElementById("modal-debug-manager").classList.add("hidden");
+            refreshSettingsUI();
+        }
+
+        // Edit / Add Song Modal + iTunes Alternative Selector
+        function openEditSongModal(track = null) {
+            const isNew = !track;
+            document.getElementById("edit-song-modal-title").innerHTML = isNew
+                ? '<i class="fa-solid fa-plus-circle"></i><span>Ajouter une nouvelle chanson (VF)</span>'
+                : '<i class="fa-solid fa-wrench"></i><span>Corriger / Éditer l\'extrait</span>';
+
+            document.getElementById("edit-song-id").value = isNew ? "" : track.id;
+            document.getElementById("edit-song-titre-fr").value = isNew ? "" : track.titre_fr;
+            document.getElementById("edit-song-film").value = isNew ? "" : track.film;
+            document.getElementById("edit-song-annee").value = isNew ? 2013 : track.annee;
+            document.getElementById("edit-song-category").value = isNew ? "anim_modern" : track.category;
+            document.getElementById("edit-song-search-query").value = isNew ? "" : (track.searchQuery || "");
+            document.getElementById("edit-song-audio-url").value = isNew ? "" : (track.audioUrl || "");
+
+            document.getElementById("btn-delete-song").classList.toggle("hidden", isNew);
+            document.getElementById("itunes-alternatives-box").classList.add("hidden");
+            document.getElementById("itunes-alternatives-list").innerHTML = "";
+
+            document.getElementById("modal-edit-song").classList.remove("hidden");
+            document.getElementById("edit-song-titre-fr").focus();
+        }
+
+        function closeEditSongModal() {
+            stopDebugPreviewAudio();
+            document.getElementById("modal-edit-song").classList.add("hidden");
+        }
+
+        async function searchItunesAlternativesForEditModal() {
+            const customQ = document.getElementById("edit-song-search-query").value.trim();
+            const titre = document.getElementById("edit-song-titre-fr").value.trim();
+            const film = document.getElementById("edit-song-film").value.trim();
+            const query = customQ || `${titre} ${film} Disney`;
+
+            if (!query.trim()) {
+                showToast("Saisissez d'abord un titre ou une requête.", "warn");
+                return;
+            }
+
+            const box = document.getElementById("itunes-alternatives-box");
+            const list = document.getElementById("itunes-alternatives-list");
+            box.classList.remove("hidden");
+            list.innerHTML = '<p class="text-xs text-slate-300 py-2"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Recherche sur iTunes France...</p>';
+
+            try {
+                const results = await searchItunesCandidates(query, 12);
+                list.innerHTML = "";
+                if (results.length === 0) {
+                    list.innerHTML = '<p class="text-xs text-rose-300 py-2">Aucun résultat audio trouvé pour cette requête.</p>';
+                    return;
+                }
+
+                results.forEach(item => {
+                    const row = document.createElement("div");
+                    row.className = "flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/75 border border-white/10 text-xs";
+                    row.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-white truncate">${escapeHtml(item.trackName)}</p>
+                            <p class="text-[11px] text-slate-400 truncate">${escapeHtml(item.artistName)} • ${escapeHtml(item.collectionName || "")}</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" class="btn-alt-preview px-2.5 py-1 rounded-lg bg-sky-500/25 hover:bg-sky-500/40 text-sky-200 font-semibold cursor-pointer">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                            <button type="button" class="btn-alt-pick px-2.5 py-1 rounded-lg bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-200 font-bold cursor-pointer">
+                                Choisir
+                            </button>
+                        </div>
+                    `;
+
+                    row.querySelector(".btn-alt-preview").addEventListener("click", () => {
+                        stopDebugPreviewAudio();
+                        debugPreviewAudio.src = item.previewUrl;
+                        debugPreviewAudio.play().catch(() => {});
+                        showToast(`Pré-écoute : ${item.trackName}`, "info");
+                    });
+
+                    row.querySelector(".btn-alt-pick").addEventListener("click", () => {
+                        document.getElementById("edit-song-audio-url").value = item.previewUrl;
+                        showToast("Lien audio sélectionné et verrouillé !", "success");
+                    });
+
+                    list.appendChild(row);
+                });
+            } catch (e) {
+                list.innerHTML = '<p class="text-xs text-rose-300 py-2">Erreur réseau lors de la recherche iTunes.</p>';
+            }
+        }
+
+        function handleSaveEditedSong(e) {
+            e.preventDefault();
+            const rawId = document.getElementById("edit-song-id").value;
+            const titre_fr = document.getElementById("edit-song-titre-fr").value.trim();
+            const film = document.getElementById("edit-song-film").value.trim();
+            const annee = Number(document.getElementById("edit-song-annee").value) || 2000;
+            const category = document.getElementById("edit-song-category").value;
+            const searchQuery = document.getElementById("edit-song-search-query").value.trim() || `${titre_fr} ${film} Disney`;
+            const audioUrl = document.getElementById("edit-song-audio-url").value.trim() || null;
+
+            if (!titre_fr || !film) {
+                showToast("Le titre de la chanson et le film/série sont obligatoires.", "warn");
+                return;
+            }
+
+            if (rawId) {
+                const idx = catalogTracks.findIndex(t => String(t.id) === String(rawId));
+                if (idx !== -1) {
+                    const updated = sanitizeTrack({
+                        ...catalogTracks[idx],
+                        titre_fr,
+                        film,
+                        annee,
+                        category,
+                        searchQuery,
+                        audioUrl,
+                        isCustomOrEdited: true
+                    });
+                    catalogTracks[idx] = updated;
+                    delete debugStatusMap[updated.id];
+                    if (audioUrl) {
+                        debugStatusMap[updated.id] = {
+                            status: "ok",
+                            resolvedLabel: "Lien audio verrouillé",
+                            previewUrl: audioUrl
+                        };
+                    }
+                }
+                showToast(`"${titre_fr}" mis à jour !`, "success");
+            } else {
+                const newTrack = sanitizeTrack({
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    titre_fr,
+                    film,
+                    annee,
+                    category,
+                    searchQuery,
+                    audioUrl,
+                    isCustomOrEdited: true
+                });
+                catalogTracks.unshift(newTrack);
+                if (Array.isArray(state.settings.selectedTrackIds)) {
+                    state.settings.selectedTrackIds.push(newTrack.id);
+                }
+                showToast(`"${titre_fr}" ajouté au catalogue !`, "success");
+            }
+
+            catalogSourceDescription = "Catalogue personnalisé (sauvegardé)";
+            saveCatalogToStorage();
+            closeEditSongModal();
+            renderDebugSongsList();
+            refreshSettingsUI();
+            broadcastSettingsIfHost();
+        }
+
+        function handleDeleteSong() {
+            const rawId = document.getElementById("edit-song-id").value;
+            if (!rawId) return;
+            catalogTracks = catalogTracks.filter(t => String(t.id) !== String(rawId));
+            if (Array.isArray(state.settings.selectedTrackIds)) {
+                state.settings.selectedTrackIds = state.settings.selectedTrackIds.filter(id => String(id) !== String(rawId));
+            }
+            saveCatalogToStorage();
+            closeEditSongModal();
+            renderDebugSongsList();
+            refreshSettingsUI();
+            broadcastSettingsIfHost();
+            showToast("Chanson supprimée du catalogue.", "info");
+        }
+
+        // Export & Import songs.json
+        function exportSongsJson() {
+            const payload = {
+                version: 1,
+                app: "Blind Test Disney - Magie Musicale",
+                exportedAt: new Date().toISOString(),
+                tracks: catalogTracks
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "songs.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast("Fichier songs.json téléchargé !", "success");
+        }
+
+        function importSongsJsonFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    const list = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.tracks) ? parsed.tracks : null);
+                    if (!list || list.length === 0) {
+                        showToast("Le fichier JSON ne contient aucune liste de chansons valide.", "error");
+                        return;
+                    }
+                    catalogTracks = list.map((t, i) => sanitizeTrack(t, i));
+                    catalogSourceDescription = `Importé (${file.name})`;
+                    state.settings.selectedTrackIds = null;
+                    Object.keys(debugStatusMap).forEach(k => delete debugStatusMap[k]);
+                    saveCatalogToStorage();
+                    renderDebugSongsList();
+                    refreshSettingsUI();
+                    broadcastSettingsIfHost();
+                    showToast(`${catalogTracks.length} chansons chargées depuis ${file.name} !`, "success");
+                } catch (err) {
+                    showToast("Fichier JSON invalide : " + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Manual Track Picker Modal
         let pickerTempIds = new Set();
 
         function openTrackPickerModal() {
@@ -2336,10 +2833,9 @@
             if (!container) return;
 
             const q = normalizeStr(filterText);
-            const all = getAllTracks();
             const filtered = q
-                ? all.filter(t => normalizeStr(t.titre_fr).includes(q) || normalizeStr(t.film).includes(q))
-                : all;
+                ? catalogTracks.filter(t => normalizeStr(t.titre_fr).includes(q) || normalizeStr(t.film).includes(q))
+                : catalogTracks;
 
             container.innerHTML = "";
             filtered.forEach(track => {
@@ -2416,11 +2912,9 @@
             requestAnimationFrame(draw);
         }
 
-        // Bind DOM event listeners
         function bindEvents() {
             document.getElementById("player-id-tag").textContent = playerId;
 
-            // Mode switching
             const btnSolo = document.getElementById("mode-btn-solo");
             const btnMulti = document.getElementById("mode-btn-multi");
             btnSolo.addEventListener("click", () => {
@@ -2441,7 +2935,6 @@
                 refreshSettingsUI();
             });
 
-            // Rounds range & presets
             const rangeRounds = document.getElementById("range-rounds");
             rangeRounds.addEventListener("input", () => {
                 state.settings.roundsCount = Number(rangeRounds.value);
@@ -2454,15 +2947,12 @@
                     if (state.mode === "multi" && state.room.code && !state.room.isHost) return;
                     const poolLen = Math.max(1, getEligibleTracks().length);
                     const preset = btn.dataset.roundPreset;
-                    state.settings.roundsCount = preset === "max"
-                        ? poolLen
-                        : Math.min(poolLen, Number(preset));
+                    state.settings.roundsCount = preset === "max" ? poolLen : Math.min(poolLen, Number(preset));
                     syncRoundsLimitToPool();
                     broadcastSettingsIfHost();
                 });
             });
 
-            // Clip duration buttons
             document.querySelectorAll(".duration-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     if (state.mode === "multi" && state.room.code && !state.room.isHost) return;
@@ -2472,7 +2962,6 @@
                 });
             });
 
-            // Scoring mode buttons
             document.querySelectorAll(".scoring-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     if (state.mode === "multi" && state.room.code && !state.room.isHost) return;
@@ -2482,7 +2971,6 @@
                 });
             });
 
-            // Target field buttons
             document.querySelectorAll(".target-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     if (state.mode === "multi" && state.room.code && !state.room.isHost) return;
@@ -2492,7 +2980,6 @@
                 });
             });
 
-            // Category group quick selectors
             document.getElementById("btn-cat-all").addEventListener("click", () => {
                 if (state.mode === "multi" && state.room.code && !state.room.isHost) return;
                 state.settings.selectedTrackIds = null;
@@ -2517,7 +3004,6 @@
                 broadcastSettingsIfHost();
             });
 
-            // Solo & Multiplayer start buttons
             document.getElementById("btn-start-solo").addEventListener("click", startSoloGame);
             document.getElementById("btn-create-room").addEventListener("click", createRoom);
             document.getElementById("btn-join-room").addEventListener("click", () => {
@@ -2548,7 +3034,7 @@
             });
             document.getElementById("btn-host-start-game").addEventListener("click", startMultiplayerGameAsHost);
 
-            // Manual answer submissions (Enter key or click only, never auto-submit on typing)
+            // Manual submissions only
             document.getElementById("btn-submit-song").addEventListener("click", handleManualSongSubmit);
             document.getElementById("input-answer-song").addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
@@ -2565,7 +3051,6 @@
                 }
             });
 
-            // Solo reveal/skip, next round, podium buttons
             document.getElementById("btn-solo-skip-reveal").addEventListener("click", revealCurrentRound);
             document.getElementById("btn-next-round").addEventListener("click", goToNextRound);
             document.getElementById("btn-replay-same").addEventListener("click", () => {
@@ -2582,7 +3067,6 @@
             document.getElementById("btn-back-lobby").addEventListener("click", () => switchView("lobby"));
             document.getElementById("btn-home-nav").addEventListener("click", () => switchView("lobby"));
 
-            // Audio play/pause & volume
             document.getElementById("btn-toggle-play").addEventListener("click", () => {
                 const audioEl = document.getElementById("disney-audio-player");
                 const eq = document.getElementById("audio-equalizer");
@@ -2603,32 +3087,53 @@
                 const vol = Number(e.target.value);
                 const audioEl = document.getElementById("disney-audio-player");
                 if (audioEl) audioEl.volume = vol;
+                debugPreviewAudio.volume = vol;
             });
 
-            // Add custom track modal
-            document.getElementById("btn-open-add-track").addEventListener("click", openAddTrackModal);
-            document.getElementById("btn-open-add-track-2").addEventListener("click", openAddTrackModal);
-            document.getElementById("btn-close-add-track").addEventListener("click", closeAddTrackModal);
-            document.getElementById("btn-cancel-add-track").addEventListener("click", closeAddTrackModal);
-            document.getElementById("form-add-track").addEventListener("submit", handleAddTrackSubmit);
-
-            document.getElementById("btn-reset-custom-tracks").addEventListener("click", () => {
-                customTracks = [];
-                saveCustomTracks([]);
-                state.settings.selectedTrackIds = null;
+            // Audio Debugger & songs.json Manager events
+            document.getElementById("btn-open-debug-manager").addEventListener("click", openDebugManagerModal);
+            document.getElementById("btn-open-debug-manager-2").addEventListener("click", openDebugManagerModal);
+            document.getElementById("btn-close-debug-manager").addEventListener("click", closeDebugManagerModal);
+            document.getElementById("btn-debug-add-song").addEventListener("click", () => openEditSongModal(null));
+            document.getElementById("btn-debug-scan-all").addEventListener("click", scanFilteredTracksAudio);
+            document.getElementById("btn-debug-stop-audio").addEventListener("click", () => {
+                stopDebugPreviewAudio();
+                renderDebugSongsList();
+            });
+            document.getElementById("debug-search-input").addEventListener("input", renderDebugSongsList);
+            document.getElementById("debug-filter-status").addEventListener("change", renderDebugSongsList);
+            document.getElementById("btn-export-json").addEventListener("click", exportSongsJson);
+            document.getElementById("input-import-json").addEventListener("change", (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    importSongsJsonFile(e.target.files[0]);
+                    e.target.value = "";
+                }
+            });
+            document.getElementById("btn-reset-catalog-default").addEventListener("click", () => {
+                localStorage.removeItem(STORAGE_CATALOG_KEY);
+                catalogTracks = DEFAULT_DISNEY_TRACKS.map((t, i) => sanitizeTrack(t, i));
+                catalogSourceDescription = "Catalogue intégré (115 VF)";
+                Object.keys(debugStatusMap).forEach(k => delete debugStatusMap[k]);
+                renderDebugSongsList();
                 refreshSettingsUI();
-                broadcastSettingsIfHost();
-                showToast("Extraits personnalisés réinitialisés.", "info");
+                showToast("Catalogue restauré par défaut.", "info");
             });
 
-            // Track picker modal
+            // Edit/Add Song modal events
+            document.getElementById("btn-close-edit-song").addEventListener("click", closeEditSongModal);
+            document.getElementById("btn-cancel-edit-song").addEventListener("click", closeEditSongModal);
+            document.getElementById("btn-search-itunes-alternatives").addEventListener("click", searchItunesAlternativesForEditModal);
+            document.getElementById("form-edit-song").addEventListener("submit", handleSaveEditedSong);
+            document.getElementById("btn-delete-song").addEventListener("click", handleDeleteSong);
+
+            // Manual Track Picker modal events
             document.getElementById("btn-open-track-picker").addEventListener("click", openTrackPickerModal);
             document.getElementById("btn-close-track-picker").addEventListener("click", closeTrackPickerModal);
             document.getElementById("picker-search-input").addEventListener("input", (e) => {
                 renderPickerList(e.target.value);
             });
             document.getElementById("btn-picker-select-all").addEventListener("click", () => {
-                pickerTempIds = new Set(getAllTracks().map(t => t.id));
+                pickerTempIds = new Set(catalogTracks.map(t => t.id));
                 renderPickerList(document.getElementById("picker-search-input").value);
             });
             document.getElementById("btn-picker-clear-all").addEventListener("click", () => {
@@ -2648,11 +3153,10 @@
             });
         }
 
-        // Application boot
         document.addEventListener("DOMContentLoaded", () => {
             initStarfield();
             bindEvents();
-            refreshSettingsUI();
+            initializeCatalog();
             initMultiplayerRelay();
         });
     </script>
